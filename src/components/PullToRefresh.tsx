@@ -109,8 +109,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
         setPullDistance(damped);
         setCanPull(damped >= THRESHOLD);
 
-        // Cegah scroll browser jika tarikan ke bawah sudah jelas
-        if (damped > 25 && e.cancelable) {
+        // Cegah overscroll goyang pada browser bawaan segera setelah tarikan dimulai
+        if (damped > 6 && e.cancelable) {
           e.preventDefault();
         }
       } else {

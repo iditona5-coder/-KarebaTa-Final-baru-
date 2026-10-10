@@ -1052,14 +1052,16 @@ export default function KarebaFeedFinal() {
     );
 
     if (isAnyModalOpen) {
-      const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
-
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
+    } else {
+      document.body.style.overflow = "";
     }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [
+    isHelpOpen,
     isEditProfileOpen,
     reportPostData,
     postToDelete,
@@ -1863,12 +1865,6 @@ export default function KarebaFeedFinal() {
         <div
           id="sticky-header-container"
           className="fixed top-0 left-0 right-0 z-40 bg-white w-full max-w-md mx-auto shadow-xs border-b border-neutral-100 overflow-hidden"
-          style={{
-            transform: "translate3d(0, 0, 0)",
-            WebkitTransform: "translate3d(0, 0, 0)",
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-          }}
         >
           <header
             id="karebata-feed-header"
