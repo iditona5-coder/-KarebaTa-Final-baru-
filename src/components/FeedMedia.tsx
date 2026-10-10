@@ -546,7 +546,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             src={src}
             poster={posterUrl || thumbnail}
             preload="auto"
-            className="w-full h-full object-cover object-center cursor-pointer block"
+            className="w-full h-full object-cover object-center cursor-pointer block pointer-events-none"
             style={{ touchAction: "pan-y" }}
             playsInline
             loop
@@ -667,7 +667,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           onLoad={handleImageLoad}
-          className={`w-full h-full object-cover object-center block pointer-events-auto select-none cursor-pointer transition-opacity duration-150 ${
+          className={`w-full h-full object-cover object-center block pointer-events-none select-none transition-opacity duration-150 ${
             isImageReady ? "opacity-100" : "opacity-0"
           }`}
           style={{ WebkitTouchCallout: "none", touchAction: "pan-y" }}

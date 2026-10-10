@@ -1,20 +1,10 @@
 {
-  "firestore": {
-    "rules": "firestore.rules"
-  },
-  "hosting": {
-    "site": "kareba-ta-ugi99",
-    "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
+  "name": "Remix Remix Remix Remix Remix Remix Remix PaluFeed",
+  "description": "A local social feed app for sharing moments, photos, and updates within the community.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

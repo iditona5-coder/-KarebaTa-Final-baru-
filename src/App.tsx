@@ -687,6 +687,36 @@ export default function KarebaFeedFinal() {
     } catch {}
   }, [feed]);
 
+  // Sinkronkan postingan milik pengguna dari feed ke dalam daftar 'Kabar Kamu' agar tidak pernah hilang
+  useEffect(() => {
+    if (feed.length > 0) {
+      setPosts((prev) => {
+        const myFeedPosts: PostItem[] = feed
+          .filter((f) => isMyPost(f) && !isDummyMedia(f))
+          .map((f) => ({
+            id: f.id,
+            title: f.text || "Kabar Kamu",
+            loc: f.location || "Wilayah Sekitar",
+            img: f.img || "",
+            thumbnail: f.thumbnail,
+            mediaType: f.mediaType || "image",
+            caption: f.text || "",
+            createdAt: f.time || "Baru saja",
+            name: f.name || userName,
+            email: f.email || userEmail,
+            user: f.user || userName,
+            init: f.init || initial,
+            isMyPost: true,
+          }));
+        if (myFeedPosts.length === 0) return prev;
+        const prevIds = new Set(prev.map((p) => p.id));
+        const missing = myFeedPosts.filter((p) => !prevIds.has(p.id));
+        if (missing.length === 0) return prev;
+        return [...missing, ...prev];
+      });
+    }
+  }, [feed, currentUser, userName, userEmail]);
+
   // Otomatis gulir ke form unggah saat media dipilih agar tombol posting terlihat penuh dan tidak terpotong
   useEffect(() => {
     if (selectedImage) {
@@ -1833,12 +1863,16 @@ export default function KarebaFeedFinal() {
         <div
           id="sticky-header-container"
           className="fixed top-0 left-0 right-0 z-40 bg-white w-full max-w-md mx-auto shadow-xs border-b border-neutral-100 overflow-hidden"
-          style={{ touchAction: "pan-y" }}
+          style={{
+            transform: "translate3d(0, 0, 0)",
+            WebkitTransform: "translate3d(0, 0, 0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+          }}
         >
           <header
             id="karebata-feed-header"
             className="bg-white border-b border-neutral-200 px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[53px] overflow-hidden w-full"
-            style={{ touchAction: "pan-y" }}
           >
             {isSearchOpen ? (
               /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL PAPAN PENCARIAN */
@@ -2283,7 +2317,16 @@ export default function KarebaFeedFinal() {
 
         {/* STATS - RAPAT KANAN KIRI: ICON DI ATAS, ANGKA DI BAWAH, SEMUA ICON MONOKROM / TIDAK BERWARNA */}
         <section id="stats-section" className="w-full flex items-center justify-around py-2.5 border-b border-neutral-200 bg-neutral-50/70">
-          <div className="flex-1 flex flex-col items-center justify-center py-0.5" aria-label="Suka kabar kamu">
+          <button
+            type="button"
+            onClick={() => {
+              setShowSavedSection(false);
+              const el = document.getElementById("my-posts-carousel");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex-1 flex flex-col items-center justify-center py-0.5 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer"
+            aria-label="Suka kabar kamu (klik untuk melihat Kabar Kamu)"
+          >
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Suka">
               <Heart className="w-4 h-4 text-neutral-700" />
             </div>
@@ -2292,7 +2335,7 @@ export default function KarebaFeedFinal() {
                 ? (myTotalLikes >= 1000 ? `${(myTotalLikes / 1000).toFixed(1)}k` : myTotalLikes)
                 : 0}
             </p>
-          </div>
+          </button>
           <div className="w-px h-7 bg-neutral-200" />
           <div className="flex-1 flex flex-col items-center justify-center py-0.5" aria-label="Total kabar kamu dibagikan">
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Bagikan">
@@ -2305,9 +2348,15 @@ export default function KarebaFeedFinal() {
             </p>
           </div>
           <div className="w-px h-7 bg-neutral-200" />
-          <div
-            className="flex-1 flex flex-col items-center justify-center py-0.5"
-            aria-label="Total kabar kamu disimpan"
+          <button
+            type="button"
+            onClick={() => {
+              setShowSavedSection(true);
+              const el = document.getElementById("my-posts-carousel");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex-1 flex flex-col items-center justify-center py-0.5 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer"
+            aria-label="Total kabar kamu disimpan (klik untuk melihat Tersimpan)"
           >
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Simpan">
               <Bookmark className="w-4 h-4 text-neutral-700" />
@@ -2317,66 +2366,91 @@ export default function KarebaFeedFinal() {
                 ? (myTotalSaves >= 1000 ? `${(myTotalSaves / 1000).toFixed(1)}k` : myTotalSaves)
                 : 0}
             </p>
-          </div>
+          </button>
         </section>
 
-        {/* HORIZONTAL: KABAR KAMU / KABAR TERSIMPAN (HANYA TAMPIL JIKA ADA KABAR ATAU MENU TERSIMPAN DIBUKA) */}
-        {(posts.length > 0 || showSavedSection) && (
-          <section id="my-posts-carousel" className="w-full py-4 border-b border-neutral-200 bg-white">
-          <div className="flex items-center justify-between mb-3 pl-2.5 pr-4">
-            <h2 className="font-bold text-sm tracking-tight text-neutral-900 flex items-center gap-2">
-              {showSavedSection ? (
-                <>
-                  <Bookmark className="w-4 h-4 fill-[#00632B] text-[#00632B]" />
-                  <span>Kabar Tersimpan</span>
-                </>
-              ) : (
-                <>
-                  <span>Kabar kamu</span>
-                  <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full border border-neutral-200">
-                    {posts.length}
-                  </span>
-                </>
-              )}
-            </h2>
+        {/* HORIZONTAL: KABAR KAMU & KABAR TERSIMPAN (SELALU MUNCUL, TIDAK PERNAH HILANG) */}
+        <section id="my-posts-carousel" className="w-full py-3.5 border-b border-neutral-200 bg-white">
+          <div className="flex items-center justify-between mb-3 px-3">
+            {/* SISI KIRI: KABAR KAMU */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSavedSection(false)}
+                className="flex items-center gap-2 text-left cursor-pointer group"
+                aria-label="Lihat Kabar kamu"
+              >
+                <h3
+                  className={`font-bold text-sm transition ${
+                    !showSavedSection
+                      ? "text-neutral-900 font-extrabold"
+                      : "text-neutral-500 group-hover:text-neutral-800"
+                  }`}
+                >
+                  Kabar kamu
+                </h3>
+                <span
+                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full transition ${
+                    !showSavedSection
+                      ? "bg-[#00632B]/10 text-[#00632B]"
+                      : "bg-neutral-100 text-neutral-500"
+                  }`}
+                >
+                  {posts.length}
+                </span>
+              </button>
+            </div>
+
+            {/* SUDUT KANAN: TULISAN SIMPAN */}
             <button
               id="saved-posts-count-badge"
               type="button"
               onClick={() => setShowSavedSection((prev) => !prev)}
-              className={`text-xs font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition active:scale-95 cursor-pointer shadow-2xs ${
+              className={`text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer ${
                 showSavedSection
-                  ? "bg-[#00632B] text-white border-[#00632B] shadow-xs"
-                  : "bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border-neutral-200"
+                  ? "bg-[#00632B] text-white shadow-xs"
+                  : "bg-emerald-50 text-[#00632B] border border-emerald-200/80 hover:bg-emerald-100/80"
               }`}
-              aria-label="Tersimpan"
+              title="Kabar Tersimpan"
+              aria-label="Simpan"
             >
               <Bookmark
-                className={`w-3.5 h-3.5 transition-colors ${
+                className={`w-3.5 h-3.5 ${
                   showSavedSection ? "fill-white text-white" : "fill-[#00632B] text-[#00632B]"
                 }`}
               />
-              <span className={showSavedSection ? "text-white" : "text-neutral-800"}>
-                Tersimpan ({savedItems.length})
+              <span>Simpan</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  showSavedSection
+                    ? "bg-white/20 text-white"
+                    : "bg-[#00632B]/10 text-[#00632B]"
+                }`}
+              >
+                {savedItems.length}
               </span>
             </button>
           </div>
 
-          {/* KETIKA KARTU SIMPAN MUNCUL: TAMPILKAN KARTU TERSIMPAN DAN SEMBUNYIKAN KARTU KABAR KAMU */}
+          {/* KONTEN KARTU: TERSIMPAN ATAU KABAR KAMU */}
           {showSavedSection ? (
             savedItems.length === 0 ? (
-              <div className="p-4 mx-2.5 rounded-xl bg-emerald-50/70 border border-dashed border-[#00632B]/30 text-center animate-fade-in">
-                <Bookmark className="w-5 h-5 text-[#00632B] mx-auto mb-1" />
-                <p className="text-xs text-neutral-700 font-medium">Belum ada kabar yang tersimpan</p>
-                <p className="text-[11px] text-neutral-400 mt-0.5 mb-2">
-                  Tandai kabar dengan icon simpan untuk melihatnya di sini.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowSavedSection(false)}
-                  className="text-xs text-[#00632B] font-semibold hover:underline cursor-pointer"
-                >
-                  Kembali ke Kabar Kamu
-                </button>
+              <div className="px-3">
+                <div className="p-4 rounded-xl bg-emerald-50/70 border border-dashed border-[#00632B]/30 text-center animate-fade-in">
+                  <Bookmark className="w-5 h-5 text-[#00632B] mx-auto mb-1.5" />
+                  <p className="text-xs text-neutral-900 font-bold">Belum ada kabar yang tersimpan</p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5 mb-2.5">
+                    Tandai kabar dengan ikon simpan di berita untuk melihatnya di sini.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowSavedSection(false)}
+                    className="inline-flex items-center gap-1 text-xs text-[#00632B] font-bold hover:underline cursor-pointer"
+                  >
+                    <span>Kembali ke Kabar Kamu</span>
+                    <span>&rarr;</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <CardCarousel id="saved-posts-carousel" className="animate-fade-in">
@@ -2454,7 +2528,24 @@ export default function KarebaFeedFinal() {
             )
           ) : (
             /* KARTU KABAR KAMU (TAMPIL KETIKA KARTU TERSIMPAN TIDAK AKTIF) */
-            posts.length === 0 ? null : (
+            posts.length === 0 ? (
+              <div className="px-3">
+                <button
+                  type="button"
+                  onClick={openCamera}
+                  className="w-full flex flex-col items-center justify-center p-3.5 bg-neutral-50 hover:bg-neutral-100 rounded-2xl border border-dashed border-neutral-300 transition active:scale-[0.99] cursor-pointer text-center shadow-2xs group"
+                >
+                  <div className="w-full text-center">
+                    <p className="text-xs font-bold text-neutral-800 group-hover:text-neutral-900 transition">
+                      Belum ada kabar kamu
+                    </p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                      Bagikan kabar atau momen terbaru di sekitarmu
+                    </p>
+                  </div>
+                </button>
+              </div>
+            ) : (
               <CardCarousel id="user-posts-carousel" className="animate-fade-in">
                 {posts.map((p) => {
                   const isVid =
@@ -2534,7 +2625,6 @@ export default function KarebaFeedFinal() {
             )
           )}
         </section>
-        )}
 
         {/* PEMBATAS SECTION RAPAT & GARIS ABU-ABU TERANG */}
         <div className="w-full h-[2px] bg-neutral-200" aria-hidden="true" />

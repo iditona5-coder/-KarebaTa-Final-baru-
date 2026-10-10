@@ -92,19 +92,20 @@ export function CardCarousel({
       if (!target) return;
       if (target.closest("button")) return;
 
-      isDown = true;
-      hasMoved = false;
-      startX = e.clientX;
-      startY = e.clientY;
-      startScrollLeft = el.scrollLeft;
-
+      // Pada sentuhan layar HP (touch), biarkan browser menangani native scrolling secara mulus
+      // Drag manual dengan JS hanya aktif jika pengguna menggunakan mouse komputer
       if (e.pointerType === "mouse") {
+        isDown = true;
+        hasMoved = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        startScrollLeft = el.scrollLeft;
         setIsPointerDown(true);
       }
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDown) return;
+      if (!isDown || e.pointerType !== "mouse") return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       const dist = Math.hypot(dx, dy);
@@ -117,7 +118,8 @@ export function CardCarousel({
       }
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
       if (!isDown) return;
       isDown = false;
       setIsPointerDown(false);
