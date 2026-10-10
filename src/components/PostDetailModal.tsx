@@ -108,28 +108,28 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Foto Profil dengan Cincin Lingkar Kuning Emas */}
               {isOwner ? (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] ring-2 ring-[#E5A000] ring-offset-1 ring-offset-white border border-[#E5A000] flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
                   {initial}
                 </div>
               ) : post.avatar ? (
                 <img
                   src={post.avatar}
                   alt={post.user}
-                  className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-[#E5A000] ring-offset-1 ring-offset-white border border-[#E5A000] shadow-xs select-none"
+                  className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white shadow-xs select-none"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] ring-2 ring-[#E5A000] ring-offset-1 ring-offset-white border border-[#E5A000] flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
                   {authorInit}
                 </div>
               )}
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
-                  <span className="text-sm font-bold text-neutral-900 tracking-tight truncate max-w-[150px] sm:max-w-[200px]">
-                    {authorName}
+                  <span className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[150px] sm:max-w-[200px]">
+                    {authorName.startsWith("@") ? authorName : `@${authorName}`}
                   </span>
-                  <span className="text-[11px] text-neutral-300 shrink-0">•</span>
-                  <span className="text-[11px] text-neutral-500 font-normal shrink-0 whitespace-nowrap">
+                  <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
+                  <span className="text-[12px] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
                     {postTime}
                   </span>
                 </div>

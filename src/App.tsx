@@ -1998,21 +1998,6 @@ export default function KarebaFeedFinal() {
                 </button>
                 <div className="flex items-center gap-1 sm:gap-1.5">
                   <button
-                    id="header-admin-dashboard-btn"
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        window.location.hash = "#admin";
-                      }
-                      setViewMode("admin");
-                    }}
-                    className="p-2 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
-                    title="Dasbor Admin"
-                    aria-label="Buka Dasbor Admin"
-                  >
-                    <ShieldCheck className="w-6 h-6 text-emerald-700" strokeWidth={2} />
-                  </button>
-                  <button
                     id="header-search-trigger"
                     type="button"
                     onClick={() => {
@@ -2193,26 +2178,44 @@ export default function KarebaFeedFinal() {
           {/* PROFIL WARGA - Jarak atas lebih lega agar icon profil tidak terlalu mepet ke papan teks berjalan */}
           <section id="profile-section" className="w-full pt-6 pb-4 px-4 flex items-center justify-between bg-white border-b border-neutral-100">
           <div className="flex items-center gap-3.5 min-w-0">
-            {/* Foto Profil: Selalu menampilkan huruf pertama nama pengguna */}
+            {/* Foto Profil: Menampilkan foto asli akun Google atau inisial modern dengan gradien berkelas */}
             <div className="relative shrink-0">
-              {currentUser ? (
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] ring-2 ring-[#E5A000] ring-offset-2 ring-offset-white flex items-center justify-center text-2xl font-extrabold shadow-sm text-white select-none">
+              {currentUser?.photoURL ? (
+                <img
+                  src={currentUser.photoURL}
+                  alt={userName}
+                  className="w-13 h-13 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-emerald-600/20 ring-offset-2 ring-offset-white shadow-xs select-none"
+                />
+              ) : currentUser ? (
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-xl font-bold shadow-xs text-white select-none tracking-tight">
                   {initial}
                 </div>
               ) : (
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] ring-2 ring-[#E5A000] ring-offset-2 ring-offset-white flex items-center justify-center text-white shadow-xs">
-                  <UserIcon className="w-7 h-7 text-white" />
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-neutral-100 ring-2 ring-neutral-200/80 ring-offset-2 ring-offset-white flex items-center justify-center text-neutral-400 shadow-xs">
+                  <UserIcon className="w-6 h-6 text-neutral-400" />
                 </div>
               )}
               {currentUser && (
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" aria-label="Sedang Aktif" />
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 ring-2 ring-white rounded-full shadow-2xs" aria-label="Sedang Aktif" />
               )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
-                <h2 className="font-bold text-base sm:text-lg text-neutral-900 tracking-tight truncate max-w-[150px] sm:max-w-[200px]">
-                  {currentUser ? userName : "Warga Kareba"}
+                <h2 className="font-bold text-[16px] sm:text-[17px] text-neutral-900 tracking-[-0.015em] truncate max-w-[150px] sm:max-w-[200px]">
+                  {currentUser ? (userName.startsWith("@") ? userName.replace(/^@/, "") : userName) : "Warga Kareba"}
                 </h2>
+                {currentUser && (
+                  <span
+                    className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${
+                      isUserAdmin(currentUser.email)
+                        ? "bg-[#00632B] text-white"
+                        : "bg-emerald-100 text-emerald-800"
+                    } shrink-0 shadow-2xs`}
+                    title={isUserAdmin(currentUser.email) ? "Pengelola Terverifikasi" : "Warga Terdaftar"}
+                  >
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  </span>
+                )}
                 {currentUser && (
                   <button
                     id="edit-username-pencil-icon"
@@ -2223,14 +2226,21 @@ export default function KarebaFeedFinal() {
                     }}
                     className="p-1 rounded-md text-neutral-400 hover:text-[#00632B] hover:bg-neutral-100 transition active:scale-90 cursor-pointer shrink-0"
                     aria-label="Edit nama pengguna"
+                    title="Ubah nama pengguna"
                   >
-                    <Pencil className="w-3.5 h-3.5 text-neutral-500 hover:text-[#00632B]" />
+                    <Pencil className="w-3.5 h-3.5 text-neutral-400 hover:text-[#00632B]" />
                   </button>
                 )}
               </div>
-              <p className="text-neutral-500 text-xs mt-0.5 whitespace-nowrap">
-                {currentUser ? `@${userName}` : "Pengunjung"}
-              </p>
+              <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium mt-0.5 whitespace-nowrap">
+                <span className="text-neutral-500 font-medium tracking-tight">
+                  {currentUser ? `@${userName.replace(/^@/, "").toLowerCase()}` : "@pengunjung"}
+                </span>
+                <span className="text-neutral-300" aria-hidden="true">·</span>
+                <span className={`text-[11px] font-semibold ${isUserAdmin(currentUser?.email) ? "text-emerald-700 font-bold" : "text-neutral-500"}`}>
+                  {currentUser ? (isUserAdmin(currentUser.email) ? "Admin Utama" : "Warga") : "Tamu"}
+                </span>
+              </div>
             </div>
           </div>
           {currentUser ? (
@@ -2244,12 +2254,11 @@ export default function KarebaFeedFinal() {
                   }
                   setViewMode("admin");
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition active:scale-90 cursor-pointer shadow-2xs"
-                title="Buka Dasbor Admin"
+                className="w-8 h-8 rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
+                title="Dasbor Admin"
                 aria-label="Dasbor Admin"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                <span className="text-[11px] font-bold">Admin</span>
               </button>
               <button
                 id="edit-username-profile-btn"
@@ -2258,16 +2267,16 @@ export default function KarebaFeedFinal() {
                   setNewUserNameInput("");
                   setIsEditProfileOpen(true);
                 }}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200/80 rounded-lg border border-neutral-200 transition active:scale-95 cursor-pointer"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200/80 rounded-xl border border-neutral-200 transition active:scale-95 cursor-pointer shadow-2xs"
                 aria-label="Edit nama pengguna"
               >
-                <Pencil className="w-3 h-3 text-neutral-500" />
+                <Pencil className="w-3.5 h-3.5 text-neutral-500" />
                 <span>Edit</span>
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition active:scale-95 cursor-pointer shadow-2xs"
                 aria-label="Keluar akun Google"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -2285,8 +2294,8 @@ export default function KarebaFeedFinal() {
                   }
                   setViewMode("admin");
                 }}
-                className="p-1.5 text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
-                title="Buka Dasbor Admin"
+                className="w-8 h-8 rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
+                title="Dasbor Admin"
                 aria-label="Dasbor Admin"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-700" />
@@ -2298,7 +2307,7 @@ export default function KarebaFeedFinal() {
                   setLoginRedirectMessage(null);
                   setViewMode("login");
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#004f22] rounded-lg border border-emerald-700 shadow-xs transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#004f22] rounded-xl border border-emerald-700 shadow-xs transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
                 aria-label="Masuk dengan Google"
               >
                 <LogIn className="w-3.5 h-3.5 shrink-0" />
@@ -3106,15 +3115,15 @@ export default function KarebaFeedFinal() {
                 {/* Post Header: Nama & Waktu tetap satu baris, tidak turun ke bawah */}
                 <div className="px-4 flex items-center justify-between">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    {/* Foto Profil dengan Cincin Lingkar Kuning Emas */}
+                    {/* Foto Profil Penulis Kabar */}
                     {f.avatar ? (
                       <img
                         src={f.avatar}
                         alt={f.user}
-                        className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-[#E5A000] ring-offset-1 ring-offset-white border border-[#E5A000] shadow-xs select-none"
+                        className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white shadow-xs select-none"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] ring-2 ring-[#E5A000] ring-offset-1 ring-offset-white border border-[#E5A000] flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
                         {((isMyPost(f) ? userName : f.user).trim().replace(/^@/, "")[0] || f.init || "W").toUpperCase()}
                       </div>
                     )}
@@ -3129,13 +3138,13 @@ export default function KarebaFeedFinal() {
                             setIsSearchOpen(true);
                             setIsSearchSuggestionsOpen(false);
                           }}
-                          className="text-sm font-bold text-neutral-900 tracking-tight truncate max-w-[130px] sm:max-w-[180px] hover:text-[#00632B] transition cursor-pointer text-left"
+                          className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[130px] sm:max-w-[180px] hover:text-[#00632B] transition-colors cursor-pointer text-left"
                           aria-label={`Lihat hanya postingan @${f.user}`}
                         >
-                          {f.user}
+                          {f.user.startsWith("@") ? f.user : `@${f.user}`}
                         </button>
-                        <span className="text-[11px] text-neutral-300 shrink-0">•</span>
-                        <span className="text-[11px] text-neutral-500 font-normal shrink-0 whitespace-nowrap">
+                        <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
+                        <span className="text-[12px] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
                           {f.time}
                         </span>
                       </div>
