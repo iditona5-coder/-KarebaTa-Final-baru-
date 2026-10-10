@@ -1998,6 +1998,21 @@ export default function KarebaFeedFinal() {
                 </button>
                 <div className="flex items-center gap-1 sm:gap-1.5">
                   <button
+                    id="header-admin-dashboard-btn"
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.location.hash = "#admin";
+                      }
+                      setViewMode("admin");
+                    }}
+                    className="p-2 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    title="Dasbor Admin"
+                    aria-label="Buka Dasbor Admin"
+                  >
+                    <ShieldCheck className="w-6 h-6 text-emerald-700" strokeWidth={2} />
+                  </button>
+                  <button
                     id="header-search-trigger"
                     type="button"
                     onClick={() => {
@@ -2220,22 +2235,22 @@ export default function KarebaFeedFinal() {
           </div>
           {currentUser ? (
             <div className="flex items-center gap-2 shrink-0">
-              {isUserAdmin(currentUser.email) && (
-                <button
-                  id="header-admin-dashboard-btn"
-                  type="button"
-                  onClick={() => {
-                    if (typeof window !== "undefined") {
-                      window.location.hash = "#admin";
-                    }
-                    setViewMode("admin");
-                  }}
-                  className="p-1.5 text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200/80 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
-                  aria-label="Khusus"
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                </button>
-              )}
+              <button
+                id="profile-admin-dashboard-btn"
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.location.hash = "#admin";
+                  }
+                  setViewMode("admin");
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition active:scale-90 cursor-pointer shadow-2xs"
+                title="Buka Dasbor Admin"
+                aria-label="Dasbor Admin"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                <span className="text-[11px] font-bold">Admin</span>
+              </button>
               <button
                 id="edit-username-profile-btn"
                 type="button"
@@ -2260,19 +2275,36 @@ export default function KarebaFeedFinal() {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setPendingUploadAction(null);
-                setLoginRedirectMessage(null);
-                setViewMode("login");
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#004f22] rounded-lg border border-emerald-700 shadow-xs transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
-              aria-label="Masuk dengan Google"
-            >
-              <LogIn className="w-3.5 h-3.5 shrink-0" />
-              <span>Masuk Google</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                id="guest-admin-dashboard-btn"
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.location.hash = "#admin";
+                  }
+                  setViewMode("admin");
+                }}
+                className="p-1.5 text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
+                title="Buka Dasbor Admin"
+                aria-label="Dasbor Admin"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingUploadAction(null);
+                  setLoginRedirectMessage(null);
+                  setViewMode("login");
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#004f22] rounded-lg border border-emerald-700 shadow-xs transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+                aria-label="Masuk dengan Google"
+              >
+                <LogIn className="w-3.5 h-3.5 shrink-0" />
+                <span>Masuk Google</span>
+              </button>
+            </div>
           )}
         </section>
 

@@ -535,7 +535,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none ${
             orientation === "vertical" ? "aspect-[4/5] min-h-[320px] max-h-[560px]" : "aspect-[16/10] min-h-[260px] max-h-[560px]"
           } ${className}`}
-          style={{ touchAction: "pan-y" }}
+          style={{ touchAction: "pan-x pan-y" }}
           onClick={toggleVideoPlay}
           onTouchStart={handleMediaTouchStart}
           onTouchMove={handleMediaTouchMove}
@@ -547,7 +547,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             poster={posterUrl || thumbnail}
             preload="auto"
             className="w-full h-full object-cover object-center cursor-pointer block pointer-events-none"
-            style={{ touchAction: "pan-y" }}
+            style={{ touchAction: "pan-x pan-y" }}
             playsInline
             loop
             muted={isMuted}
@@ -647,7 +647,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
         className={`w-full relative overflow-hidden bg-neutral-900 select-none ${
           orientation === "vertical" ? "aspect-[4/5] min-h-[320px] max-h-[560px]" : "aspect-[16/10] min-h-[260px] max-h-[560px]"
         } ${className}`}
-        style={{ touchAction: "pan-y" }}
+        style={{ touchAction: "pan-x pan-y" }}
         onTouchStart={handleMediaTouchStart}
         onTouchMove={handleMediaTouchMove}
         onTouchEnd={handleMediaTouchEnd}
@@ -670,7 +670,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           className={`w-full h-full object-cover object-center block pointer-events-none select-none transition-opacity duration-150 ${
             isImageReady ? "opacity-100" : "opacity-0"
           }`}
-          style={{ WebkitTouchCallout: "none", touchAction: "pan-y" }}
+          style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
         />
 
         {/* Tombol Icon Layar Penuh di Atas Kiri */}

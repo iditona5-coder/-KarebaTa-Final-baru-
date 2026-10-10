@@ -108,11 +108,6 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
         pullDistanceRef.current = damped;
         setPullDistance(damped);
         setCanPull(damped >= THRESHOLD);
-
-        // Cegah overscroll goyang pada browser bawaan segera setelah tarikan dimulai
-        if (damped > 6 && e.cancelable) {
-          e.preventDefault();
-        }
       } else {
         if (diffY < 0) {
           isDraggingRef.current = false;
@@ -209,7 +204,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
     };
 
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
     window.addEventListener("touchend", handleTouchEnd, { passive: true });
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);

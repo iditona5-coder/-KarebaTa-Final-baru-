@@ -26,7 +26,6 @@
 html {
   max-width: 100%;
   width: 100%;
-  overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -43,7 +42,6 @@ body {
   width: 100%;
   min-height: 100vh;
   position: relative;
-  overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -62,7 +60,6 @@ body {
   width: 100%;
   min-height: 100%;
   position: relative;
-  overscroll-behavior-y: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
