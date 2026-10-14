@@ -6,7 +6,7 @@ import { loginWithGoogle, loginAsSimulatedUser, PRIMARY_ADMIN_EMAIL } from "../s
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (user?: any) => void;
   actionContext?: "camera" | "gallery" | "general" | null;
 }
 
@@ -60,7 +60,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       sessionStorage.setItem("karebata_active_session", "true");
       const res = await loginWithGoogle();
       if (res.user) {
-        onSuccess();
+        onSuccess(res.user);
       } else if (res.error) {
         sessionStorage.removeItem("karebata_active_session");
         if (res.error.includes("popup-closed-by-user")) {
@@ -90,8 +90,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleQuickPreviewLogin = (asAdmin: boolean = false) => {
     sessionStorage.setItem("karebata_active_session", "true");
-    loginAsSimulatedUser(asAdmin ? PRIMARY_ADMIN_EMAIL : "warga.kareba@gmail.com");
-    onSuccess();
+    const simulated = loginAsSimulatedUser(asAdmin ? PRIMARY_ADMIN_EMAIL : "warga.kareba@gmail.com");
+    onSuccess(simulated);
   };
 
   const getActionTitle = () => {

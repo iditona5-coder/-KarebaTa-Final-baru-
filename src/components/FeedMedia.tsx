@@ -184,40 +184,55 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     }
   };
 
-  // Proteksi anti-play/anti-click saat scrolling pada perangkat sentuh (touchscreen)
-  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
-  const isTouchScrollingRef = useRef(false);
+  // Proteksi anti-play/anti-click saat scrolling pada perangkat sentuh (touchscreen) & mouse
+  const pointerStartPosRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isDraggingMediaRef = useRef(false);
   const blockClickUntilRef = useRef(0);
 
-  const handleMediaTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      isTouchScrollingRef.current = false;
-    }
+  const handleMediaPointerDown = (e: React.PointerEvent) => {
+    pointerStartPosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    isDraggingMediaRef.current = false;
   };
 
-  const handleMediaTouchMove = (e: React.TouchEvent) => {
-    if (touchStartPosRef.current && e.touches.length > 0) {
-      const dx = e.touches[0].clientX - touchStartPosRef.current.x;
-      const dy = e.touches[0].clientY - touchStartPosRef.current.y;
-      if (Math.hypot(dx, dy) > 6) {
-        isTouchScrollingRef.current = true;
-        blockClickUntilRef.current = Date.now() + 450;
+  const handleMediaPointerMove = (e: React.PointerEvent) => {
+    if (pointerStartPosRef.current) {
+      const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
+      const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
+      if (dx > 6 || dy > 6) {
+        isDraggingMediaRef.current = true;
       }
     }
   };
 
-  const handleMediaTouchEnd = () => {
-    if (isTouchScrollingRef.current) {
-      blockClickUntilRef.current = Date.now() + 450;
-      setTimeout(() => {
-        isTouchScrollingRef.current = false;
-      }, 450);
+  const handleMediaPointerUp = (e: React.PointerEvent) => {
+    if (pointerStartPosRef.current) {
+      const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
+      const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
+      const duration = Date.now() - pointerStartPosRef.current.time;
+      pointerStartPosRef.current = null;
+      if (dx > 6 || dy > 6 || duration > 350) {
+        isDraggingMediaRef.current = true;
+        blockClickUntilRef.current = Date.now() + 400;
+        setTimeout(() => {
+          isDraggingMediaRef.current = false;
+        }, 400);
+        return;
+      }
     }
+    isDraggingMediaRef.current = false;
+  };
+
+  const handleMediaPointerCancel = () => {
+    pointerStartPosRef.current = null;
+    isDraggingMediaRef.current = true;
+    blockClickUntilRef.current = Date.now() + 400;
+    setTimeout(() => {
+      isDraggingMediaRef.current = false;
+    }, 400);
   };
 
   const toggleVideoPlay = () => {
-    if (isTouchScrollingRef.current || Date.now() < blockClickUntilRef.current) return;
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) return;
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       safePlay(videoRef.current);
@@ -228,7 +243,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isTouchScrollingRef.current || Date.now() < blockClickUntilRef.current) return;
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) return;
     if (!videoRef.current) return;
     videoRef.current.muted = !videoRef.current.muted;
     setIsMuted(videoRef.current.muted);
@@ -239,7 +254,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   // Mencegah 100% fullscreen terbuka tidak sengaja saat pengguna sedang scrolling
   // =========================================================================
   const openFullscreen = () => {
-    if (isTouchScrollingRef.current || Date.now() < blockClickUntilRef.current) return;
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) return;
     if (videoRef.current) {
       if (!videoRef.current.paused) {
         safePause(videoRef.current);
@@ -264,9 +279,13 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
 
   // Lock body scroll saat fullscreen aktif
   useEffect(() => {
-    if (!isFullscreen) return;
-    const origOverflow = document.body.style.overflow;
+    if (!isFullscreen) {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      return;
+    }
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -276,7 +295,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = origOverflow;
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isFullscreen]);
@@ -291,52 +311,10 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     }
   }, [isFullscreen, isVideo]);
 
-  // Tombol Full Screen dengan Proteksi Gesture Khusus:
-  // Hanya terbuka jika benar-benar diketuk (tap diam < 6px dan < 350ms)
-  // Jari yang sedang scrolling vertikal atau bergerak TIDAK akan membuka layar penuh
-  const fsBtnTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
-
-  const handleFsBtnTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      fsBtnTouchRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-        time: Date.now(),
-      };
-    }
-  };
-
-  const handleFsBtnTouchMove = (e: React.TouchEvent) => {
-    if (fsBtnTouchRef.current && e.touches.length > 0) {
-      const dx = Math.abs(e.touches[0].clientX - fsBtnTouchRef.current.x);
-      const dy = Math.abs(e.touches[0].clientY - fsBtnTouchRef.current.y);
-      // Jika jari bergeser > 6px, ini adalah gestur scroll. Batalkan tap!
-      if (dx > 6 || dy > 6) {
-        fsBtnTouchRef.current = null;
-        isTouchScrollingRef.current = true;
-        blockClickUntilRef.current = Date.now() + 450;
-      }
-    }
-  };
-
-  const handleFsBtnTouchEnd = (e: React.TouchEvent) => {
-    if (fsBtnTouchRef.current) {
-      const duration = Date.now() - fsBtnTouchRef.current.time;
-      fsBtnTouchRef.current = null;
-      if (duration < 350 && !isTouchScrollingRef.current && Date.now() >= blockClickUntilRef.current) {
-        e.stopPropagation();
-        e.preventDefault();
-        openFullscreen();
-      }
-    }
-  };
-
+  // Tombol Full Screen: Membuka layar penuh saat ditekan
   const handleFsBtnClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Khusus klik desktop mouse (pointerType bukan touch)
-    if ((e.nativeEvent as any).pointerType !== "touch") {
-      openFullscreen();
-    }
+    openFullscreen();
   };
 
   // Format Waktu mm:ss untuk durasi video
@@ -425,7 +403,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
               playsInline
               loop
               muted={fsIsMuted}
-              className="max-w-full max-h-full object-contain pointer-events-auto"
+              className="max-w-full max-h-full object-contain pointer-events-auto fullscreen-video-element"
               onClick={(e) => {
                 e.stopPropagation();
                 if (!fullscreenVideoRef.current) return;
@@ -532,14 +510,15 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     return (
       <>
         <div
-          className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none ${
+          className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${
             orientation === "vertical" ? "aspect-[4/5] min-h-[320px] max-h-[560px]" : "aspect-[16/10] min-h-[260px] max-h-[560px]"
           } ${className}`}
-          style={{ touchAction: "pan-x pan-y" }}
+          style={{ touchAction: "pan-y" }}
           onClick={toggleVideoPlay}
-          onTouchStart={handleMediaTouchStart}
-          onTouchMove={handleMediaTouchMove}
-          onTouchEnd={handleMediaTouchEnd}
+          onPointerDown={handleMediaPointerDown}
+          onPointerMove={handleMediaPointerMove}
+          onPointerUp={handleMediaPointerUp}
+          onPointerCancel={handleMediaPointerCancel}
         >
           <video
             ref={videoRef}
@@ -547,7 +526,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             poster={posterUrl || thumbnail}
             preload="auto"
             className="w-full h-full object-cover object-center cursor-pointer block pointer-events-none"
-            style={{ touchAction: "pan-x pan-y" }}
+            style={{ touchAction: "pan-y" }}
             playsInline
             loop
             muted={isMuted}
@@ -611,7 +590,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           <button
             type="button"
             onClick={toggleMute}
-            className="absolute bottom-3 right-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition z-10 cursor-pointer shadow-md"
+            className="absolute bottom-3 right-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition z-10 cursor-pointer shadow-md pointer-events-auto"
             aria-label={isMuted ? "Aktifkan suara" : "Bisukan"}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -622,10 +601,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             id="open-video-fullscreen-btn"
             type="button"
             onClick={handleFsBtnClick}
-            onTouchStart={handleFsBtnTouchStart}
-            onTouchMove={handleFsBtnTouchMove}
-            onTouchEnd={handleFsBtnTouchEnd}
-            className="absolute top-3 left-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition shadow-md z-10 active:scale-95 flex items-center justify-center cursor-pointer"
+            className="absolute top-3 left-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition shadow-md z-10 active:scale-95 flex items-center justify-center cursor-pointer pointer-events-auto"
             aria-label="Layar Penuh"
           >
             <Maximize2 className="w-4 h-4 text-white" />
@@ -644,13 +620,14 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   return (
     <>
       <div
-        className={`w-full relative overflow-hidden bg-neutral-900 select-none ${
+        className={`w-full relative overflow-hidden bg-neutral-900 select-none feed-media-wrapper ${
           orientation === "vertical" ? "aspect-[4/5] min-h-[320px] max-h-[560px]" : "aspect-[16/10] min-h-[260px] max-h-[560px]"
         } ${className}`}
-        style={{ touchAction: "pan-x pan-y" }}
-        onTouchStart={handleMediaTouchStart}
-        onTouchMove={handleMediaTouchMove}
-        onTouchEnd={handleMediaTouchEnd}
+        style={{ touchAction: "pan-y" }}
+        onPointerDown={handleMediaPointerDown}
+        onPointerMove={handleMediaPointerMove}
+        onPointerUp={handleMediaPointerUp}
+        onPointerCancel={handleMediaPointerCancel}
         onClick={openFullscreen}
       >
         {/* Placeholder skeleton halus jika sedang decode perdana di jaringan lambat */}
@@ -667,10 +644,10 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           onLoad={handleImageLoad}
-          className={`w-full h-full object-cover object-center block pointer-events-none select-none transition-opacity duration-150 ${
+          className={`w-full h-full object-cover object-center block select-none pointer-events-none transition-opacity duration-150 ${
             isImageReady ? "opacity-100" : "opacity-0"
           }`}
-          style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
+          style={{ WebkitTouchCallout: "none", touchAction: "pan-y" }}
         />
 
         {/* Tombol Icon Layar Penuh di Atas Kiri */}
@@ -678,10 +655,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           id="open-photo-fullscreen-btn"
           type="button"
           onClick={handleFsBtnClick}
-          onTouchStart={handleFsBtnTouchStart}
-          onTouchMove={handleFsBtnTouchMove}
-          onTouchEnd={handleFsBtnTouchEnd}
-          className="absolute top-3 left-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition shadow-md z-10 active:scale-95 flex items-center justify-center cursor-pointer"
+          className="absolute top-3 left-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition shadow-md z-10 active:scale-95 flex items-center justify-center cursor-pointer pointer-events-auto"
           aria-label="Layar Penuh"
         >
           <Maximize2 className="w-4 h-4 text-white" />

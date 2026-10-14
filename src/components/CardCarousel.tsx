@@ -92,34 +92,35 @@ export function CardCarousel({
       if (!target) return;
       if (target.closest("button")) return;
 
-      // Pada sentuhan layar HP (touch), biarkan browser menangani native scrolling secara mulus
-      // Drag manual dengan JS hanya aktif jika pengguna menggunakan mouse komputer
+      isDown = true;
+      hasMoved = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      startScrollLeft = el.scrollLeft;
+
       if (e.pointerType === "mouse") {
-        isDown = true;
-        hasMoved = false;
-        startX = e.clientX;
-        startY = e.clientY;
-        startScrollLeft = el.scrollLeft;
         setIsPointerDown(true);
       }
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isDown || e.pointerType !== "mouse") return;
+      if (!isDown) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       const dist = Math.hypot(dx, dy);
 
-      if (dist > 5 && Math.abs(dx) > Math.abs(dy)) {
+      if (dist > 6) {
         hasMoved = true;
         (window as any).__KAREBATA_IS_DRAGGING_CARD__ = true;
+      }
+
+      if (e.pointerType === "mouse" && dist > 5 && Math.abs(dx) > Math.abs(dy)) {
         el.scrollLeft = startScrollLeft - dx;
         updateScrollIndicators();
       }
     };
 
-    const handlePointerUp = (e: PointerEvent) => {
-      if (e.pointerType !== "mouse") return;
+    const handlePointerUp = () => {
       if (!isDown) return;
       isDown = false;
       setIsPointerDown(false);
@@ -146,19 +147,14 @@ export function CardCarousel({
       }
     };
 
-    // Mouse wheel & trackpad horizontal scroll
+    // Trackpad horizontal scroll (deltaX) atau Shift + wheel (deltaY)
     const handleWheel = (e: WheelEvent) => {
       if (e.deltaX !== 0) {
         el.scrollLeft += e.deltaX;
         updateScrollIndicators();
-      } else if (Math.abs(e.deltaY) > 0) {
-        const canScroll =
-          (e.deltaY > 0 && el.scrollLeft < el.scrollWidth - el.clientWidth - 2) ||
-          (e.deltaY < 0 && el.scrollLeft > 2);
-        if (canScroll) {
-          el.scrollLeft += e.deltaY;
-          updateScrollIndicators();
-        }
+      } else if (e.shiftKey && Math.abs(e.deltaY) > 0) {
+        el.scrollLeft += e.deltaY;
+        updateScrollIndicators();
       }
     };
 

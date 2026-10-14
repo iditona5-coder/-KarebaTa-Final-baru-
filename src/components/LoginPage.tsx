@@ -110,7 +110,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </p>
 
           <p className="text-xs text-neutral-600 mt-2.5 max-w-xs leading-relaxed font-normal">
-            Pilih masuk dengan Akun Google untuk kirim kabar warga, atau langsung jelajahi Kabar Warga.
+            Masuk dengan Akun Google terlebih dahulu untuk menikmati dan membagikan kabar warga terkini.
           </p>
         </div>
 
@@ -204,27 +204,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <span>Masuk dengan Akun Google</span>
               </>
             )}
-          </button>
-
-          {/* Garis Pembatas "atau" */}
-          <div className="relative flex items-center justify-center my-1">
-            <div className="border-t border-neutral-200 w-full" />
-            <span className="bg-white px-3 text-[11px] text-neutral-400 uppercase tracking-wider font-semibold shrink-0">
-              atau
-            </span>
-            <div className="border-t border-neutral-200 w-full" />
-          </div>
-
-          {/* PILIHAN 2: Tombol Masuk sebagai Warga Kareba (Langsung Masuk Beranda) */}
-          <button
-            id="login-warga-kareba-btn"
-            type="button"
-            onClick={onContinueAsGuest}
-            className="w-full py-4 px-5 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.98] cursor-pointer"
-          >
-            <Users className="w-5 h-5 text-[#E5A000]" />
-            <span>Warga Kareba</span>
-            <ArrowRight className="w-4 h-4 ml-auto text-emerald-200" />
           </button>
         </div>
       </main>

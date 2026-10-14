@@ -132,18 +132,40 @@ img, video, svg, a, button {
   -webkit-user-drag: none !important;
 }
 
-img, video {
+img {
   -webkit-user-select: none !important;
   user-select: none !important;
   pointer-events: auto;
+  touch-action: pan-y !important;
+  -webkit-touch-callout: none !important;
 }
 
-/* Cegah efek karet melar (overscroll stretch/rubber-band) bawaan browser pada container scroll horizontal */
+/* Video di feed & card: pointer-events none agar browser dapat men-scroll layar secara mulus saat disentuh/diusap di HP */
+video {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  pointer-events: none;
+  touch-action: pan-y !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Video di dalam modal pemutar layar penuh tetap interaktif */
+.fullscreen-video-element {
+  pointer-events: auto !important;
+}
+
+[id^="feed-post-media-"],
+.feed-media-wrapper {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Container scroll horizontal tetap mengizinkan scroll vertikal halaman */
 .horizontal-scroll-container {
-  overscroll-behavior-x: none !important;
+  overscroll-behavior-x: contain !important;
   overscroll-behavior-y: auto !important;
-  overscroll-behavior: none !important;
   touch-action: pan-x pan-y !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 #sticky-header-container {

@@ -653,7 +653,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs font-bold text-neutral-900 truncate">{currentUser?.email || PRIMARY_ADMIN_EMAIL}</p>
-              <p className="text-[10px] text-emerald-600 font-semibold">Admin Utama</p>
+              <p className="text-[10px] text-emerald-600 font-semibold">Admin</p>
             </div>
             <button
               type="button"
