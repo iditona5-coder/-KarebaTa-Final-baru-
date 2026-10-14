@@ -58,10 +58,20 @@ app.post('/api/upload', async (req, res) => {
       });
     }
 
+    const isVid =
+      /\.(mp4|mov|webm|mkv|3gp|avi)$/i.test(ikData.name || fileName || '') ||
+      ikData.fileType === 'non-image';
+    const finalUrl =
+      isVid && ikData.url
+        ? ikData.url.includes('tr=orig-true')
+          ? ikData.url
+          : `${ikData.url}?tr=orig-true`
+        : ikData.url;
+
     return res.json({
       success: true,
-      url: ikData.url,
-      thumbnailUrl: ikData.thumbnailUrl || ikData.url,
+      url: finalUrl,
+      thumbnailUrl: ikData.thumbnailUrl || (isVid ? '' : finalUrl),
       fileId: ikData.fileId,
       name: ikData.name,
       filePath: ikData.filePath,

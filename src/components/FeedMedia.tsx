@@ -11,9 +11,12 @@ import {
   Video,
   MapPin,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import { extractVideoThumbnail } from "../utils/thumbnail";
 import { isMediaCached, markMediaCached, preloadImage } from "../utils/mediaPreloader";
+import { normalizeMediaUrl } from "../services/imagekit";
+import { getLocalVideoBlob } from "../utils/localMediaCache";
 
 export interface MediaAuthorInfo {
   avatar?: string;
@@ -52,7 +55,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     src.endsWith(".webm") ||
     src.endsWith(".mov") ||
     src.startsWith("data:video/") ||
-    src.includes("video");
+    src.includes("video") ||
+    src.includes(".mp4");
 
   // Orientasi media
   const [orientation, setOrientation] = useState<"vertical" | "horizontal">("vertical");
@@ -62,6 +66,31 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   const [hasVideoError, setHasVideoError] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Sumber URL video aktif (dinormalisasi dengan ?tr=orig-true jika ImageKit agar tidak 403)
+  const [activeVideoSrc, setActiveVideoSrc] = useState(() => normalizeMediaUrl(src, isVideo));
+
+  useEffect(() => {
+    const normalized = normalizeMediaUrl(src, isVideo);
+    setActiveVideoSrc(normalized);
+    setHasVideoError(false);
+
+    // Jika URL blob lokal yang mungkin telah kedaluwarsa setelah reload, cari di IndexedDB lokal
+    if (isVideo && src && src.startsWith("blob:")) {
+      const keysToTry = [src, alt || "", description || "", author?.username || ""].filter(Boolean);
+      (async () => {
+        for (const k of keysToTry) {
+          const cachedBlob = await getLocalVideoBlob(k);
+          if (cachedBlob) {
+            const freshUrl = URL.createObjectURL(cachedBlob);
+            setActiveVideoSrc(freshUrl);
+            setHasVideoError(false);
+            break;
+          }
+        }
+      })();
+    }
+  }, [src, isVideo, alt, description, author?.username]);
 
   // Fullscreen video state
   const fullscreenVideoRef = useRef<HTMLVideoElement | null>(null);
