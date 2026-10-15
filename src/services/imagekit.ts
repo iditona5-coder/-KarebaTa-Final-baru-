@@ -27,14 +27,13 @@ export function isVideoMedia(nameOrType: string): boolean {
 
 export function normalizeMediaUrl(url: string | undefined, isVideo = false): string {
   if (!url) return "";
-  if (url.includes("ik.imagekit.io")) {
-    const isVid = isVideo || isVideoMedia(url) || url.includes("/karebata/kareba_");
-    if (isVid) {
-      // Hapus query transformasi gambar (seperti ?tr=w-500) dan pastikan tr=orig-true aktif
-      const clean = url.replace(/[?&]tr=[^&]*/g, "").replace(/\?$/, "");
-      const separator = clean.includes("?") ? "&" : "?";
-      return clean.includes("tr=orig-true") ? clean : `${clean}${separator}tr=orig-true`;
-    }
+  const isVid = isVideo || isVideoMedia(url) || url.includes(".mp4") || url.includes("/karebata/kareba_");
+  if (isVid) {
+    let clean = url.split("?")[0];
+    clean = clean.replace(/\/tr:[^\/]+\//g, "/");
+    // kunci biar tidak double slash
+    clean = clean.replace(/([^:]\/)\/+/g, "$1");
+    return clean;
   }
   return url;
 }

@@ -463,7 +463,7 @@ export default function KarebaFeedFinal() {
     localStorage.setItem("karebata_is_logged_in", "true");
     setLoginRedirectMessage(null);
     setViewMode("feed");
-    showToast("Selamat datang, Pengunjung!");
+    showToast("Selamat datang di Kareba'Ta!");
   };
 
   // Handler logout pengguna
@@ -2224,7 +2224,7 @@ export default function KarebaFeedFinal() {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
                 <h2 className="font-bold text-[16px] sm:text-[17px] text-neutral-900 tracking-[-0.015em] truncate max-w-[150px] sm:max-w-[200px]">
-                  {currentUser ? (userName.startsWith("@") ? userName.replace(/^@/, "") : userName) : "Pengunjung"}
+                  {currentUser ? (userName.startsWith("@") ? userName.replace(/^@/, "") : userName) : "Warga Kareba"}
                 </h2>
                 {currentUser && (
                   <span

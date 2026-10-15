@@ -1,10 +1,25 @@
-export function KarebaPinIcon({ className = "w-11 h-12" }: { className?: string }) {
+export function KarebaPinIcon({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <svg
       viewBox="0 0 100 120"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={{
+        width: "40px",
+        height: "40px",
+        minWidth: "40px",
+        minHeight: "40px",
+        flexShrink: 0,
+        flexGrow: 0,
+        ...style,
+      }}
       aria-label="Logo Pin Kareba'Ta"
     >
       {/* Bentuk Pin Lokasi Warna Kuning Keemasan Khas Kareba'Ta */}
@@ -30,25 +45,85 @@ export function KarebaTaLogo({
   className?: string;
 }) {
   return (
-    <div className={`flex items-center gap-2.5 sm:gap-3 select-none ${className}`}>
-      {/* Icon Pin Lokasi Kuning Keemasan */}
-      <div className="shrink-0 transition-transform duration-200 hover:scale-105 drop-shadow-xs">
-        <KarebaPinIcon className="w-10 h-11 sm:w-11 sm:h-12" />
+    <div
+      className={`select-none ${className}`}
+      style={{
+        height: "40px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        flexShrink: 0,
+        flexGrow: 0,
+      }}
+    >
+      {/* Logo K: width 40px, height 40px, minWidth 40px, minHeight 40px, flexShrink 0, flexGrow 0 */}
+      <div
+        style={{
+          width: "40px",
+          height: "40px",
+          minWidth: "40px",
+          minHeight: "40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          flexGrow: 0,
+        }}
+      >
+        <KarebaPinIcon
+          style={{
+            width: "40px",
+            height: "40px",
+            minWidth: "40px",
+            minHeight: "40px",
+            flexShrink: 0,
+            flexGrow: 0,
+          }}
+        />
       </div>
 
-      {/* Typography Kareba'Ta (Kareba' Hijau Tua & Ta Kuning Keemasan) & Slogan "beritamu suaramu" */}
-      <div className="flex flex-col justify-center">
+      {/* Container Tulisan */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          flexShrink: 0,
+          flexGrow: 0,
+        }}
+      >
+        {/* Tulisan Kareba'Ta: fontSize 18px, lineHeight 1, whiteSpace nowrap, flexShrink 0 */}
         <div
-          className="text-2xl sm:text-[28px] font-[900] tracking-tight leading-none"
-          style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
+          style={{
+            fontSize: "18px",
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            flexGrow: 0,
+            fontWeight: 900,
+            letterSpacing: "-0.02em",
+            fontFamily: "'Poppins', system-ui, sans-serif",
+          }}
         >
-          <span className="text-[#00632B]">Kareba'</span>
-          <span className="text-[#E5A000]">Ta</span>
+          <span style={{ color: "#00632B" }}>Kareba'</span>
+          <span style={{ color: "#E5A000" }}>Ta</span>
         </div>
+
         {showSubtitle && (
           <span
-            className="text-[12px] sm:text-[13px] font-bold tracking-[0.05em] text-[#E5A000] leading-tight mt-1"
-            style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
+            style={{
+              fontSize: "9px",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              flexGrow: 0,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              color: "#E5A000",
+              marginTop: "2px",
+              textTransform: "uppercase",
+              fontFamily: "'Poppins', system-ui, sans-serif",
+            }}
           >
             beritamu, suaramu
           </span>
@@ -57,4 +132,3 @@ export function KarebaTaLogo({
     </div>
   );
 }
-
