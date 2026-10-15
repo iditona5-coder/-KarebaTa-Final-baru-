@@ -1,19 +1,38 @@
-export default function KarebaTaLogo() {
+export function KarebaPinIcon({ style }: { style?: React.CSSProperties }) {
   return (
-    <img 
-      src="/logo-karebata.png" 
-      alt="Kareba'Ta"
-      style={{
-        width: "185px",
-        minWidth: "185px",
-        maxWidth: "185px",
-        height: "56px",
-        minHeight: "56px",
-        maxHeight: "56px",
-        objectFit: "contain",
-        display: "block",
-        flexShrink: 0
-      }}
-    />
+    <div style={{
+      width: '40px',
+      height: '40px',
+      backgroundColor: '#EAB308',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontWeight: 900,
+      fontSize: '22px',
+      flexShrink: 0,
+      ...style
+    }}>
+      K
+    </div>
   );
 }
+
+export function KarebaTaLogo() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <KarebaPinIcon />
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+        <span style={{ fontWeight: 800, color: '#14532d' }}>Kareba'Ta</span>
+        <span style={{ fontSize: '10px', color: '#EAB308' }}>BERITAMU, SUARAMU</span>
+      </div>
+    </div>
+  );
+}
+
+export default KarebaTaLogo;
