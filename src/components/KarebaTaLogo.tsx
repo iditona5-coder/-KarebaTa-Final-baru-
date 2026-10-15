@@ -70,6 +70,11 @@ export function KarebaTaLogo({
         <span style={{ fontSize: "20px", fontWeight: 800, lineHeight: "20px", whiteSpace: "nowrap", color: "#166534" }}>
           Kareba'Ta
         </span>
+        {showSubtitle && (
+          <span style={{ fontSize: "10px", fontWeight: 700, lineHeight: "10px", whiteSpace: "nowrap", color: "#CA8A04", marginTop: "2px", letterSpacing: "0.5px" }}>
+            BERITAMU, SUARAMU
+          </span>
+        )}
       </div>
     </div>
   );
