@@ -6,7 +6,6 @@ export function KarebaPinIcon({ className = "", style, }: { className?: string; 
     </svg>
   );
 }
-
 export function KarebaTaLogo({ showSubtitle = true, className = "", }: { showSubtitle?: boolean; className?: string; }) {
   return (
     <div className={`select-none ${className}`} style={{ height: "40px", display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexGrow: 0, paddingLeft: "12px" }}>
