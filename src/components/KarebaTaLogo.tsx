@@ -6,9 +6,10 @@ export function KarebaPinIcon({ className = "", style, }: { className?: string; 
     </svg>
   );
 }
+
 export function KarebaTaLogo({ showSubtitle = true, className = "", }: { showSubtitle?: boolean; className?: string; }) {
   return (
-    <div className={`select-none ${className}`} style={{ height: "40px", display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexGrow: 0, paddingLeft: "12px" }}>
+    <div className={`select-none ${className}`} style={{ height: "40px", display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexGrow: 0, paddingLeft: "6px" }}>
       <div style={{ width: "40px", height: "40px", minWidth: "40px", minHeight: "40px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, flexGrow: 0 }}>
         <KarebaPinIcon style={{ width: "40px", height: "40px", minWidth: "40px", minHeight: "40px" }} />
       </div>
@@ -23,4 +24,5 @@ export function KarebaTaLogo({ showSubtitle = true, className = "", }: { showSub
     </div>
   );
 }
+
 export default KarebaTaLogo;
