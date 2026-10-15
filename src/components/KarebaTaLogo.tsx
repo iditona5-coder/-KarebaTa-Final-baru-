@@ -9,16 +9,16 @@ export function KarebaPinIcon({ className = "", style, }: { className?: string; 
 
 export function KarebaTaLogo({ showSubtitle = true, className = "", }: { showSubtitle?: boolean; className?: string; }) {
   return (
-    <div className={`select-none ${className}`} style={{ height: "40px", display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexGrow: 0, paddingLeft: "0px", marginLeft: "-2px" }}>
-      <div style={{ width: "40px", height: "40px", minWidth: "40px", minHeight: "40px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, flexGrow: 0 }}>
-        <KarebaPinIcon style={{ width: "40px", height: "40px", minWidth: "40px", minHeight: "40px" }} />
+    <div className={`select-none ${className}`} style={{ height: "40px", display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, paddingLeft: "0px" }}>
+      <div style={{ width: "40px", height: "40px", minWidth: "40px", minHeight: "40px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <KarebaPinIcon style={{ width: "40px", height: "40px" }} />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexShrink: 0 }}>
-        <div style={{ fontSize: "18px", lineHeight: 1, whiteSpace: "nowrap", flexShrink: 0, fontWeight: 900, letterSpacing: "-0.02em", fontFamily: "Poppins, system-ui, sans-serif" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ fontSize: "18px", lineHeight: 1, whiteSpace: "nowrap", fontWeight: 900, fontFamily: "Poppins, system-ui, sans-serif" }}>
           <span style={{ color: "#00623B" }}>Kareba'</span><span style={{ color: "#E5A000" }}>Ta</span>
         </div>
         {showSubtitle && (
-          <span style={{ fontSize: "9px", lineHeight: 1, whiteSpace: "nowrap", flexShrink: 0, flexGrow: 0, fontWeight: 800, letterSpacing: "0.08em", color: "#E5A000" }}>beritamu suaramu</span>
+          <span style={{ fontSize: "9px", lineHeight: 1, whiteSpace: "nowrap", fontWeight: 800, letterSpacing: "0.08em", color: "#E5A000" }}>beritamu suaramu</span>
         )}
       </div>
     </div>
