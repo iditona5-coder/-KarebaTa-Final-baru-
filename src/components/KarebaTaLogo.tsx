@@ -1,19 +1,24 @@
 export default function KarebaTaLogo() {
   return (
-    <img 
-      src="/logo-karebata.png" 
-      alt="Kareba'Ta"
-      style={{
-        width: "185px",
-        minWidth: "185px",
-        maxWidth: "185px",
-        height: "56px",
-        minHeight: "56px",
-        maxHeight: "56px",
-        objectFit: "contain",
-        display: "block",
-        flexShrink: 0
-      }}
-    />
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      flexShrink: 0,
+      width: "clamp(135px, 42vw, 195px)",
+      height: "auto",
+      aspectRatio: "195 / 56",
+    }}>
+      <img 
+        src="/logo-karebata.png" 
+        alt="Kareba'Ta"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          objectPosition: "left center",
+          display: "block"
+        }}
+      />
+    </div>
   );
 }
