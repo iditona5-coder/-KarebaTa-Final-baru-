@@ -1,49 +1,76 @@
-// components/Header.tsx - KODE LENGKAP ANTI MEPET KANAN
-import KarebaTaLogo from "./KarebaTaLogo";
-
-export default function Header() {
+export function KarebaPinIcon({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
-    <header 
-      style={{ 
-        width: "100%",
-        height: "64px",
-        backgroundColor: "white",
+    <svg
+      viewBox="0 0 100 120"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={{
+        width: "44px",
+        height: "44px",
+        minWidth: "44px",
+        minHeight: "44px",
+        maxWidth: "44px",
+        maxHeight: "44px",
+        flexShrink: 0,
+        flexGrow: 0,
+        ...style,
+      }}
+      aria-label="Logo Pin Kareba'Ta"
+    >
+      <path
+        d="M 50 118 C 47 108 10 70 10 46 A 40 40 0 1 1 90 46 C 90 70 53 108 50 118 Z"
+        fill="#E5A000"
+      />
+      <path
+        d="M 30 25 H 41 V 44.5 L 59.5 25 H 73.5 L 50.5 47.5 L 74.5 71 H 60.5 L 41 51 V 71 H 30 V 25 Z"
+        fill="#ffffff"
+      />
+    </svg>
+  );
+}
+
+export function KarebaTaLogo({
+  showSubtitle = true,
+  className = "",
+}: {
+  showSubtitle?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`select-none ${className}`}
+      style={{
+        width: "185px",
+        minWidth: "185px",
+        maxWidth: "185px",
+        height: "56px",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        paddingLeft: "16px",
-        paddingRight: "24px", // INI KUNCI - JARAK KANAN 24px BIAR TIDAK MEPET
-        boxSizing: "border-box",
-        borderBottom: "1px solid #eee",
-        position: "sticky",
-        top: 0,
-        zIndex: 50
+        gap: "10px",
+        flexShrink: 0,
+        flexGrow: 0,
       }}
     >
-      {/* KIRI - LOGO */}
-      <div style={{ flexShrink: 0 }}>
-        <KarebaTaLogo />
-      </div>
-
-      {/* KANAN - ICON MEDIA - TIDAK MEPET KANAN LAGI */}
-      <div 
-        style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: "16px", // JARAK ANTAR ICON 16px
-          paddingRight: "4px"
+      <KarebaPinIcon
+        style={{
+          width: "44px",
+          height: "44px",
+          minWidth: "44px",
+          minHeight: "44px",
         }}
-      >
-        {/* Icon Search */}
-        <button style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none" }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-3.5-3.5"/></svg>
-        </button>
-
-        {/* Icon Kamera */}
-        <button style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none" }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-        </button>
-
-        {/* Icon Gambar */}
-        <button style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none" }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21
+      />
+      <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <span style={{ fontSize: "20px", fontWeight: 800, lineHeight: "20px", whiteSpace: "nowrap", color: "#166534" }}>
+          Kareba'Ta
+        </span>
+      </div>
+    </div>
+  );
+}
