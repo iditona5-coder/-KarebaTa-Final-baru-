@@ -1,81 +1,39 @@
-export function KarebaPinIcon({
-  className = "",
-  style,
-}: {
-  className?: string;
-  style?: React.CSSProperties;
-}) {
+export function KarebaPinIcon({ style }: { style?: React.CSSProperties }) {
   return (
-    <svg
-      viewBox="0 0 100 120"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      style={{
-        width: "44px",
-        height: "44px",
-        minWidth: "44px",
-        minHeight: "44px",
-        maxWidth: "44px",
-        maxHeight: "44px",
-        flexShrink: 0,
-        flexGrow: 0,
-        ...style,
-      }}
-      aria-label="Logo Pin Kareba'Ta"
-    >
-      <path
-        d="M 50 118 C 47 108 10 70 10 46 A 40 40 0 1 1 90 46 C 90 70 53 108 50 118 Z"
-        fill="#E5A000"
-      />
-      <path
-        d="M 30 25 H 41 V 44.5 L 59.5 25 H 73.5 L 50.5 47.5 L 74.5 71 H 60.5 L 41 51 V 71 H 30 V 25 Z"
-        fill="#ffffff"
-      />
-    </svg>
+    <div style={{
+      width: "44px", minWidth: "44px", maxWidth: "44px",
+      height: "56px", minHeight: "56px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      flexShrink: 0, ...style
+    }}>
+      <svg viewBox="0 0 100 130" style={{ width: "44px", height: "54px" }}>
+        <path d="M50 126 L46 118 C35 95 8 70 8 42 A42 42 0 0 1 92 42 C92 70 65 95 54 118 L50 126Z" fill="#EAB308" />
+        <text x="50" y="68" textAnchor="middle" fill="white" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="54" letterSpacing="-2">K</text>
+      </svg>
+    </div>
   );
 }
 
-export function KarebaTaLogo({
-  showSubtitle = true,
-  className = "",
-}: {
-  showSubtitle?: boolean;
-  className?: string;
-}) {
+export function KarebaTaLogo() {
   return (
-    <div
-      className={`select-none ${className}`}
-      style={{
-        width: "185px",
-        minWidth: "185px",
-        maxWidth: "185px",
-        height: "56px",
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        flexShrink: 0,
-        flexGrow: 0,
-      }}
-    >
-      <KarebaPinIcon
-        style={{
-          width: "44px",
-          height: "44px",
-          minWidth: "44px",
-          minHeight: "44px",
-        }}
-      />
-      <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        <span style={{ fontSize: "20px", fontWeight: 800, lineHeight: "20px", whiteSpace: "nowrap", color: "#166534" }}>
-          Kareba'Ta
-        </span>
-        {showSubtitle && (
-          <span style={{ fontSize: "10px", fontWeight: 700, lineHeight: "10px", whiteSpace: "nowrap", color: "#CA8A04", marginTop: "2px", letterSpacing: "0.5px" }}>
-            BERITAMU, SUARAMU
-          </span>
-        )}
+    <div style={{
+      width: "195px", minWidth: "195px", maxWidth: "195px",
+      height: "56px", display: "flex", alignItems: "center", gap: "10px", flexShrink: 0
+    }}>
+      <KarebaPinIcon />
+      <div style={{ display: "flex", flexDirection: "column", flexShrink: 0, marginTop: "-2px" }}>
+        <div style={{ display: "flex", whiteSpace: "nowrap", lineHeight: "1" }}>
+          <span style={{ fontSize: "26px", fontWeight: 900, color: "#0E5E2F", fontFamily: "'Baloo 2', 'Nunito', sans-serif", letterSpacing: "-0.5px" }}>Kareba'</span>
+          <span style={{ fontSize: "26px", fontWeight: 900, color: "#EAB308", fontFamily: "'Baloo 2', 'Nunito', sans-serif", letterSpacing: "-0.5px" }}>Ta</span>
+        </div>
+        <span style={{
+          fontSize: "13px", fontWeight: 700, color: "#EAB308",
+          fontFamily: "'Nunito', sans-serif",
+          letterSpacing: "0.3px", marginTop: "1px", whiteSpace: "nowrap", lineHeight: "1"
+        }}>beritamu suaramu</span>
       </div>
     </div>
   );
 }
+
+export default KarebaTaLogo;
