@@ -43,13 +43,17 @@ import { SponsorAdCard } from "./components/SponsorAdCard";
 import { extractVideoThumbnail } from "./utils/thumbnail";
 import { compressImageFile } from "./utils/compressor";
 import { uploadToImageKit, deleteFromImageKit } from "./services/imagekit";
+import { checkContentModeration } from "./utils/contentModeration";
 import {
   savePostToFirestore,
   listenToFirestorePosts,
   deletePostFromFirestore,
   togglePostLikeInFirestore,
   incrementPostViewInFirestore,
+  incrementPostShareInFirestore,
+  togglePostSaveInFirestore,
   addCommentToFirestore,
+  updatePostCommentsInFirestore,
   listenToFirestoreBulletins,
   submitReportToFirestore,
   subscribeToAuth,
@@ -115,6 +119,16 @@ export default function KarebaFeedFinal() {
     }
   });
 
+  // Postingan yang disembunyikan oleh pengguna (misal konten yang baru saja dilaporkan karena vulgar)
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("karebata_hidden_posts");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const likedPostIdsRef = useRef(likedPostIds);
   useEffect(() => {
     likedPostIdsRef.current = likedPostIds;
@@ -170,7 +184,6 @@ export default function KarebaFeedFinal() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCategory, setSearchCategory] = useState<SearchFilterCategory>("all");
-  const [isSearchSuggestionsOpen, setIsSearchSuggestionsOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeDetailPost, setActiveDetailPost] = useState<PostItem | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
@@ -472,6 +485,7 @@ export default function KarebaFeedFinal() {
     if (ok) {
       setCurrentUser(null);
       setUserName("warga_kareba");
+      setPosts([]);
       sessionStorage.removeItem("kareba_guest_mode");
       sessionStorage.removeItem("karebata_active_session");
       localStorage.removeItem("kareba_guest_mode");
@@ -509,18 +523,21 @@ export default function KarebaFeedFinal() {
   // Helper untuk mengecek apakah suatu postingan adalah milik akun sendiri:
   // - Pada postingan sendiri: HANYA kita yang melihat icon X (Hapus), dan TIDAK melihat icon Laporkan.
   // - Pada postingan orang lain: kita melihat icon Laporkan, dan TIDAK melihat icon X (Hapus).
-  const isMyPost = (item: { isMyPost?: boolean; user?: string; email?: string }) => {
-    const myEmail = (currentUser?.email || userEmail || "").toLowerCase();
-    const myName = (userName || "").toLowerCase();
-    if (myEmail && item.email && item.email.toLowerCase() === myEmail) {
+  const isMyPost = (item: { isMyPost?: boolean; user?: string; email?: string; authorUid?: string }) => {
+    if (!currentUser) return false;
+    const myUid = (currentUser.uid || "").trim();
+    const myEmail = (currentUser.email || "").trim().toLowerCase();
+
+    // 1. Cek kecocokan UID unik akun Google (paling presisi antar akun)
+    if (myUid && item.authorUid && item.authorUid.trim() === myUid) {
       return true;
     }
-    if (myName && item.user && item.user.toLowerCase() === myName) {
+
+    // 2. Cek kecocokan alamat email akun Google
+    if (myEmail && item.email && item.email.trim().toLowerCase() === myEmail) {
       return true;
     }
-    if (typeof item.isMyPost === "boolean") {
-      return item.isMyPost;
-    }
+
     return false;
   };
 
@@ -724,9 +741,9 @@ export default function KarebaFeedFinal() {
             mediaType: f.mediaType || "image",
             caption: f.text || "",
             createdAt: f.time || "Baru saja",
-            name: f.name || userName,
-            email: f.email || userEmail,
-            user: f.user || userName,
+            name: f.name || f.user || "Warga",
+            email: f.email || "",
+            user: f.user || "warga",
             init: f.init || initial,
             isMyPost: true,
           }));
@@ -793,6 +810,8 @@ export default function KarebaFeedFinal() {
           : item
       )
     );
+    // Simpan ke Firestore
+    incrementPostShareInFirestore(postId);
   };
 
   // Handler untuk menyimpan / membatalkan simpan sebuah kabar (Bookmark)
@@ -842,64 +861,15 @@ export default function KarebaFeedFinal() {
         return item;
       })
     );
+
+    // Simpan ke Firestore
+    togglePostSaveInFirestore(postId, willBeSaved ? 1 : -1);
   };
 
-  // Filter pencarian terarah langsung di halaman utama: Akun, Lokasi, atau Berita
+  // Beranda selalu menampilkan seluruh kabar warga asli (pencarian tampil eksklusif di Halaman Pencarian)
   const displayFeed = useMemo(() => {
-    const rawQ = searchQuery.trim();
-    if (!rawQ) return feed;
-
-    const lowerQ = rawQ.toLowerCase();
-
-    // Deteksi otomatis jika pengguna mengetik awalan khusus
-    let activeFilter = searchCategory;
-    let cleanQ = lowerQ;
-
-    if (rawQ.startsWith("@")) {
-      activeFilter = "account";
-      cleanQ = lowerQ.replace(/^@+/, "").trim();
-    } else if (rawQ.toLowerCase().startsWith("lokasi:")) {
-      activeFilter = "location";
-      cleanQ = lowerQ.replace(/^lokasi:\s*/i, "").trim();
-    } else if (rawQ.toLowerCase().startsWith("berita:")) {
-      activeFilter = "news";
-      cleanQ = lowerQ.replace(/^berita:\s*/i, "").trim();
-    }
-
-    if (!cleanQ && activeFilter === "account") {
-      return feed;
-    }
-
-    return feed.filter((item) => {
-      const itemUser = (item.user || "").toLowerCase().replace(/^@+/, "");
-      const itemName = (item.name || "").toLowerCase();
-      const itemLoc = (item.location || "").toLowerCase();
-      const itemText = (item.text || "").toLowerCase();
-
-      if (activeFilter === "account") {
-        // CUKUP akun yang punya postingan itu saja yang muncul
-        return itemUser.includes(cleanQ) || itemName.includes(cleanQ);
-      }
-
-      if (activeFilter === "location") {
-        // SEMUA postingan dengan lokasi yang sama yang muncul
-        return itemLoc.includes(cleanQ);
-      }
-
-      if (activeFilter === "news") {
-        // Postingan dengan isi/judul/topik berita yang cocok yang muncul
-        return itemText.includes(cleanQ);
-      }
-
-      // 'all': cocokkan nama akun, lokasi, atau teks berita
-      return (
-        itemUser.includes(cleanQ) ||
-        itemName.includes(cleanQ) ||
-        itemLoc.includes(cleanQ) ||
-        itemText.includes(cleanQ)
-      );
-    });
-  }, [feed, searchQuery, searchCategory]);
+    return feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id));
+  }, [feed, hiddenPostIds]);
 
   // Helper untuk menggulirkan layar langsung tertuju ke media postingan di feed
   const scrollToFeedMedia = (postId: string) => {
@@ -997,10 +967,10 @@ export default function KarebaFeedFinal() {
             mediaType: p.mediaType || "image",
             caption: p.text || "",
             createdAt: p.time || "Baru saja",
-            name: p.name || userName,
-            email: p.email || userEmail,
-            user: p.user || userName,
-            init: p.init || initial,
+            name: p.name || p.user || "Warga",
+            email: p.email || "",
+            user: p.user || "warga",
+            init: p.init || (p.user ? p.user[0].toUpperCase() : "W"),
             isMyPost: true,
           }));
 
@@ -1168,11 +1138,11 @@ export default function KarebaFeedFinal() {
       // Jika belum ada di feed warga, sisipkan langsung agar bisa dilihat
       target = {
         id: p.id,
-        user: isOwner ? userName : (p.user || "warga"),
-        init: isOwner ? initial : (p.init || "W"),
-        name: isOwner ? "Sahabat Kareba (Kamu)" : (p.name || p.user || "Warga"),
-        email: isOwner ? userEmail : p.email,
-        avatar: isOwner ? undefined : p.avatar,
+        user: p.user || "warga",
+        init: p.init || (p.user ? p.user[0].toUpperCase() : "W"),
+        name: p.name || p.user || "Warga",
+        email: p.email,
+        avatar: p.avatar,
         time: p.createdAt || "Baru saja",
         text: p.caption || p.title || "Kabar Warga",
         img: p.img,
@@ -1198,11 +1168,11 @@ export default function KarebaFeedFinal() {
       thumbnail: p.thumbnail || target.thumbnail,
       mediaType: p.mediaType || target.mediaType || "image",
       createdAt: p.createdAt || target.time || "Baru saja",
-      name: isOwner ? userName : (target.name || p.name || target.user || p.user || "Warga"),
-      email: isOwner ? userEmail : (target.email || p.email),
-      user: isOwner ? userName : (target.user || p.user || "warga"),
-      init: isOwner ? initial : (target.init || p.init || (p.user ? p.user.trim().replace(/^@/, "")[0] : "W")).toUpperCase(),
-      avatar: isOwner ? undefined : (target.avatar || p.avatar),
+      name: target.name || p.name || target.user || p.user || "Warga",
+      email: target.email || p.email,
+      user: target.user || p.user || "warga",
+      init: ((target.user || p.user || "W").trim().replace(/^@/, "")[0] || "W").toUpperCase(),
+      avatar: target.avatar || p.avatar,
       isMyPost: isOwner,
     });
   };
@@ -1333,25 +1303,29 @@ export default function KarebaFeedFinal() {
         return item;
       })
     );
+    const updatedComments = (activeCommentItem.comments || []).map((comm) => {
+      if (comm.id === commentId) {
+        const currentLikes = comm.likes ?? 0;
+        const isNowLiked = !comm.isLiked;
+        return {
+          ...comm,
+          isLiked: isNowLiked,
+          likes: isNowLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1),
+        };
+      }
+      return comm;
+    });
+
     setActiveCommentItem((prev) =>
       prev
         ? {
             ...prev,
-            comments: (prev.comments || []).map((comm) => {
-              if (comm.id === commentId) {
-                const currentLikes = comm.likes ?? 0;
-                const isNowLiked = !comm.isLiked;
-                return {
-                  ...comm,
-                  isLiked: isNowLiked,
-                  likes: isNowLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1),
-                };
-              }
-              return comm;
-            }),
+            comments: updatedComments,
           }
         : null
     );
+
+    updatePostCommentsInFirestore(activeCommentItem.id, updatedComments);
   };
 
   // Handler Balas Komentar
@@ -1366,12 +1340,14 @@ export default function KarebaFeedFinal() {
   // Handler Hapus Komentar (hanya pemilik komentar)
   const handleDeleteComment = (commentId: string) => {
     if (!activeCommentItem) return;
+    const remainingComments = (activeCommentItem.comments || []).filter((comm) => comm.id !== commentId);
+
     setFeed((prevFeed) =>
       prevFeed.map((item) => {
         if (item.id === activeCommentItem.id) {
           return {
             ...item,
-            comments: (item.comments || []).filter((comm) => comm.id !== commentId),
+            comments: remainingComments,
           };
         }
         return item;
@@ -1381,7 +1357,7 @@ export default function KarebaFeedFinal() {
       prev
         ? {
             ...prev,
-            comments: (prev.comments || []).filter((comm) => comm.id !== commentId),
+            comments: remainingComments,
           }
         : null
     );
@@ -1390,6 +1366,9 @@ export default function KarebaFeedFinal() {
       komentar: Math.max(0, prev.komentar - 1),
     }));
     showToast("Komentar berhasil dihapus");
+
+    // Simpan perubahan ke Firestore
+    updatePostCommentsInFirestore(activeCommentItem.id, remainingComments);
   };
 
   // Handler Kirim Komentar Baru (Wajib Login Google)
@@ -1405,6 +1384,14 @@ export default function KarebaFeedFinal() {
     }
     if (!commentInputText.trim() || !activeCommentItem) return;
     const text = commentInputText.trim();
+
+    // Filter Kata Jorok / Asusila / Makian pada komentar (100% Gratis)
+    const commentCheck = checkContentModeration(text);
+    if (!commentCheck.isClean) {
+      showToast(`Komentar ditolak: Mengandung kata tidak pantas ("${commentCheck.flaggedWord}"). Mohon gunakan bahasa yang santun.`);
+      return;
+    }
+
     const newComment = {
       id: `c-${Date.now()}`,
       user: userName,
@@ -1440,11 +1427,26 @@ export default function KarebaFeedFinal() {
     addCommentToFirestore(activeCommentItem.id, newComment);
   };
 
-  // Cek apakah ketiga syarat (media, deskripsi minimal 99 huruf, lokasi) sudah terisi lengkap
+  // Deteksi kata jorok / asusila / kasar secara real-time pada form postingan (100% Gratis)
+  const moderationWarning = useMemo(() => {
+    if (!description.trim() && !selectedLocation.trim()) return null;
+    const descCheck = checkContentModeration(description);
+    if (!descCheck.isClean) {
+      return descCheck;
+    }
+    const locCheck = checkContentModeration(selectedLocation);
+    if (!locCheck.isClean) {
+      return locCheck;
+    }
+    return null;
+  }, [description, selectedLocation]);
+
+  // Cek apakah ketiga syarat (media, deskripsi minimal 99 huruf, lokasi) sudah terisi lengkap dan bersih dari kata terlarang
   const isPublishReady =
     Boolean(selectedImage) &&
     description.trim().length >= 99 &&
-    selectedLocation.trim().length > 0;
+    selectedLocation.trim().length > 0 &&
+    !moderationWarning;
 
   // Fungsi Posting Baru ke Feed & Postingan Kamu
   const handleCreatePost = () => {
@@ -1467,6 +1469,22 @@ export default function KarebaFeedFinal() {
     }
     if (!selectedLocation.trim()) {
       showToast("Isi lokasi kabar terlebih dahulu!");
+      return;
+    }
+
+    // Pos pemeriksaan moderasi kata jorok, porno, dan kasar (100% Gratis)
+    if (moderationWarning && !moderationWarning.isClean) {
+      showToast(`Ditolak: ${moderationWarning.reason} Terdeteksi: "${moderationWarning.flaggedWord}".`);
+      return;
+    }
+    const checkDesc = checkContentModeration(description);
+    if (!checkDesc.isClean) {
+      showToast(`Ditolak: ${checkDesc.reason} Dilarang menggunakan kata "${checkDesc.flaggedWord}".`);
+      return;
+    }
+    const checkLoc = checkContentModeration(selectedLocation);
+    if (!checkLoc.isClean) {
+      showToast(`Ditolak: Lokasi mengandung kata tidak pantas ("${checkLoc.flaggedWord}").`);
       return;
     }
 
@@ -1545,7 +1563,8 @@ export default function KarebaFeedFinal() {
         user: userName,
         init: initial,
         name: userName,
-        email: currentUser?.email || "iditona5@gmail.com",
+        authorUid: currentUser?.uid || "",
+        email: currentUser?.email || "",
         avatar: undefined,
         time: "Baru saja",
         text: finalDesc || "Momen spesial hari ini 📸",
@@ -1573,7 +1592,8 @@ export default function KarebaFeedFinal() {
         caption: finalDesc,
         createdAt: "Baru saja",
         name: userName,
-        email: currentUser?.email || "iditona5@gmail.com",
+        authorUid: currentUser?.uid || "",
+        email: currentUser?.email || "",
         user: userName,
         init: initial,
         isMyPost: true,
@@ -1673,9 +1693,10 @@ export default function KarebaFeedFinal() {
       return;
     }
     const targetUser = reportPostData.user;
+    const reportedPostId = reportPostData.id;
     const reportItem: ReportItem = {
       id: `rep-${Date.now()}`,
-      postId: reportPostData.id,
+      postId: reportedPostId,
       targetUser: reportPostData.user,
       postText: reportPostData.text || "",
       reason: reportReason,
@@ -1686,8 +1707,20 @@ export default function KarebaFeedFinal() {
       timeString: "Baru saja",
     };
     submitReportToFirestore(reportItem);
+
+    // Langsung sembunyikan postingan dari layar pelapor seketika (100% Gratis, Aman & Cepat)
+    setHiddenPostIds((prev) => {
+      const updated = Array.from(new Set([...prev, reportedPostId]));
+      try {
+        localStorage.setItem("karebata_hidden_posts", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Gagal simpan hidden posts:", e);
+      }
+      return updated;
+    });
+
     setReportPostData(null);
-    showToast(`Laporan atas kabar @${targetUser} berhasil dikirim untuk ditinjau tim Kareba'Ta.`);
+    showToast(`Laporan atas kabar @${targetUser} diterima. Konten telah disembunyikan dari layar Anda dan diteruskan ke Pengawas.`);
   };
 
   // FUNGSI PENGHAPUSAN SINKRON: Menghapus berita dari Feed DAN Kartu Kabar Kamu sekaligus
@@ -1903,17 +1936,7 @@ export default function KarebaFeedFinal() {
                       type="text"
                       autoFocus
                       value={searchQuery}
-                      onFocus={() => setIsSearchSuggestionsOpen(true)}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && searchQuery.trim()) {
-                          setIsSearchSuggestionsOpen(false);
-                          const container = document.getElementById("feed-vertical-container");
-                          if (container) {
-                            container.scrollIntoView({ behavior: "smooth" });
-                          }
-                        }
-                      }}
                       placeholder={
                         searchCategory === "account"
                           ? "Ketik nama akun (@username)..."
@@ -1944,11 +1967,9 @@ export default function KarebaFeedFinal() {
                     type="button"
                     onClick={() => {
                       setIsSearchOpen(false);
-                      setIsSearchSuggestionsOpen(false);
                       setSearchCategory("all");
                       setSearchQuery("");
                       setHighlightedPostId(null);
-                      scrollToTop();
                     }}
                     className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 px-2 py-1.5 rounded-lg hover:bg-neutral-100 transition cursor-pointer shrink-0"
                   >
@@ -2024,7 +2045,6 @@ export default function KarebaFeedFinal() {
                     type="button"
                     onClick={() => {
                       setIsSearchOpen(true);
-                      setIsSearchSuggestionsOpen(true);
                     }}
                     className="p-2 text-neutral-800 hover:text-[#00632B] transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Cari"
@@ -2055,12 +2075,14 @@ export default function KarebaFeedFinal() {
           </header>
 
           {/* Papan Teks Berjalan di Bawah Bar */}
-          <RunningTextBar
-            announcements={bulletins}
-            onItemClick={(text) => {
-              showToast(text);
-            }}
-          />
+          {!isSearchOpen && (
+            <RunningTextBar
+              announcements={bulletins}
+              onItemClick={(text) => {
+                showToast(text);
+              }}
+            />
+          )}
 
           {/* PAPAN HORIZONTAL STATUS UNGGAH MEDIA (ALA FACEBOOK) - DI BAWAH PAPAN TEKS BERJALAN */}
           {uploadStatus === "uploading" && (
@@ -2712,8 +2734,20 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
 
+              {/* Peringatan Pedoman Komunitas Bebas Asusila & Santun (100% Gratis) */}
+              <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-2.5 text-xs text-emerald-950 flex items-start gap-2 select-none">
+                <ShieldCheck className="w-4 h-4 text-[#00632B] shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <span className="font-bold text-neutral-900">Pedoman Konten Santun Kareba&apos;Ta:</span> Dilarang keras mempublikasikan pornografi, busana seksi/terbuka berlebihan, goyangan erotis, pose julur lidah sensual, serta kata jorok atau makian.
+                </div>
+              </div>
+
               {/* KETIK DESKRIPSI KABAR (BATAS 500 HURUF) */}
-              <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white transition space-y-1.5">
+              <div className={`rounded-xl p-3 border transition space-y-1.5 ${
+                moderationWarning
+                  ? "border-red-400 bg-red-50/40"
+                  : "bg-neutral-50 border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white"
+              }`}>
                 <div className="flex items-center justify-between">
                   <label htmlFor="post-description-input" className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
                     <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Deskripsi Kabar:
@@ -2732,6 +2766,17 @@ export default function KarebaFeedFinal() {
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none"
                   autoFocus
                 />
+
+                {/* Indikator Peringatan Kata Terlarang / Jorok */}
+                {moderationWarning && (
+                  <div className="mt-2 p-2.5 rounded-lg bg-red-100/90 border border-red-300 text-red-900 text-xs flex items-start gap-2 animate-fade-in">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-[11px]">Terdeteksi kata dilarang: &ldquo;{moderationWarning.flaggedWord}&rdquo;</p>
+                      <p className="text-[10px] text-red-700 leading-tight">{moderationWarning.reason}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* KETIK LOKASI MANUAL (BATAS 30 HURUF) */}
@@ -2768,6 +2813,9 @@ export default function KarebaFeedFinal() {
                   <span className={`flex items-center gap-0.5 ${selectedLocation.trim() ? "text-emerald-600 font-bold" : "text-neutral-400"}`}>
                     {selectedLocation.trim() ? "✓" : "○"} Lokasi
                   </span>
+                  <span className={`flex items-center gap-0.5 ${!moderationWarning ? "text-emerald-600 font-bold" : "text-red-600 font-bold"}`}>
+                    {!moderationWarning ? "✓" : "✕"} Bahasa Santun
+                  </span>
                 </div>
               </div>
 
@@ -2786,7 +2834,9 @@ export default function KarebaFeedFinal() {
                 >
                   <Send className="w-4 h-4" />
                   <span>
-                    {description.trim().length < 99
+                    {moderationWarning
+                      ? `Hapus kata terlarang: "${moderationWarning.flaggedWord}"`
+                      : description.trim().length < 99
                       ? `Ketik minimal 99 huruf (kurang ${Math.max(0, 99 - description.trim().length)})`
                       : "Bagikan kabar sekarang"}
                   </span>
@@ -2826,74 +2876,10 @@ export default function KarebaFeedFinal() {
           <div className="w-full px-4 pt-3.5 pb-2.5 bg-white border-b border-neutral-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                {searchQuery.trim() ? (
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {searchCategory === "account" || searchQuery.startsWith("@") ? (
-                      <div className="w-6 h-6 rounded-full bg-[#00632B]/10 flex items-center justify-center text-[#00632B] shrink-0">
-                        <UserIcon className="w-3.5 h-3.5" />
-                      </div>
-                    ) : searchCategory === "location" || searchQuery.toLowerCase().startsWith("lokasi:") ? (
-                      <div className="w-6 h-6 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500 shrink-0">
-                        <MapPin className="w-3.5 h-3.5 text-yellow-500" />
-                      </div>
-                    ) : searchCategory === "news" || searchQuery.toLowerCase().startsWith("berita:") ? (
-                      <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-[#00632B] shrink-0">
-                        <Newspaper className="w-3.5 h-3.5" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-600 shrink-0">
-                        <Search className="w-3.5 h-3.5" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h2 className="font-bold text-sm tracking-tight text-neutral-900 truncate">
-                        {searchCategory === "account" || searchQuery.startsWith("@")
-                          ? `Postingan @${searchQuery.replace(/^@+/, "")}`
-                          : searchCategory === "location" || searchQuery.toLowerCase().startsWith("lokasi:")
-                          ? `Lokasi: ${searchQuery.replace(/^lokasi:\s*/i, "")}`
-                          : searchCategory === "news" || searchQuery.toLowerCase().startsWith("berita:")
-                          ? `Berita: "${searchQuery.replace(/^berita:\s*/i, "")}"`
-                          : `Hasil: "${searchQuery}"`}
-                      </h2>
-                      <p className="text-[11px] text-neutral-500 truncate">
-                        {searchCategory === "account" || searchQuery.startsWith("@")
-                          ? "Hanya postingan milik akun ini yang ditampilkan"
-                          : searchCategory === "location" || searchQuery.toLowerCase().startsWith("lokasi:")
-                          ? "Semua kabar dengan lokasi yang sama"
-                          : searchCategory === "news"
-                          ? "Kabar dengan topik berita yang cocok"
-                          : "Pencarian di seluruh kategori"}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <h2 className="font-bold text-sm tracking-tight text-neutral-900">
-                    Kabar Warga
-                  </h2>
-                )}
+                <h2 className="font-bold text-sm tracking-tight text-neutral-900">
+                  Kabar Warga
+                </h2>
               </div>
-
-              {searchQuery.trim() ? (
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="text-xs text-[#00632B] font-semibold whitespace-nowrap">
-                    {displayFeed.length} kabar
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchCategory("all");
-                      setIsSearchOpen(false);
-                      setIsSearchSuggestionsOpen(false);
-                      setHighlightedPostId(null);
-                      scrollToTop();
-                    }}
-                    className="text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-medium transition cursor-pointer whitespace-nowrap"
-                  >
-                    Kembali
-                  </button>
-                </div>
-              ) : (
                 <button
                   id="help-kabar-warga-btn"
                   type="button"
@@ -2935,116 +2921,22 @@ export default function KarebaFeedFinal() {
                   <Megaphone className="w-3 h-3 text-amber-700" />
                   <span>Pasang Iklan</span>
                 </button>
-              )}
             </div>
-
-            {/* Filter Cepat di Feed Saat Pencarian Aktif */}
-            {searchQuery.trim() && (
-              <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-neutral-100 overflow-x-auto no-scrollbar">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 mr-0.5 shrink-0">Filter:</span>
-                <button
-                  type="button"
-                  onClick={() => setSearchCategory("all")}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition cursor-pointer whitespace-nowrap ${
-                    searchCategory === "all"
-                      ? "bg-[#00632B] text-white"
-                      : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"
-                  }`}
-                >
-                  Semua
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchCategory("account")}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
-                    searchCategory === "account"
-                      ? "bg-[#00632B] text-white"
-                      : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"
-                  }`}
-                >
-                  <UserIcon className="w-3 h-3" />
-                  <span>Akun Milik Ini</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchCategory("location")}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
-                    searchCategory === "location"
-                      ? "bg-[#00632B] text-white"
-                      : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"
-                  }`}
-                >
-                  <MapPin className="w-3 h-3 text-yellow-500" />
-                  <span>Lokasi Sama</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchCategory("news")}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
-                    searchCategory === "news"
-                      ? "bg-[#00632B] text-white"
-                      : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"
-                  }`}
-                >
-                  <Newspaper className="w-3 h-3 text-emerald-500" />
-                  <span>Berita Sama</span>
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="w-full bg-white">
             {displayFeed.length === 0 ? (
-              searchQuery.trim() ? (
-                <div className="p-8 text-center space-y-2">
-                  <Search className="w-8 h-8 text-neutral-300 mx-auto" />
-                  <p className="text-sm font-semibold text-neutral-700">Tidak ada kabar ditemukan</p>
-                  <p className="text-xs text-neutral-400">
-                    {searchCategory === "account"
-                      ? `Tidak ada postingan yang dibuat oleh akun "${searchQuery.replace(/^@+/, "")}".`
-                      : searchCategory === "location"
-                      ? `Tidak ada kabar dari lokasi "${searchQuery.replace(/^lokasi:\s*/i, "")}".`
-                      : searchCategory === "news"
-                      ? `Tidak ada berita yang cocok dengan "${searchQuery.replace(/^berita:\s*/i, "")}".`
-                      : `Tidak ditemukan kabar warga dengan kata kunci "${searchQuery}".`}
+              <div className="py-5 sm:py-6 px-4 text-center flex flex-col items-center justify-center space-y-2.5 animate-fade-in">
+                <div className="w-14 h-14 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-400 shadow-2xs">
+                  <Newspaper className="w-7 h-7 stroke-[1.75] text-neutral-400" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-bold text-neutral-900">Belum Ada Kabar Warga</h3>
+                  <p className="text-xs text-neutral-500 max-w-xs leading-normal">
+                    Aplikasi siap digunakan. Belum ada postingan warga yang diterbitkan. Jadilah yang pertama membagikan kabar!
                   </p>
-                  {searchCategory !== "all" && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchCategory("all")}
-                      className="mt-1 text-xs text-[#00632B] font-semibold hover:underline block mx-auto cursor-pointer"
-                    >
-                      Coba cari di semua kategori
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchCategory("all");
-                      setIsSearchOpen(false);
-                      setIsSearchSuggestionsOpen(false);
-                      setHighlightedPostId(null);
-                      scrollToTop();
-                    }}
-                    className="mt-2 text-xs bg-[#00632B] hover:bg-[#004f22] text-white font-medium px-4 py-2 rounded-full cursor-pointer shadow-xs transition"
-                  >
-                    Kembali ke Semua Kabar
-                  </button>
                 </div>
-              ) : (
-                <div className="py-5 sm:py-6 px-4 text-center flex flex-col items-center justify-center space-y-2.5 animate-fade-in">
-                  <div className="w-14 h-14 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-400 shadow-2xs">
-                    <Newspaper className="w-7 h-7 stroke-[1.75] text-neutral-400" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-sm sm:text-base font-bold text-neutral-900">Belum Ada Kabar Warga</h3>
-                    <p className="text-xs text-neutral-500 max-w-xs leading-normal">
-                      Aplikasi siap digunakan. Belum ada postingan warga yang diterbitkan. Jadilah yang pertama membagikan kabar!
-                    </p>
-                  </div>
-                </div>
-              )
+              </div>
             ) : (
               displayFeed.map((f, index) => (
               <Fragment key={f.id}>
@@ -3108,7 +3000,7 @@ export default function KarebaFeedFinal() {
                       />
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
-                        {((isMyPost(f) ? userName : f.user).trim().replace(/^@/, "")[0] || f.init || "W").toUpperCase()}
+                        {(f.user.trim().replace(/^@/, "")[0] || f.init || "W").toUpperCase()}
                       </div>
                     )}
                     <div className="min-w-0">
@@ -3116,11 +3008,10 @@ export default function KarebaFeedFinal() {
                         <button
                           type="button"
                           onClick={() => {
-                            const targetUser = isMyPost(f) ? userName : f.user;
+                            const targetUser = f.user;
                             setSearchCategory("account");
                             setSearchQuery(`@${targetUser.replace(/^@/, "")}`);
                             setIsSearchOpen(true);
-                            setIsSearchSuggestionsOpen(false);
                           }}
                           className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[130px] sm:max-w-[180px] hover:text-[#00632B] transition-colors cursor-pointer text-left"
                           aria-label={`Lihat hanya postingan @${f.user}`}
@@ -3140,7 +3031,6 @@ export default function KarebaFeedFinal() {
                               setSearchCategory("location");
                               setSearchQuery(f.location!);
                               setIsSearchOpen(true);
-                              setIsSearchSuggestionsOpen(false);
                             }}
                             className="flex items-center gap-0.5 text-neutral-600 font-medium truncate max-w-[180px] hover:text-[#00632B] transition cursor-pointer text-left"
                             aria-label={`Lihat semua postingan di ${f.location}`}
@@ -3180,15 +3070,13 @@ export default function KarebaFeedFinal() {
                     description={f.text}
                     mediaType={f.mediaType}
                     author={{
-                      name: isMyPost(f) ? userName : (f.name || f.user || "Kawan Warga Kareba"),
-                      username: isMyPost(f) ? userName : f.user,
-                      email: f.email || (f.user === "kamu" ? "iditona5@gmail.com" : `${f.user}@karebata.id`),
+                      name: f.name || f.user || "Warga Kareba",
+                      username: f.user,
+                      email: f.email || `${f.user}@karebata.id`,
                       location: f.location || "Kawasan Sekitar",
                       time: f.time,
-                      initials: isMyPost(f)
-                        ? (userName.trim().replace(/^@/, "")[0] || "W").toUpperCase()
-                        : (f.user ? f.user.trim().replace(/^@/, "")[0] : f.init || "W").toUpperCase(),
-                      avatar: isMyPost(f) ? undefined : f.avatar,
+                      initials: (f.user ? f.user.trim().replace(/^@/, "")[0] : f.init || "W").toUpperCase(),
+                      avatar: f.avatar,
                       description: f.text,
                     }}
                   />
@@ -3225,8 +3113,8 @@ export default function KarebaFeedFinal() {
                   })()}
                 </div>
 
-                {/* Post Actions: Suka, Bagikan, Laporkan */}
-                <div className="px-4 flex items-center gap-6 text-xs font-semibold text-neutral-600">
+                {/* Post Actions: Suka, Komentar, Bagikan, Laporkan/Hapus, Dilihat */}
+                <div className="px-4 flex items-center gap-4 sm:gap-6 text-xs font-semibold text-neutral-600">
                   <button
                     id={`like-btn-${f.id}`}
                     type="button"
@@ -3242,6 +3130,17 @@ export default function KarebaFeedFinal() {
                       }`}
                     />
                     <span>Suka</span>
+                  </button>
+
+                  <button
+                    id={`comment-btn-${f.id}`}
+                    type="button"
+                    onClick={() => setActiveCommentItem(f)}
+                    className="flex items-center gap-1.5 py-1 hover:text-[#00632B] text-neutral-600 transition cursor-pointer"
+                    aria-label="Komentar"
+                  >
+                    <MessageCircle className="w-4 h-4 text-neutral-500" />
+                    <span>{f.comments && f.comments.length > 0 ? f.comments.length : "Komentar"}</span>
                   </button>
 
                   <button
@@ -3846,57 +3745,67 @@ export default function KarebaFeedFinal() {
                 </button>
               </div>
             ) : (
-              <div className="p-3 sm:p-4 border-t border-neutral-200 bg-white flex items-center gap-2.5 shrink-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border-2 border-[#E5A000] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs select-none">
-                  {userName[0].toUpperCase()}
+              <div className="p-3 sm:p-4 border-t border-neutral-200 bg-white space-y-2 shrink-0">
+                {!checkContentModeration(commentInputText).isClean && (
+                  <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-fade-in">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                    <span>Komentar mengandung kata tidak pantas/jorok. Mohon gunakan bahasa santun.</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border-2 border-[#E5A000] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs select-none">
+                    {userName[0].toUpperCase()}
+                  </div>
+                  <input
+                    id="comment-input-field"
+                    type="text"
+                    value={commentInputText}
+                    onChange={(e) => setCommentInputText(e.target.value)}
+                    placeholder={`Tulis komentar santun sebagai @${userName}...`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSubmitComment();
+                      }
+                    }}
+                    className={`flex-1 border rounded-full px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition ${
+                      !checkContentModeration(commentInputText).isClean
+                        ? "bg-red-50 border-red-300"
+                        : "bg-neutral-100 border-neutral-300 focus:border-[#00632B] focus:bg-white"
+                    }`}
+                  />
+                  <button
+                    id="send-comment-btn"
+                    type="button"
+                    disabled={!commentInputText.trim() || !checkContentModeration(commentInputText).isClean}
+                    onClick={handleSubmitComment}
+                    className="p-2.5 bg-[#00632B] hover:bg-[#004f22] disabled:opacity-40 text-white rounded-full transition shadow-xs active:scale-95 flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed"
+                    aria-label="Kirim Komentar"
+                  >
+                    <Send className="w-4 h-4 translate-x-0.5" />
+                  </button>
                 </div>
-                <input
-                  id="comment-input-field"
-                  type="text"
-                  value={commentInputText}
-                  onChange={(e) => setCommentInputText(e.target.value)}
-                  placeholder={`Tulis komentar sebagai @${userName}...`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSubmitComment();
-                    }
-                  }}
-                  className="flex-1 bg-neutral-100 border border-neutral-300 rounded-full px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none focus:border-[#00632B] focus:bg-white transition"
-                />
-                <button
-                  id="send-comment-btn"
-                  type="button"
-                  disabled={!commentInputText.trim()}
-                  onClick={handleSubmitComment}
-                  className="p-2.5 bg-[#00632B] hover:bg-[#004f22] disabled:opacity-40 text-white rounded-full transition shadow-xs active:scale-95 flex items-center justify-center shrink-0"
-                  aria-label="Kirim Komentar"
-                >
-                  <Send className="w-4 h-4 translate-x-0.5" />
-                </button>
               </div>
             )}
           </div>
         )}
 
-        {/* MODAL PENCARIAN TERARAH: AKUN, LOKASI, DAN BERITA */}
+        {/* HALAMAN PENCARIAN TERARAH: HASIL TAMPIL EKSKLUSIF DI SINI, BUKAN DI BERANDA */}
         <SearchModal
-          isOpen={isSearchOpen && isSearchSuggestionsOpen}
-          onClose={() => setIsSearchSuggestionsOpen(false)}
+          isOpen={isSearchOpen}
+          onClose={() => {
+            setIsSearchOpen(false);
+            setSearchQuery("");
+            setSearchCategory("all");
+          }}
           feed={feed}
           posts={posts}
           query={searchQuery}
           setQuery={setSearchQuery}
           activeCategory={searchCategory}
           onSelectCategory={(cat) => setSearchCategory(cat)}
-          onSelectResult={(selectedText, selectedCat) => {
-            const cat = selectedCat || searchCategory;
-            setSearchCategory(cat);
-            setSearchQuery(cat === "account" ? `@${selectedText.replace(/^@/, "")}` : selectedText);
-            setIsSearchSuggestionsOpen(false);
-            const container = document.getElementById("feed-vertical-container");
-            if (container) {
-              container.scrollIntoView({ behavior: "smooth" });
-            }
+          onOpenPostDetail={(post) => {
+            const foundFeed = feed.find((f) => f.id === post.id);
+            setActiveDetailPost((foundFeed || post) as PostItem);
           }}
         />
 
@@ -3941,6 +3850,15 @@ export default function KarebaFeedFinal() {
               feed.find((f) => f.id === activeDetailPost.id)?.like || 0
             }
             onToggleLike={(id) => handleToggleLike(id)}
+            commentsCount={
+              feed.find((f) => f.id === activeDetailPost.id)?.comments?.length || 0
+            }
+            onOpenComments={() => {
+              const targetFeedItem = feed.find((f) => f.id === activeDetailPost.id);
+              if (targetFeedItem) {
+                setActiveCommentItem(targetFeedItem);
+              }
+            }}
             onDelete={(id) => {
               setPostToDelete({ id, title: activeDetailPost?.title, img: activeDetailPost?.img });
               setActiveDetailPost(null);

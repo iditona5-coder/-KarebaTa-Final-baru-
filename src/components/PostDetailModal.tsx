@@ -8,6 +8,7 @@ import {
   Heart,
   Trash2,
   Eye,
+  MessageCircle,
 } from "lucide-react";
 import { PostItem, FeedItem } from "../types";
 import { FeedMedia } from "./FeedMedia";
@@ -30,6 +31,8 @@ interface PostDetailModalProps {
   views?: number;
   userName?: string;
   initial?: string;
+  commentsCount?: number;
+  onOpenComments?: () => void;
 }
 
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({
@@ -49,6 +52,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   views,
   userName = "Kamu",
   initial = "K",
+  commentsCount = 0,
+  onOpenComments,
 }) => {
   if (!post) return null;
 
@@ -232,6 +237,19 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   }`}
                 />
                 <span>Suka</span>
+              </button>
+            )}
+
+            {onOpenComments && (
+              <button
+                id={`comment-detail-btn-${post.id}`}
+                type="button"
+                onClick={onOpenComments}
+                className="flex items-center gap-1.5 py-1 hover:text-[#00632B] text-neutral-600 transition cursor-pointer"
+                aria-label="Komentar"
+              >
+                <MessageCircle className="w-4 h-4 text-neutral-500" />
+                <span>{commentsCount ? `${commentsCount}` : "Komentar"}</span>
               </button>
             )}
 

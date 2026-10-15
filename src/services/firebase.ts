@@ -91,6 +91,9 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
     const postRef = doc(db, 'posts', feedItem.id);
     await setDoc(postRef, {
       ...feedItem,
+      isMyPost: false,
+      authorUid: feedItem.authorUid || postItem.authorUid || '',
+      email: feedItem.email || postItem.email || '',
       views: Number(feedItem.views) || 0,
       title: postItem.title,
       loc: postItem.loc,
@@ -145,10 +148,15 @@ export function listenToFirestorePosts(
               mediaType: data.mediaType || 'image',
               like: Number(data.like) || 0,
               views: Number(data.views) || 0,
+              shares: Number(data.shares) || 0,
+              saves: Number(data.saves) || 0,
               likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
               isLiked: false, // Ditentukan oleh client lokal
               comments: Array.isArray(data.comments) ? data.comments : [],
               location: data.location || data.loc || 'Wilayah Sekitar',
+              authorUid: data.authorUid || data.uid || data.userId || '',
+              isHidden: Boolean(data.isHidden),
+              category: data.category || undefined,
               isMyPost: false,
             };
           });
@@ -228,6 +236,57 @@ export async function addCommentToFirestore(postId: string, comment: CommentItem
     return true;
   } catch (error) {
     console.warn('[Firebase] Gagal menambahkan komentar ke Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Memperbarui seluruh daftar komentar postingan di Firestore (misalnya saat komentar dihapus atau disukai)
+ */
+export async function updatePostCommentsInFirestore(postId: string, comments: CommentItem[]): Promise<boolean> {
+  if (!db || !postId) return false;
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      comments: comments,
+    });
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] Gagal memperbarui komentar di Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Menambahkan jumlah share (bagikan) ke postingan di Firestore
+ */
+export async function incrementPostShareInFirestore(postId: string): Promise<boolean> {
+  if (!db || !postId) return false;
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      shares: increment(1),
+    });
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] Gagal menyimpan share di Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Memperbarui jumlah simpanan (saves/bookmark) di postingan di Firestore
+ */
+export async function togglePostSaveInFirestore(postId: string, delta: number): Promise<boolean> {
+  if (!db || !postId) return false;
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      saves: increment(delta),
+    });
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] Gagal memperbarui bookmark di Firestore:', error);
     return false;
   }
 }

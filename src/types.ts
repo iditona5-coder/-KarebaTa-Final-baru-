@@ -14,6 +14,7 @@ export interface PostItem {
   user?: string;
   init?: string;
   avatar?: string;
+  authorUid?: string;
   isMyPost?: boolean;
   shares?: number;
   saves?: number;
@@ -48,6 +49,7 @@ export interface FeedItem {
   isLiked?: boolean;
   comments?: CommentItem[];
   location?: string;
+  authorUid?: string;
   isMyPost?: boolean;
   shares?: number;
   saves?: number;
