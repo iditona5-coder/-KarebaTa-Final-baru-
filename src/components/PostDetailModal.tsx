@@ -9,6 +9,8 @@ import {
   Trash2,
   Eye,
   MessageCircle,
+  MoreVertical,
+  Link2,
 } from "lucide-react";
 import { PostItem, FeedItem } from "../types";
 import { FeedMedia } from "./FeedMedia";
@@ -59,6 +61,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const postViews = views ?? feedItem?.views ?? post.views ?? 0;
 
@@ -147,24 +150,123 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Icon Simpan di atas kanan postingan */}
-            {onToggleSave && (
+            {/* Icon Titik 3 di Atas Sudut Kanan Postingan */}
+            <div className="relative">
               <button
-                id={`save-detail-header-${post.id}`}
+                id={`detail-menu-btn-${post.id}`}
                 type="button"
-                onClick={() => onToggleSave(post.id)}
-                className="p-1.5 text-neutral-400 hover:text-[#00632B] hover:bg-[#00632B]/10 rounded-lg transition cursor-pointer"
-                aria-label="Simpan kabar"
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
+                aria-label="Opsi postingan"
               >
-                <Bookmark
-                  className={`w-4 h-4 transition-transform active:scale-125 ${
-                    isSaved
-                      ? "fill-[#00632B] text-[#00632B]"
-                      : "text-neutral-500 hover:text-[#00632B]"
-                  }`}
-                />
+                <MoreVertical className="w-5 h-5 text-neutral-600" />
               </button>
-            )}
+
+              {/* Dropdown Menu Titik 3 */}
+              {isMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsMenuOpen(false)}
+                  />
+                  <div
+                    className="absolute right-0 top-9 z-40 w-52 bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                  >
+                    {/* 1. Opsi Simpan Kabar */}
+                    {onToggleSave && (
+                      <button
+                        id={`menu-detail-save-btn-${post.id}`}
+                        type="button"
+                        onClick={() => {
+                          onToggleSave(post.id);
+                          setIsMenuOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                      >
+                        <Bookmark
+                          className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+                            isSaved
+                              ? "fill-[#00632B] text-[#00632B]"
+                              : "text-neutral-600"
+                          }`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs font-bold leading-tight ${isSaved ? "text-[#00632B]" : "text-neutral-800"}`}>
+                            {isSaved ? "Hapus dari Simpanan" : "Simpan Kabar"}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
+                            {isSaved ? "Tersimpan di koleksi Anda" : "Simpan untuk dibaca nanti"}
+                          </p>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* 2. Opsi Laporkan Kabar atau Hapus Kabar */}
+                    {isOwner && onDelete ? (
+                      <button
+                        id={`menu-detail-delete-btn-${post.id}`}
+                        type="button"
+                        onClick={() => {
+                          onDelete(post.id);
+                          setIsMenuOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                      >
+                        <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold leading-tight text-rose-600">
+                            Hapus Kabar
+                          </p>
+                          <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                            Hapus postingan Anda
+                          </p>
+                        </div>
+                      </button>
+                    ) : !isOwner && onReport ? (
+                      <button
+                        id={`menu-detail-report-btn-${post.id}`}
+                        type="button"
+                        onClick={() => {
+                          onReport(post.id, post.user || "kabar_warga");
+                          setIsMenuOpen(false);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                      >
+                        <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold leading-tight text-rose-600">
+                            Laporkan Kabar
+                          </p>
+                          <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                            Laporkan jika melanggar
+                          </p>
+                        </div>
+                      </button>
+                    ) : null}
+
+                    <div className="my-1 border-t border-neutral-100" />
+
+                    {/* 3. Salin Tautan */}
+                    <button
+                      id={`menu-detail-copy-btn-${post.id}`}
+                      type="button"
+                      onClick={() => {
+                        if (navigator?.clipboard) {
+                          navigator.clipboard.writeText(`${window.location.origin}/#post-${post.id}`);
+                        }
+                        if (onShare) onShare(post.id);
+                        if (onShowToast) onShowToast("Tautan kabar berhasil disalin");
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                    >
+                      <Link2 className="w-4 h-4 shrink-0 text-neutral-600 transition-transform group-hover:scale-110" />
+                      <span className="text-xs font-medium text-neutral-700">Salin Tautan</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Media Foto/Video: Vertikal rasio 4:5 dipotong atas bawah, Horizontal rasio asli */}
@@ -266,35 +368,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <span>Bagikan</span>
             </button>
 
-            {/* Sesuai aturan kepemilikan:
-                - Pada postingan kita sendiri: tombol Hapus.
-                - Pada postingan orang lain: tombol Laporkan.
-            */}
-            {isOwner && onDelete ? (
-              <button
-                id={`delete-detail-btn-${post.id}`}
-                type="button"
-                onClick={() => onDelete(post.id)}
-                className="flex items-center gap-1.5 py-1 text-neutral-500 hover:text-red-600 transition cursor-pointer"
-                aria-label="Hapus kabar"
-              >
-                <Trash2 className="w-4 h-4 text-red-500" />
-                <span className="text-red-600">Hapus</span>
-              </button>
-            ) : !isOwner && onReport ? (
-              <button
-                id={`report-detail-btn-${post.id}`}
-                type="button"
-                onClick={() => onReport(post.id, post.user || "kabar_warga")}
-                className="flex items-center gap-1.5 py-1 hover:text-red-500 text-neutral-600 transition cursor-pointer"
-                aria-label="Laporkan"
-              >
-                <Flag className="w-4 h-4" />
-                <span>Laporkan</span>
-              </button>
-            ) : null}
-
-            {/* Ikon Tayangan / Dilihat (Fitur Analitik) - Posisi di samping kanan icon Laporkan/Hapus */}
+            {/* Ikon Tayangan / Dilihat (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
             <div
               className="flex items-center gap-1.5 py-1 text-neutral-500 select-none ml-auto sm:ml-0"
               aria-label={`${postViews.toLocaleString("id-ID")} kali dilihat`}

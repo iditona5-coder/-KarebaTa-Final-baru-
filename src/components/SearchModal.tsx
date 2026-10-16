@@ -13,7 +13,6 @@ import {
   Eye,
   Video,
   ArrowLeft,
-  Sparkles,
 } from "lucide-react";
 import { FeedItem, PostItem } from "../types";
 
@@ -291,7 +290,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             {/* Kartu Petunjuk Pencarian Cepat */}
             <section className="p-4 bg-white rounded-2xl border border-neutral-200 shadow-2xs space-y-3">
               <div className="flex items-center gap-2 pb-1.5 border-b border-neutral-100">
-                <Sparkles className="w-4 h-4 text-[#00632B]" />
+                <Search className="w-4 h-4 text-[#00632B]" />
                 <h3 className="font-bold text-neutral-800 text-xs">Pencarian Halaman Tersedia:</h3>
               </div>
 

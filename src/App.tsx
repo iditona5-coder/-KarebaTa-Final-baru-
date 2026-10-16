@@ -30,11 +30,13 @@ import {
   Megaphone,
   AlertTriangle,
   ShieldCheck,
+  MoreVertical,
+  Link2,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { FeedMedia } from "./components/FeedMedia";
 import { FeedItem, PostItem, ReportItem, HelpSettings, DEFAULT_HELP_SETTINGS, SponsorAd, AdSettings, DEFAULT_AD_SETTINGS } from "./types";
-import { KarebaTaLogo } from "./components/KarebaTaLogo";
+import { KarebaTaLogo, KarebaPinIcon } from "./components/KarebaTaLogo";
 import { SearchModal, SearchFilterCategory } from "./components/SearchModal";
 import { CommentActions } from "./components/CommentActions";
 import { ShareBar } from "./components/ShareBar";
@@ -84,17 +86,16 @@ import { SetupUsernamePage } from "./components/SetupUsernamePage";
 
 export default function KarebaFeedFinal() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [pendingUploadAction, setPendingUploadAction] = useState<"camera" | "gallery" | null>(null);
   const [loginRedirectMessage, setLoginRedirectMessage] = useState<string | null>(null);
 
-  const [userName, setUserName] = useState<string>(() => {
-    return "warga_kareba";
-  });
-  const userEmail = currentUser?.email || "warga.kareba@email.com";
+  const [userName, setUserName] = useState<string>("");
+  const userEmail = currentUser?.email || "";
   // Nama pengguna selalu bersumber dari ketikan user (maks 13 huruf), BUKAN alamat email
   const userDisplayName = userName;
-  const initial = (userName.trim()[0] || "W").toUpperCase();
+  const initial = (userName.trim()[0] || currentUser?.displayName?.[0] || "W").toUpperCase();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -209,6 +210,8 @@ export default function KarebaFeedFinal() {
   const [reportPostData, setReportPostData] = useState<{ id: string; user: string; text?: string } | null>(null);
   const [reportReason, setReportReason] = useState<string>("");
   const [reportDetails, setReportDetails] = useState<string>("");
+  const [reportSuccessInfo, setReportSuccessInfo] = useState<{ targetUser: string; postId: string } | null>(null);
+  const [activeMenuPostId, setActiveMenuPostId] = useState<string | null>(null);
   // Deteksi rute Dashboard Admin terpisah (/admin atau #/admin atau #admin)
   const isDedicatedAdminRoute = () => {
     if (typeof window === "undefined") return false;
@@ -219,13 +222,6 @@ export default function KarebaFeedFinal() {
 
   const [viewMode, setViewMode] = useState<"login" | "set_name" | "feed" | "admin">(() => {
     if (isDedicatedAdminRoute()) return "admin";
-    if (typeof window !== "undefined") {
-      const isLogged = localStorage.getItem("karebata_is_logged_in") === "true";
-      const isGuest =
-        sessionStorage.getItem("kareba_guest_mode") === "true" ||
-        localStorage.getItem("kareba_guest_mode") === "true";
-      if (isLogged || isGuest) return "feed";
-    }
     return "login";
   });
 
@@ -237,7 +233,13 @@ export default function KarebaFeedFinal() {
         return;
       }
       if (window.location.hash === "#feed") {
-        setViewMode("feed");
+        if (currentUser && userName && userName !== "warga_kareba") {
+          setViewMode("feed");
+        } else if (currentUser) {
+          setViewMode("set_name");
+        } else {
+          setViewMode("login");
+        }
       } else if (window.location.hash === "#login") {
         setViewMode("login");
       }
@@ -248,7 +250,7 @@ export default function KarebaFeedFinal() {
       window.removeEventListener("hashchange", handleRouteChange);
       window.removeEventListener("popstate", handleRouteChange);
     };
-  }, []);
+  }, [currentUser, userName]);
 
   // Berlangganan pengumuman kilat secara real-time dari Firestore
   useEffect(() => {
@@ -260,58 +262,44 @@ export default function KarebaFeedFinal() {
     return () => unsubBulletins();
   }, []);
 
-  // Berlangganan status autentikasi Google Firebase
+  // Berlangganan status autentikasi Google Firebase (Wajib login terlebih dahulu)
   useEffect(() => {
-    let isInitialCallback = true;
-    const unsubAuth = subscribeToAuth((user) => {
+    const unsubAuth = subscribeToAuth(async (user) => {
       if (user) {
         setCurrentUser(user);
         try {
           localStorage.setItem("karebata_is_logged_in", "true");
         } catch {}
 
-        checkRegisteredUser(user.email, user.uid)
-          .then((res) => {
-            if (res.isRegistered && res.username) {
-              setUserName(res.username);
-              setViewMode((prev) => (prev === "login" || prev === "set_name" ? "feed" : prev));
-            } else {
-              // Belum isi nama: Wajib masuk halaman isi nama pengguna (batas 13 huruf)
-              setUserName("warga_kareba");
-              setViewMode((prev) => (prev === "admin" ? "admin" : "set_name"));
-            }
-          })
-          .catch(() => {
-            setUserName("warga_kareba");
+        try {
+          const res = await checkRegisteredUser(user.email, user.uid);
+          if (res.isRegistered && res.username && res.username.trim() && res.username.trim() !== "warga_kareba") {
+            const clean = res.username.trim().slice(0, 13);
+            setUserName(clean);
+            setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
+          } else {
+            // Belum isi nama pengguna: Wajib masuk halaman pengetikan nama
+            setUserName("");
             setViewMode((prev) => (prev === "admin" ? "admin" : "set_name"));
-          });
+          }
+        } catch {
+          setUserName("");
+          setViewMode((prev) => (prev === "admin" ? "admin" : "set_name"));
+        } finally {
+          setIsAuthChecking(false);
+        }
       } else {
         setCurrentUser(null);
-        const isGuest =
-          typeof window !== "undefined" &&
-          (sessionStorage.getItem("kareba_guest_mode") === "true" ||
-            localStorage.getItem("kareba_guest_mode") === "true");
-        const hasSavedSession =
-          typeof window !== "undefined" &&
-          (localStorage.getItem("karebata_is_logged_in") === "true" ||
-            sessionStorage.getItem("karebata_active_session") === "true");
-
-        // Cegah layar hilang/flicker saat inisialisasi awal Firebase sebelum sesi pulih
-        if (isInitialCallback && (isGuest || hasSavedSession)) {
-          isInitialCallback = false;
-          return;
-        }
-        isInitialCallback = false;
-
-        if (isGuest) {
-          // Pengunjung tetap berada di Beranda
-          return;
-        }
-
+        setUserName("");
         try {
           localStorage.removeItem("karebata_is_logged_in");
+          localStorage.removeItem("kareba_guest_mode");
+          sessionStorage.removeItem("kareba_guest_mode");
+          sessionStorage.removeItem("karebata_active_session");
         } catch {}
+        // Wajib login: tidak ada pengunjung / halaman warga tanpa login!
         setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
+        setIsAuthChecking(false);
       }
     });
     return () => unsubAuth();
@@ -403,19 +391,19 @@ export default function KarebaFeedFinal() {
       // Periksa status pendaftaran akun Google ini di database
       const checkRes = await checkRegisteredUser(email, uid);
 
-      if (checkRes.isRegistered && checkRes.username) {
+      if (checkRes.isRegistered && checkRes.username && checkRes.username.trim() && checkRes.username.trim() !== "warga_kareba") {
         // 1. AKUN SUDAH TERDAFTAR SEBELUMNYA:
-        const clean = checkRes.username;
+        const clean = checkRes.username.trim().slice(0, 13);
         setUserName(clean);
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
       } else {
-        // 2. AKUN BARU ATAU GANTI KE AKUN LAIN YANG BELUM TERDAFTAR:
-        setUserName("warga_kareba");
+        // 2. AKUN BARU ATAU BELUM ISI NAMA PENGGUNA: WAJIB MASUK HALAMAN PENGETIKAN NAMA
+        setUserName("");
         setViewMode("set_name");
       }
     } catch {
-      setUserName("warga_kareba");
+      setUserName("");
       setViewMode("set_name");
     }
   };
@@ -468,16 +456,6 @@ export default function KarebaFeedFinal() {
     }
   };
 
-  // Callback saat user memilih nonton bebas tanpa login (Pengunjung)
-  const handleContinueAsGuest = () => {
-    sessionStorage.setItem("kareba_guest_mode", "true");
-    sessionStorage.setItem("karebata_active_session", "true");
-    localStorage.setItem("kareba_guest_mode", "true");
-    localStorage.setItem("karebata_is_logged_in", "true");
-    setLoginRedirectMessage(null);
-    setViewMode("feed");
-    showToast("Selamat datang di Kareba'Ta!");
-  };
 
   // Handler logout pengguna
   const handleLogout = async () => {
@@ -1679,11 +1657,25 @@ export default function KarebaFeedFinal() {
     }
   };
 
-  // Laporkan postingan - Membuka modal pelaporan interaktif
+  // Laporkan postingan - Membuka modal pelaporan interaktif ala aplikasi modern
   const handleReportPost = (postId: string, user: string, text?: string) => {
     setReportPostData({ id: postId, user, text });
     setReportReason("");
     setReportDetails("");
+    setReportSuccessInfo(null);
+  };
+
+  const handleUnhidePost = (postId: string) => {
+    setHiddenPostIds((prev) => {
+      const updated = prev.filter((id) => id !== postId);
+      try {
+        localStorage.setItem("karebata_hidden_posts", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Gagal simpan hidden posts:", e);
+      }
+      return updated;
+    });
+    showToast("Postingan kembali ditampilkan di linimasa Anda");
   };
 
   const handleConfirmReport = () => {
@@ -1708,7 +1700,7 @@ export default function KarebaFeedFinal() {
     };
     submitReportToFirestore(reportItem);
 
-    // Langsung sembunyikan postingan dari layar pelapor seketika (100% Gratis, Aman & Cepat)
+    // Langsung sembunyikan postingan dari layar pelapor seketika (seperti di Instagram / Facebook)
     setHiddenPostIds((prev) => {
       const updated = Array.from(new Set([...prev, reportedPostId]));
       try {
@@ -1719,8 +1711,8 @@ export default function KarebaFeedFinal() {
       return updated;
     });
 
-    setReportPostData(null);
-    showToast(`Laporan atas kabar @${targetUser} diterima. Konten telah disembunyikan dari layar Anda dan diteruskan ke Pengawas.`);
+    // Pindah ke tampilan konfirmasi sukses pelaporan
+    setReportSuccessInfo({ targetUser, postId: reportedPostId });
   };
 
   // FUNGSI PENGHAPUSAN SINKRON: Menghapus berita dari Feed DAN Kartu Kabar Kamu sekaligus
@@ -1836,15 +1828,35 @@ export default function KarebaFeedFinal() {
     );
   }
 
-  // JIKA SETELAH LOGIN GOOGLE: LANGSUNG MASUK KE HALAMAN NGETIK NAMA (TIDAK PAKAI NAMA EMAIL)
-  if (viewMode === "set_name") {
+  // JIKA SEDANG MEMERIKSA STATUS AUTENTIKASI AWAL
+  if (isAuthChecking) {
+    return (
+      <div className="fixed inset-0 w-full h-[100dvh] bg-white flex flex-col items-center justify-center p-6 select-none z-50">
+        <div className="w-20 h-24 flex items-center justify-center filter drop-shadow-md animate-pulse mb-3">
+          <KarebaPinIcon className="w-20 h-24" />
+        </div>
+        <h1 className="text-2xl font-[900] tracking-tight leading-none mb-1" style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}>
+          <span className="text-[#00632B]">Kareba'</span>
+          <span className="text-[#E5A000]">Ta</span>
+        </h1>
+        <p className="text-xs font-extrabold tracking-[0.12em] text-[#E5A000] uppercase mb-4" style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}>
+          beritamu, suaramu
+        </p>
+        <div className="flex items-center gap-2 text-xs text-neutral-500 font-medium">
+          <div className="w-4 h-4 rounded-full border-2 border-neutral-300 border-t-[#00632B] animate-spin" />
+          <span>Memeriksa status akun...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // JIKA BELUM LOGIN: WAJIB MASUK HALAMAN LOGIN TERLEBIH DAHULU (TIDAK ADA HALAMAN PENGUNJUNG TANPA LOGIN)
+  if (!currentUser || viewMode === "login") {
     return (
       <>
-        <SetupUsernamePage
-          currentUser={currentUser}
-          initialValue={userName !== "warga_kareba" ? userName : ""}
-          onSaveUsername={handleSaveUsername}
-          onLogout={handleLogout}
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          initialMessage={loginRedirectMessage}
         />
         {toastMessage && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-semibold border border-neutral-700 animate-slide-up">
@@ -1856,14 +1868,15 @@ export default function KarebaFeedFinal() {
     );
   }
 
-  // JIKA SEDANG MEMBUKA HALAMAN LOGIN TERPISAH SEBELUM MUNCUL BERANDA
-  if (viewMode === "login") {
+  // JIKA SETELAH LOGIN GOOGLE: WAJIB MASUK KE HALAMAN NGETIK NAMA TERLEBIH DAHULU SEBELUM BISA MASUK APLIKASI
+  if (viewMode === "set_name" || !userName || userName === "warga_kareba") {
     return (
       <>
-        <LoginPage
-          onLoginSuccess={handleLoginSuccess}
-          onContinueAsGuest={handleContinueAsGuest}
-          initialMessage={loginRedirectMessage}
+        <SetupUsernamePage
+          currentUser={currentUser}
+          initialValue={userName && userName !== "warga_kareba" ? userName : ""}
+          onSaveUsername={handleSaveUsername}
+          onLogout={handleLogout}
         />
         {toastMessage && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-semibold border border-neutral-700 animate-slide-up">
@@ -2230,93 +2243,65 @@ export default function KarebaFeedFinal() {
                   alt={userName}
                   className="w-13 h-13 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-emerald-600/20 ring-offset-2 ring-offset-white shadow-xs select-none"
                 />
-              ) : currentUser ? (
+              ) : (
                 <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-xl font-bold shadow-xs text-white select-none tracking-tight">
                   {initial}
                 </div>
-              ) : (
-                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-neutral-100 ring-2 ring-neutral-200/80 ring-offset-2 ring-offset-white flex items-center justify-center text-neutral-400 shadow-xs">
-                  <UserIcon className="w-6 h-6 text-neutral-400" />
-                </div>
               )}
-              {currentUser && (
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 ring-2 ring-white rounded-full shadow-2xs" aria-label="Sedang Aktif" />
-              )}
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 ring-2 ring-white rounded-full shadow-2xs" aria-label="Sedang Aktif" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
                 <h2 className="font-bold text-[16px] sm:text-[17px] text-neutral-900 tracking-[-0.015em] truncate max-w-[150px] sm:max-w-[200px]">
-                  {currentUser ? (userName.startsWith("@") ? userName.replace(/^@/, "") : userName) : "Warga Kareba"}
+                  {userName.startsWith("@") ? userName.replace(/^@/, "") : userName}
                 </h2>
-                {currentUser && (
-                  <span
-                    className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${
-                      isUserAdmin(currentUser.email)
-                        ? "bg-[#00632B] text-white"
-                        : "bg-emerald-100 text-emerald-800"
-                    } shrink-0 shadow-2xs`}
-                    title={isUserAdmin(currentUser.email) ? "Pengelola Terverifikasi" : "Warga Terdaftar"}
-                  >
-                    <Check className="w-2.5 h-2.5 stroke-[3]" />
-                  </span>
-                )}
+                <span
+                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${
+                    isUserAdmin(currentUser?.email)
+                      ? "bg-[#00632B] text-white"
+                      : "bg-emerald-100 text-emerald-800"
+                  } shrink-0 shadow-2xs`}
+                  title={isUserAdmin(currentUser?.email) ? "Pengelola Terverifikasi" : "Warga Terdaftar"}
+                >
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                </span>
               </div>
-              {currentUser && (
-                <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium mt-0.5 whitespace-nowrap">
-                  <span className="text-neutral-500 font-medium tracking-tight">
-                    @{userName.replace(/^@/, "").toLowerCase()}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium mt-0.5 whitespace-nowrap">
+                <span className="text-neutral-500 font-medium tracking-tight">
+                  @{userName.replace(/^@/, "").toLowerCase()}
+                </span>
+              </div>
             </div>
           </div>
-          {currentUser ? (
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Icon Dasbor Admin HANYA Muncul di Akun Admin Khusus (iditona5@gmail.com) */}
-              {isUserAdmin(currentUser.email) && (
-                <button
-                  id="profile-admin-dashboard-btn"
-                  type="button"
-                  onClick={() => {
-                    if (typeof window !== "undefined") {
-                      window.location.hash = "#admin";
-                    }
-                    setViewMode("admin");
-                  }}
-                  className="w-8 h-8 rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
-                  title="Dasbor Admin"
-                  aria-label="Dasbor Admin"
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                </button>
-              )}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Icon Dasbor Admin HANYA Muncul di Akun Admin Khusus (iditona5@gmail.com) */}
+            {isUserAdmin(currentUser?.email) && (
               <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition active:scale-95 cursor-pointer shadow-2xs"
-                aria-label="Keluar akun Google"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Keluar</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
+                id="profile-admin-dashboard-btn"
                 type="button"
                 onClick={() => {
-                  setPendingUploadAction(null);
-                  setLoginRedirectMessage(null);
-                  setIsLoginModalOpen(true);
+                  if (typeof window !== "undefined") {
+                    window.location.hash = "#admin";
+                  }
+                  setViewMode("admin");
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#004f22] rounded-xl border border-emerald-700 shadow-xs transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
-                aria-label="Masuk dengan Google"
+                className="w-8 h-8 rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
+                title="Dasbor Admin"
+                aria-label="Dasbor Admin"
               >
-                <LogIn className="w-3.5 h-3.5 shrink-0" />
-                <span>Masuk Google</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
               </button>
-            </div>
-          )}
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition active:scale-95 cursor-pointer shadow-2xs"
+              aria-label="Keluar akun Google"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Keluar</span>
+            </button>
+          </div>
         </section>
 
         {/* PERINGATAN RESMI JIKA AKUN DITANGGUHKAN OLEH ADMIN */}
@@ -3043,22 +3028,123 @@ export default function KarebaFeedFinal() {
                     </div>
                   </div>
 
-                  {/* Icon Simpan di atas kanan postingan */}
-                  <button
-                    id={`save-feed-header-${f.id}`}
-                    type="button"
-                    onClick={() => handleToggleSave(f.id)}
-                    className="p-1.5 text-neutral-400 hover:text-[#00632B] hover:bg-[#00632B]/10 rounded-lg transition cursor-pointer"
-                    aria-label="Simpan kabar"
-                  >
-                    <Bookmark
-                      className={`w-4 h-4 transition-transform active:scale-125 ${
-                        savedPostIds.includes(f.id)
-                          ? "fill-[#00632B] text-[#00632B]"
-                          : "text-neutral-500 hover:text-[#00632B]"
-                      }`}
-                    />
-                  </button>
+                  {/* Icon Titik 3 di Atas Sudut Kanan Postingan */}
+                  <div className="relative">
+                    <button
+                      id={`post-menu-btn-${f.id}`}
+                      type="button"
+                      onClick={() => setActiveMenuPostId((prev) => (prev === f.id ? null : f.id))}
+                      className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
+                      aria-label="Opsi postingan"
+                    >
+                      <MoreVertical className="w-5 h-5 text-neutral-600" />
+                    </button>
+
+                    {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Salin) */}
+                    {activeMenuPostId === f.id && (
+                      <>
+                        {/* Backdrop untuk menutup menu saat klik di luar */}
+                        <div
+                          className="fixed inset-0 z-30"
+                          onClick={() => setActiveMenuPostId(null)}
+                        />
+
+                        <div
+                          className="absolute right-0 top-9 z-40 w-52 bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                        >
+                          {/* 1. Opsi Simpan Kabar */}
+                          <button
+                            id={`menu-save-btn-${f.id}`}
+                            type="button"
+                            onClick={() => {
+                              handleToggleSave(f.id);
+                              setActiveMenuPostId(null);
+                            }}
+                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                          >
+                            <Bookmark
+                              className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+                                savedPostIds.includes(f.id)
+                                  ? "fill-[#00632B] text-[#00632B]"
+                                  : "text-neutral-600"
+                              }`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-xs font-bold leading-tight ${savedPostIds.includes(f.id) ? "text-[#00632B]" : "text-neutral-800"}`}>
+                                {savedPostIds.includes(f.id) ? "Hapus dari Simpanan" : "Simpan Kabar"}
+                              </p>
+                              <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
+                                {savedPostIds.includes(f.id) ? "Tersimpan di koleksi Anda" : "Simpan untuk dibaca nanti"}
+                              </p>
+                            </div>
+                          </button>
+
+                          {/* 2. Opsi Laporkan Kabar (Pada postingan orang lain) ATAU Hapus Kabar (Pada postingan sendiri) */}
+                          {isMyPost(f) ? (
+                            <button
+                              id={`menu-delete-btn-${f.id}`}
+                              type="button"
+                              onClick={() => {
+                                setPostToDelete({ id: f.id, title: f.text, img: f.img });
+                                setActiveMenuPostId(null);
+                              }}
+                              className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                            >
+                              <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold leading-tight text-rose-600">
+                                  Hapus Kabar
+                                </p>
+                                <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                                  Hapus postingan Anda
+                                </p>
+                              </div>
+                            </button>
+                          ) : (
+                            <button
+                              id={`menu-report-btn-${f.id}`}
+                              type="button"
+                              onClick={() => {
+                                handleReportPost(f.id, f.user, f.text);
+                                setActiveMenuPostId(null);
+                              }}
+                              className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                            >
+                              <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold leading-tight text-rose-600">
+                                  Laporkan Kabar
+                                </p>
+                                <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                                  Laporkan jika melanggar
+                                </p>
+                              </div>
+                            </button>
+                          )}
+
+                          <div className="my-1 border-t border-neutral-100" />
+
+                          {/* 3. Salin Tautan */}
+                          <button
+                            id={`menu-copy-btn-${f.id}`}
+                            type="button"
+                            onClick={() => {
+                              if (navigator?.clipboard) {
+                                navigator.clipboard.writeText(`${window.location.origin}/#post-${f.id}`);
+                              }
+                              handlePostShared(f.id);
+                              showToast("Tautan kabar berhasil disalin");
+                              setActiveMenuPostId(null);
+                            }}
+                            className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                          >
+                            <Link2 className="w-4 h-4 shrink-0 text-neutral-600 transition-transform group-hover:scale-110" />
+                            <span className="text-xs font-medium text-neutral-700">Salin Tautan</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Media Foto/Video: Vertikal rasio 4:5 dipotong atas bawah, Horizontal rasio asli */}
@@ -3156,35 +3242,7 @@ export default function KarebaFeedFinal() {
                     <span>Bagikan</span>
                   </button>
 
-                  {/* Sesuai aturan kepemilikan:
-                      - Pada postingan kita sendiri: HANYA kita yang melihat icon X (Hapus). Icon Laporkan TIDAK terlihat.
-                      - Pada postingan orang lain: kita melihat icon Laporkan. Icon X (Hapus) TIDAK terlihat.
-                  */}
-                  {isMyPost(f) ? (
-                    <button
-                      id={`delete-btn-${f.id}`}
-                      type="button"
-                      onClick={() => setPostToDelete({ id: f.id, title: f.text, img: f.img })}
-                      className="flex items-center gap-1.5 py-1 text-neutral-500 hover:text-red-600 transition cursor-pointer"
-                      aria-label="Hapus kabar"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                      <span className="text-red-600">Hapus</span>
-                    </button>
-                  ) : (
-                    <button
-                      id={`report-btn-${f.id}`}
-                      type="button"
-                      onClick={() => handleReportPost(f.id, f.user, f.text)}
-                      className="flex items-center gap-1.5 py-1 hover:text-red-500 text-neutral-600 transition cursor-pointer"
-                      aria-label="Laporkan"
-                    >
-                      <Flag className="w-4 h-4" />
-                      <span>Laporkan</span>
-                    </button>
-                  )}
-
-                  {/* Ikon Tayangan / View (Fitur Analitik) - Posisi di samping kanan icon Laporkan/Hapus */}
+                  {/* Ikon Tayangan / View (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
                   <div
                     className="flex items-center gap-1.5 py-1 text-neutral-500 select-none ml-auto sm:ml-0"
                     aria-label={`${(f.views || 0).toLocaleString("id-ID")} kali dilihat`}
@@ -3342,7 +3400,10 @@ export default function KarebaFeedFinal() {
               <button
                 id="close-report-modal-btn"
                 type="button"
-                onClick={() => setReportPostData(null)}
+                onClick={() => {
+                  setReportPostData(null);
+                  setReportSuccessInfo(null);
+                }}
                 className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer"
                 aria-label="Tutup Halaman Laporan"
               >
@@ -3350,134 +3411,202 @@ export default function KarebaFeedFinal() {
               </button>
             </div>
 
-            {/* Konten Halaman Full Screen (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Kutipan konten yang dilaporkan */}
-              {reportPostData.text && (
-                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs text-neutral-600 italic">
-                  &ldquo;{reportPostData.text}&rdquo;
+            {reportSuccessInfo ? (
+              /* Tampilan Konfirmasi Sukses Pelaporan ala Instagram / Facebook */
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center text-center animate-fade-in space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-[#00632B] flex items-center justify-center shadow-xs">
+                  <ShieldCheck className="w-9 h-9" />
                 </div>
-              )}
+                <div className="space-y-1.5 max-w-xs">
+                  <h3 className="text-lg font-bold text-neutral-900">
+                    Terima Kasih Atas Laporan Anda
+                  </h3>
+                  <p className="text-xs text-neutral-600 leading-relaxed">
+                    Laporan Anda mengenai kabar dari <span className="font-semibold text-neutral-800">@{reportSuccessInfo.targetUser}</span> telah berhasil dikirimkan ke tim pengawas.
+                  </p>
+                </div>
 
-              {/* Pilihan alasan pelaporan dengan deskripsi tegas untuk asusila / sensual */}
-              <div>
-                <label className="text-xs font-bold text-neutral-800 block mb-2">
-                  Pilih Alasan Pelaporan:
-                </label>
-                <div className="space-y-2">
-                  {[
-                    {
-                      title: "Konten Asusila, Sensual & Pornografi",
-                      desc: "Pakaian seksi/terbuka berlebihan, goyangan/tarian erotis, julur lidah sensual, atau gestur berbau pornografi.",
-                    },
-                    {
-                      title: "Informasi Palsu / Hoaks",
-                      desc: "Berita bohong, fitnah, atau kabar menyesatkan warga.",
-                    },
-                    {
-                      title: "Ujaran Kebencian & Pelecehan",
-                      desc: "SARA, perundungan, hinaan personal, atau pelecehan sesama warga.",
-                    },
-                    {
-                      title: "Spam, Penipuan & Promosi Liar",
-                      desc: "Iklan berulang, link berbahaya, penipuan uang, atau judi online.",
-                    },
-                    {
-                      title: "Kekerasan & Bahaya Nyata",
-                      desc: "Mendorong perkelahian, tawuran, senjata tajam, atau aksi kejahatan.",
-                    },
-                    {
-                      title: "Pelanggaran Norma & Etika Lainnya",
-                      desc: "Melanggar ketertiban dan pedoman etika komunitas Kareba'Ta.",
-                    },
-                  ].map((opt) => {
-                    const isSelected = reportReason === opt.title;
-                    return (
-                      <label
-                        key={opt.title}
-                        onClick={() => setReportReason(opt.title)}
-                        className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition select-none ${
-                          isSelected
-                            ? "border-red-500 bg-red-50/50 text-neutral-900 ring-1 ring-red-400 shadow-xs"
-                            : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80 text-neutral-700"
-                        }`}
-                      >
-                        {/* Cincin Lingkaran: Abu-abu netral secara default, berubah Merah saat dipilih */}
-                        <div
-                          className={`w-4 h-4 rounded-full mt-0.5 shrink-0 flex items-center justify-center transition-all ${
-                            isSelected
-                              ? "border-2 border-red-600 bg-white ring-2 ring-red-200"
-                              : "border-2 border-neutral-300 bg-white"
-                          }`}
-                        >
-                          {isSelected && (
-                            <div className="w-2 h-2 rounded-full bg-red-600 transition-transform scale-100" />
-                          )}
-                        </div>
-                        <input
-                          type="radio"
-                          name="report_reason"
-                          checked={isSelected}
-                          onChange={() => setReportReason(opt.title)}
-                          className="sr-only"
-                        />
-                        <div className="min-w-0">
-                          <p className={`text-xs font-bold leading-tight ${isSelected ? "text-red-700" : "text-neutral-900"}`}>
-                            {opt.title}
-                          </p>
-                          <p className="text-[11px] text-neutral-500 leading-normal mt-1">{opt.desc}</p>
-                        </div>
-                      </label>
-                    );
-                  })}
+                {/* Info Kotak Penjelasan */}
+                <div className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl p-4 text-left space-y-2.5 text-xs text-neutral-700">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-[#00632B] mt-1.5 shrink-0" />
+                    <p className="leading-snug">
+                      <b>Postingan telah disembunyikan</b> dari linimasa beranda Anda agar Anda tidak melihatnya kembali.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-[#00632B] mt-1.5 shrink-0" />
+                    <p className="leading-snug">
+                      <b>Identitas Anda aman & rahasia.</b> Pengguna yang dilaporkan tidak akan pernah mengetahui siapa yang melaporkan.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-[#00632B] mt-1.5 shrink-0" />
+                    <p className="leading-snug">
+                      <b>Pengawas akan meninjau</b> konten ini dan mengambil tindakan tegas jika terbukti melanggar Pedoman Komunitas Kareba'Ta.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tombol Aksi */}
+                <div className="w-full pt-2 space-y-2">
+                  <button
+                    id="finish-report-btn"
+                    type="button"
+                    onClick={() => {
+                      setReportSuccessInfo(null);
+                      setReportPostData(null);
+                    }}
+                    className="w-full py-3 px-4 bg-[#00632B] hover:bg-[#004f22] text-white font-bold text-sm rounded-xl transition cursor-pointer shadow-md"
+                  >
+                    Selesai
+                  </button>
+                  <button
+                    id="undo-hide-post-btn"
+                    type="button"
+                    onClick={() => {
+                      handleUnhidePost(reportSuccessInfo.postId);
+                      setReportSuccessInfo(null);
+                      setReportPostData(null);
+                    }}
+                    className="w-full py-2.5 px-4 text-neutral-500 hover:text-neutral-800 font-semibold text-xs transition cursor-pointer"
+                  >
+                    Batalkan Sembunyikan Postingan
+                  </button>
                 </div>
               </div>
+            ) : (
+              <>
+                {/* Konten Halaman Full Screen (Scrollable) */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Kutipan konten yang dilaporkan */}
+                  {reportPostData.text && (
+                    <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs text-neutral-600 italic">
+                      &ldquo;{reportPostData.text}&rdquo;
+                    </div>
+                  )}
 
-              {/* Catatan tambahan opsional */}
-              <div>
-                <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                  Keterangan Tambahan <span className="text-neutral-400 font-normal">(Opsional)</span>
-                </label>
-                <textarea
-                  id="report-details-input"
-                  value={reportDetails}
-                  onChange={(e) => setReportDetails(e.target.value)}
-                  placeholder="Jelaskan detail tindakan atau menit/bagian yang melanggar..."
-                  rows={3}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl p-3 text-base text-neutral-900 placeholder-neutral-400 outline-none focus:border-red-500 focus:bg-white transition resize-none"
-                />
-              </div>
+                  {/* Pilihan alasan pelaporan dengan deskripsi tegas untuk asusila / sensual */}
+                  <div>
+                    <label className="text-xs font-bold text-neutral-800 block mb-2">
+                      Pilih Alasan Pelaporan:
+                    </label>
+                    <div className="space-y-2">
+                      {[
+                        {
+                          title: "Konten Asusila, Sensual & Pornografi",
+                          desc: "Pakaian seksi/terbuka berlebihan, goyangan/tarian erotis, julur lidah sensual, atau gestur berbau pornografi.",
+                        },
+                        {
+                          title: "Informasi Palsu / Hoaks",
+                          desc: "Berita bohong, fitnah, atau kabar menyesatkan warga.",
+                        },
+                        {
+                          title: "Ujaran Kebencian & Pelecehan",
+                          desc: "SARA, perundungan, hinaan personal, atau pelecehan sesama warga.",
+                        },
+                        {
+                          title: "Spam, Penipuan & Promosi Liar",
+                          desc: "Iklan berulang, link berbahaya, penipuan uang, atau judi online.",
+                        },
+                        {
+                          title: "Kekerasan & Bahaya Nyata",
+                          desc: "Mendorong perkelahian, tawuran, senjata tajam, atau aksi kejahatan.",
+                        },
+                        {
+                          title: "Pelanggaran Norma & Etika Lainnya",
+                          desc: "Melanggar ketertiban dan pedoman etika komunitas Kareba'Ta.",
+                        },
+                      ].map((opt) => {
+                        const isSelected = reportReason === opt.title;
+                        return (
+                          <label
+                            key={opt.title}
+                            onClick={() => setReportReason(opt.title)}
+                            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition select-none ${
+                              isSelected
+                                ? "border-red-500 bg-red-50/50 text-neutral-900 ring-1 ring-red-400 shadow-xs"
+                                : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80 text-neutral-700"
+                            }`}
+                          >
+                            {/* Cincin Lingkaran: Abu-abu netral secara default, berubah Merah saat dipilih */}
+                            <div
+                              className={`w-4 h-4 rounded-full mt-0.5 shrink-0 flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? "border-2 border-red-600 bg-white ring-2 ring-red-200"
+                                  : "border-2 border-neutral-300 bg-white"
+                              }`}
+                            >
+                              {isSelected && (
+                                <div className="w-2 h-2 rounded-full bg-red-600 transition-transform scale-100" />
+                              )}
+                            </div>
+                            <input
+                              type="radio"
+                              name="report_reason"
+                              checked={isSelected}
+                              onChange={() => setReportReason(opt.title)}
+                              className="sr-only"
+                            />
+                            <div className="min-w-0">
+                              <p className={`text-xs font-bold leading-tight ${isSelected ? "text-red-700" : "text-neutral-900"}`}>
+                                {opt.title}
+                              </p>
+                              <p className="text-[11px] text-neutral-500 leading-normal mt-1">{opt.desc}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800 leading-relaxed">
-                Laporan Anda bersifat rahasia. Tim moderator Kareba&apos;Ta akan segera meninjau dan menghapus konten jika terbukti melanggar norma komunitas.
-              </div>
-            </div>
+                  {/* Catatan tambahan opsional */}
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                      Keterangan Tambahan <span className="text-neutral-400 font-normal">(Opsional)</span>
+                    </label>
+                    <textarea
+                      id="report-details-input"
+                      value={reportDetails}
+                      onChange={(e) => setReportDetails(e.target.value)}
+                      placeholder="Jelaskan detail tindakan atau bagian yang melanggar..."
+                      rows={3}
+                      className="w-full bg-neutral-50 border border-neutral-300 rounded-xl p-3 text-base text-neutral-900 placeholder-neutral-400 outline-none focus:border-red-500 focus:bg-white transition resize-none"
+                    />
+                  </div>
 
-            {/* Footer Tombol Aksi Sticky di Bawah */}
-            <div className="sticky bottom-0 bg-white border-t border-neutral-200 p-4 flex gap-3 shadow-lg">
-              <button
-                id="cancel-report-btn"
-                type="button"
-                onClick={() => setReportPostData(null)}
-                className="flex-1 py-3 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                id="submit-report-btn"
-                type="button"
-                onClick={handleConfirmReport}
-                disabled={!reportReason}
-                className={`flex-1 py-3 text-xs font-bold text-white rounded-xl transition cursor-pointer shadow-md flex items-center justify-center gap-1.5 ${
-                  reportReason
-                    ? "bg-red-600 hover:bg-red-700 active:scale-[0.99]"
-                    : "bg-neutral-300 text-neutral-500 cursor-not-allowed shadow-none"
-                }`}
-              >
-                <Flag className="w-4 h-4" />
-                <span>Kirim Laporan</span>
-              </button>
-            </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800 leading-relaxed">
+                    Laporan Anda bersifat rahasia. Tim moderator Kareba&apos;Ta akan segera meninjau dan menghapus konten jika terbukti melanggar norma komunitas.
+                  </div>
+                </div>
+
+                {/* Footer Tombol Aksi Sticky di Bawah */}
+                <div className="sticky bottom-0 bg-white border-t border-neutral-200 p-4 flex gap-3 shadow-lg">
+                  <button
+                    id="cancel-report-btn"
+                    type="button"
+                    onClick={() => setReportPostData(null)}
+                    className="flex-1 py-3 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    id="submit-report-btn"
+                    type="button"
+                    onClick={handleConfirmReport}
+                    disabled={!reportReason}
+                    className={`flex-1 py-3 text-xs font-bold text-white rounded-xl transition cursor-pointer shadow-md flex items-center justify-center gap-1.5 ${
+                      reportReason
+                        ? "bg-red-600 hover:bg-red-700 active:scale-[0.99]"
+                        : "bg-neutral-300 text-neutral-500 cursor-not-allowed shadow-none"
+                    }`}
+                  >
+                    <Flag className="w-4 h-4" />
+                    <span>Kirim Laporan</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

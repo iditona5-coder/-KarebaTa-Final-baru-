@@ -1,19 +1,17 @@
 import React, { useState } from "react";
 import { 
-  Copy, Check, ShieldAlert, ArrowRight, Newspaper, Users, ShieldCheck
+  Copy, Check, ShieldAlert
 } from "lucide-react";
 import { KarebaPinIcon } from "./KarebaTaLogo";
-import { loginWithGoogle, loginAsSimulatedUser, PRIMARY_ADMIN_EMAIL, User } from "../services/firebase";
+import { loginWithGoogle, User } from "../services/firebase";
 
 interface LoginPageProps {
   onLoginSuccess: (user?: User | null) => void;
-  onContinueAsGuest?: () => void;
   initialMessage?: string | null;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
-  onContinueAsGuest,
   initialMessage = null,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -65,12 +63,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickPreviewLogin = (asAdmin: boolean = false) => {
-    sessionStorage.setItem("karebata_active_session", "true");
-    const simulated = loginAsSimulatedUser(asAdmin ? PRIMARY_ADMIN_EMAIL : "warga.kareba@gmail.com");
-    onLoginSuccess(simulated);
   };
 
   return (
@@ -129,7 +121,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <span>Domain pratinjau belum diizinkan di Firebase Console</span>
             </div>
             <p className="text-neutral-700 text-[11px] leading-relaxed">
-              Google membatasi autentikasi di domain ini. Anda dapat menyalin nama domain untuk didaftarkan di Firebase Console, atau langsung masuk lewat <b>Mode Uji Coba Pratinjau</b>:
+              Google membatasi autentikasi di domain ini. Silakan salin nama domain ini dan tambahkan ke <b>Authorized Domains</b> di Firebase Console:
             </p>
 
             {/* Box Salin Domain */}
@@ -146,18 +138,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <span>{copiedDomain ? "Tersalin!" : "Salin"}</span>
               </button>
             </div>
-
-            {/* Tombol Masuk Cepat Sebagai Warga */}
-            <div className="pt-1 flex flex-col gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickPreviewLogin(false)}
-                className="w-full py-2.5 px-3 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Masuk Cepat Sebagai Warga</span>
-              </button>
-            </div>
           </div>
         ) : errorMessage ? (
           <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs text-left font-medium">
@@ -165,9 +145,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         ) : null}
 
-        {/* 2 PILIHAN UTAMA: TOMBOL LOGIN GOOGLE DAN TOMBOL KABAR WARGA */}
+        {/* TOMBOL UTAMA: MASUK DENGAN AKUN GOOGLE */}
         <div className="space-y-3.5">
-          {/* PILIHAN 1: Tombol Masuk dengan Akun Google */}
           <button
             id="login-google-btn"
             type="button"
