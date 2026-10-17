@@ -8,7 +8,6 @@ import {
   Heart,
   Trash2,
   Eye,
-  MessageCircle,
   MoreVertical,
   Link2,
 } from "lucide-react";
@@ -339,19 +338,6 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   }`}
                 />
                 <span>Suka</span>
-              </button>
-            )}
-
-            {onOpenComments && (
-              <button
-                id={`comment-detail-btn-${post.id}`}
-                type="button"
-                onClick={onOpenComments}
-                className="flex items-center gap-1.5 py-1 hover:text-[#00632B] text-neutral-600 transition cursor-pointer"
-                aria-label="Komentar"
-              >
-                <MessageCircle className="w-4 h-4 text-neutral-500" />
-                <span>{commentsCount ? `${commentsCount}` : "Komentar"}</span>
               </button>
             )}
 

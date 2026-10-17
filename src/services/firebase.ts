@@ -119,59 +119,81 @@ export function listenToFirestorePosts(
     return () => {};
   }
 
+  const parseDoc = (docSnap: any): FeedItem => {
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      user: data.user || 'Warga Kareba',
+      init: data.init || (data.user ? data.user[0].toUpperCase() : 'W'),
+      name: data.name || data.user || 'Warga',
+      email: data.email || '',
+      avatar: data.avatar,
+      time: data.time || 'Baru saja',
+      text: data.text || '',
+      img: data.img || '',
+      thumbnail: data.thumbnail,
+      fileId: data.fileId,
+      thumbFileId: data.thumbFileId,
+      mediaType: data.mediaType || 'image',
+      like: Number(data.like) || 0,
+      views: Number(data.views) || 0,
+      shares: Number(data.shares) || 0,
+      saves: Number(data.saves) || 0,
+      likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
+      isLiked: false, // Ditentukan oleh client lokal
+      comments: Array.isArray(data.comments) ? data.comments : [],
+      location: data.location || data.loc || 'Wilayah Sekitar',
+      authorUid: data.authorUid || data.uid || data.userId || '',
+      isHidden: Boolean(data.isHidden),
+      category: data.category || undefined,
+      isMyPost: false,
+      createdAtTimestamp: Number(data.createdAtTimestamp) || (data.createdAtServer?.toMillis ? data.createdAtServer.toMillis() : 0),
+    } as any;
+  };
+
   try {
+    let fallbackUnsub: (() => void) | null = null;
     const postsQuery = query(
       collection(db, 'posts'),
       orderBy('createdAtTimestamp', 'desc'),
-      limit(50)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(
       postsQuery,
       (snapshot) => {
         if (!snapshot.empty) {
-          const remotePosts: FeedItem[] = snapshot.docs.map((docSnap) => {
-            const data = docSnap.data();
-            return {
-              id: docSnap.id,
-              user: data.user || 'Warga Kareba',
-              init: data.init || (data.user ? data.user[0].toUpperCase() : 'W'),
-              name: data.name || data.user || 'Warga',
-              email: data.email || '',
-              avatar: data.avatar,
-              time: data.time || 'Baru saja',
-              text: data.text || '',
-              img: data.img || '',
-              thumbnail: data.thumbnail,
-              fileId: data.fileId,
-              thumbFileId: data.thumbFileId,
-              mediaType: data.mediaType || 'image',
-              like: Number(data.like) || 0,
-              views: Number(data.views) || 0,
-              shares: Number(data.shares) || 0,
-              saves: Number(data.saves) || 0,
-              likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
-              isLiked: false, // Ditentukan oleh client lokal
-              comments: Array.isArray(data.comments) ? data.comments : [],
-              location: data.location || data.loc || 'Wilayah Sekitar',
-              authorUid: data.authorUid || data.uid || data.userId || '',
-              isHidden: Boolean(data.isHidden),
-              category: data.category || undefined,
-              isMyPost: false,
-            };
-          });
+          const remotePosts: FeedItem[] = snapshot.docs.map(parseDoc);
           onUpdate(remotePosts);
         } else {
           onUpdate([]);
         }
       },
       (error) => {
-        console.warn('[Firebase] Listener Firestore belum aktif atau butuh izin rules:', error);
-        if (onError) onError(error);
+        console.warn('[Firebase] Query dengan orderBy dialihkan ke fallback realtime:', error);
+        try {
+          fallbackUnsub = onSnapshot(
+            collection(db, 'posts'),
+            (snap) => {
+              const remote = snap.docs.map(parseDoc);
+              remote.sort((a: any, b: any) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
+              onUpdate(remote);
+            },
+            (err2) => {
+              console.warn('[Firebase] Fallback listener error:', err2);
+              if (onError) onError(err2);
+            }
+          );
+        } catch {
+          if (onError) onError(error);
+        }
       }
     );
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (fallbackUnsub) fallbackUnsub();
+    };
   } catch (err) {
     console.warn('[Firebase] Gagal menginisialisasi listener Firestore:', err);
     return () => {};

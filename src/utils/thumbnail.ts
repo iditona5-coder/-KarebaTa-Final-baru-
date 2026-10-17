@@ -79,10 +79,72 @@ export function extractVideoThumbnail(source: string | File, seekTime = 0.8): Pr
 }
 
 /**
+ * Batas durasi maksimal video untuk aplikasi Kareba'Ta (Kabar Warga Cepat)
+ * 60 detik (1 menit) sangat ideal: hemat kuota ImageKit, upload instan di HP, kabar padat to-the-point.
+ */
+export const MAX_VIDEO_DURATION_SECONDS = 60;
+
+/**
+ * Mendapatkan durasi video dalam satuan detik
+ */
+export function getVideoDuration(source: File | string): Promise<number> {
+  return new Promise((resolve) => {
+    try {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      let objectUrl: string | null = null;
+      if (typeof source === "string") {
+        video.src = source;
+      } else {
+        objectUrl = URL.createObjectURL(source);
+        video.src = objectUrl;
+      }
+
+      let done = false;
+      const cleanup = () => {
+        if (!done) {
+          done = true;
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          video.remove();
+        }
+      };
+
+      video.onloadedmetadata = () => {
+        const dur = video.duration || 0;
+        cleanup();
+        resolve(dur);
+      };
+
+      video.onerror = () => {
+        cleanup();
+        resolve(0);
+      };
+
+      setTimeout(() => {
+        const dur = video.duration || 0;
+        cleanup();
+        resolve(dur);
+      }, 3500);
+    } catch {
+      resolve(0);
+    }
+  });
+}
+
+/**
+ * Format detik ke format mm:ss (contoh: 45 -> 00:45, 75 -> 01:15)
+ */
+export function formatDuration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  const mins = Math.floor(s / 60);
+  const remainingSecs = s % 60;
+  return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+}
+
+/**
  * Fallback thumbnail jika browser memblokir frame (misal CORS remote URL)
  */
 export function getFallbackVideoThumbnail(): string {
-  // SVG poster data URL yang elegan dengan ikon pemutar video Kareba'Ta
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">

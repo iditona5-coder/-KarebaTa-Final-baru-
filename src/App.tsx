@@ -42,7 +42,12 @@ import { CommentActions } from "./components/CommentActions";
 import { ShareBar } from "./components/ShareBar";
 import { HelpContactModal } from "./components/HelpContactModal";
 import { SponsorAdCard } from "./components/SponsorAdCard";
-import { extractVideoThumbnail } from "./utils/thumbnail";
+import {
+  extractVideoThumbnail,
+  getVideoDuration,
+  formatDuration,
+  MAX_VIDEO_DURATION_SECONDS,
+} from "./utils/thumbnail";
 import { compressImageFile } from "./utils/compressor";
 import { uploadToImageKit, deleteFromImageKit } from "./services/imagekit";
 import { checkContentModeration } from "./utils/contentModeration";
@@ -106,6 +111,7 @@ export default function KarebaFeedFinal() {
   const [selectedThumbnail, setSelectedThumbnail] = useState<string | null>(null);
   const [isExtractingThumbnail, setIsExtractingThumbnail] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState<"image" | "video">("image");
+  const [selectedVideoDuration, setSelectedVideoDuration] = useState<number | null>(null);
   const [description, setDescription] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
@@ -546,15 +552,25 @@ export default function KarebaFeedFinal() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
       const isVid = file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|3gp|avi)$/i.test(file.name);
       
       if (isVid) {
-        const url = URL.createObjectURL(file);
-        setSelectedImage(url);
-        setSelectedMediaType("video");
         setIsExtractingThumbnail(true);
         try {
+          // Validasi durasi video: batas maksimal 60 detik (1 menit) sangat pas untuk kabar warga
+          const dur = await getVideoDuration(file);
+          if (dur > MAX_VIDEO_DURATION_SECONDS) {
+            setIsExtractingThumbnail(false);
+            showToast(`Durasi video (${formatDuration(dur)}) melebihi batas maksimal 60 detik (1 menit). Silakan pilih video yang lebih singkat.`);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
+          }
+
+          setSelectedFile(file);
+          setSelectedVideoDuration(dur);
+          const url = URL.createObjectURL(file);
+          setSelectedImage(url);
+          setSelectedMediaType("video");
           const thumb = await extractVideoThumbnail(file);
           setSelectedThumbnail(thumb);
         } catch {
@@ -563,6 +579,8 @@ export default function KarebaFeedFinal() {
           setIsExtractingThumbnail(false);
         }
       } else {
+        setSelectedFile(file);
+        setSelectedVideoDuration(null);
         setSelectedMediaType("image");
         setSelectedThumbnail(null);
         // Kompres otomatis gambar: hemat gudang ImageKit & kencang meski sinyal lelet
@@ -1481,6 +1499,7 @@ export default function KarebaFeedFinal() {
     setSelectedImage(null);
     setSelectedFile(null);
     setSelectedThumbnail(null);
+    setSelectedVideoDuration(null);
     setDescription("");
     setSelectedLocation("");
     if (fileInputRef.current) {
@@ -2682,8 +2701,9 @@ export default function KarebaFeedFinal() {
                   )}
 
                   {selectedMediaType === "video" && (
-                    <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] px-1 py-0.5 rounded flex items-center gap-0.5">
-                      <Video className="w-2.5 h-2.5 text-[#00632B]" />
+                    <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 font-mono shadow-xs backdrop-blur-xs">
+                      <Video className="w-2.5 h-2.5 text-emerald-400" />
+                      <span>{selectedVideoDuration ? formatDuration(selectedVideoDuration) : "00:00"}</span>
                     </span>
                   )}
                 </div>
@@ -2691,7 +2711,9 @@ export default function KarebaFeedFinal() {
                 {/* Keterangan & Tombol Ganti / Hapus */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <p className="text-xs font-semibold text-neutral-800">
-                    {selectedMediaType === "video" ? "Video siap dibagikan" : "Foto siap dibagikan"}
+                    {selectedMediaType === "video"
+                      ? `Video siap dibagikan ${selectedVideoDuration ? `(${formatDuration(selectedVideoDuration)} / maks 01:00)` : "(Maks 60 dtk)"}`
+                      : "Foto siap dibagikan"}
                   </p>
                   <div className="flex items-center gap-3 pt-1">
                     <button
@@ -2699,7 +2721,7 @@ export default function KarebaFeedFinal() {
                       onClick={handleGalleryClick}
                       className="text-xs text-[#00632B] hover:text-[#004f22] font-semibold cursor-pointer"
                     >
-                      Ganti Foto
+                      {selectedMediaType === "video" ? "Ganti Video" : "Ganti Foto"}
                     </button>
                     <span className="text-neutral-300">•</span>
                     <button
@@ -2709,6 +2731,7 @@ export default function KarebaFeedFinal() {
                         setSelectedImage(null);
                         setSelectedFile(null);
                         setSelectedThumbnail(null);
+                        setSelectedVideoDuration(null);
                         setDescription("");
                       }}
                       className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
@@ -3216,17 +3239,6 @@ export default function KarebaFeedFinal() {
                       }`}
                     />
                     <span>Suka</span>
-                  </button>
-
-                  <button
-                    id={`comment-btn-${f.id}`}
-                    type="button"
-                    onClick={() => setActiveCommentItem(f)}
-                    className="flex items-center gap-1.5 py-1 hover:text-[#00632B] text-neutral-600 transition cursor-pointer"
-                    aria-label="Komentar"
-                  >
-                    <MessageCircle className="w-4 h-4 text-neutral-500" />
-                    <span>{f.comments && f.comments.length > 0 ? f.comments.length : "Komentar"}</span>
                   </button>
 
                   <button
