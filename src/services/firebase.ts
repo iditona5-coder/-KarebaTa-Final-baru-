@@ -697,7 +697,7 @@ export async function checkRegisteredUser(
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanUid = (uid || '').trim();
 
-  // 1. Cek cache lokal terlebih dahulu untuk kecepatan instan
+  // 1. Cek cache lokal terlebih dahulu untuk kecepatan instan (0ms)
   if (cleanEmail) {
     const localCached = localStorage.getItem(`karebata_registered_${cleanEmail}`);
     if (localCached && localCached.trim() && localCached !== 'warga_kareba') {
@@ -705,10 +705,14 @@ export async function checkRegisteredUser(
     }
   }
   if (cleanUid) {
-    const localCachedUid = localStorage.getItem(`karebata_custom_username_${cleanUid}`);
+    const localCachedUid = localStorage.getItem(`karebata_custom_username_${cleanUid}`) || localStorage.getItem(`karebata_registered_user_${cleanUid}`);
     if (localCachedUid && localCachedUid.trim() && localCachedUid !== 'warga_kareba') {
       return { isRegistered: true, username: localCachedUid.trim().slice(0, 13) };
     }
+  }
+  const generalCached = localStorage.getItem('karebata_username') || localStorage.getItem('karebata_last_registered_username');
+  if (generalCached && generalCached.trim() && generalCached !== 'warga_kareba') {
+    return { isRegistered: true, username: generalCached.trim().slice(0, 13) };
   }
 
   if (!db) {
@@ -716,22 +720,7 @@ export async function checkRegisteredUser(
   }
 
   try {
-    // 2. Cek dokumen di Firestore users collection berdasarkan email key
-    if (cleanEmail) {
-      const emailDocId = 'email_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
-      const emailSnap = await getDoc(doc(db, 'users', emailDocId));
-      if (emailSnap.exists()) {
-        const d = emailSnap.data();
-        const uname = d?.username || d?.userName || d?.displayName;
-        if (uname && typeof uname === 'string' && uname.trim() && uname.trim() !== 'warga_kareba') {
-          const cleanUname = uname.trim().slice(0, 13);
-          localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
-          return { isRegistered: true, username: cleanUname };
-        }
-      }
-    }
-
-    // 3. Cek dokumen di Firestore users collection berdasarkan UID
+    // 2. Cek dokumen di Firestore users collection berdasarkan UID
     if (cleanUid) {
       const uidSnap = await getDoc(doc(db, 'users', cleanUid));
       if (uidSnap.exists()) {
@@ -741,12 +730,29 @@ export async function checkRegisteredUser(
           const cleanUname = uname.trim().slice(0, 13);
           if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
           localStorage.setItem(`karebata_custom_username_${cleanUid}`, cleanUname);
+          localStorage.setItem('karebata_last_registered_username', cleanUname);
           return { isRegistered: true, username: cleanUname };
         }
       }
     }
 
-    // 4. Query koleksi users jika dokumen email spesifik belum ada
+    // 3. Cek dokumen di Firestore users collection berdasarkan email key
+    if (cleanEmail) {
+      const emailDocId = 'email_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
+      const emailSnap = await getDoc(doc(db, 'users', emailDocId));
+      if (emailSnap.exists()) {
+        const d = emailSnap.data();
+        const uname = d?.username || d?.userName || d?.displayName;
+        if (uname && typeof uname === 'string' && uname.trim() && uname.trim() !== 'warga_kareba') {
+          const cleanUname = uname.trim().slice(0, 13);
+          localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
+          localStorage.setItem('karebata_last_registered_username', cleanUname);
+          return { isRegistered: true, username: cleanUname };
+        }
+      }
+    }
+
+    // 4. Query koleksi users jika dokumen UID/email langsung belum ada
     if (cleanEmail) {
       const q = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(1));
       const qSnap = await getDocs(q);
@@ -756,14 +762,42 @@ export async function checkRegisteredUser(
         if (uname && typeof uname === 'string' && uname.trim() && uname.trim() !== 'warga_kareba') {
           const cleanUname = uname.trim().slice(0, 13);
           localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
+          localStorage.setItem('karebata_last_registered_username', cleanUname);
           return { isRegistered: true, username: cleanUname };
         }
       }
     }
 
+    // 5. Cadangan: Cek postingan sebelumnya milik user ini di Firestore jika pernah posting
+    if (cleanUid || cleanEmail) {
+      try {
+        const postConstraints = cleanUid 
+          ? [where('authorUid', '==', cleanUid), limit(1)]
+          : [where('email', '==', cleanEmail), limit(1)];
+        const postQ = query(collection(db, 'posts'), ...(postConstraints as any));
+        const postSnap = await getDocs(postQ);
+        if (!postSnap.empty) {
+          const pd = postSnap.docs[0].data();
+          const pUser = (pd?.user || pd?.author || pd?.name)?.toString().trim().replace(/^@/, '');
+          if (pUser && pUser !== 'warga_kareba') {
+            const cleanUname = pUser.slice(0, 13);
+            if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
+            if (cleanUid) localStorage.setItem(`karebata_custom_username_${cleanUid}`, cleanUname);
+            localStorage.setItem('karebata_last_registered_username', cleanUname);
+            return { isRegistered: true, username: cleanUname };
+          }
+        }
+      } catch {}
+    }
+
     return { isRegistered: false, username: null };
   } catch (err) {
     console.warn('[Firebase] Gagal cek status pendaftaran akun:', err);
+    // Jika koneksi gagal, periksa apakah ada username yang tersimpan sebelumnya
+    const lastUser = localStorage.getItem('karebata_last_registered_username') || localStorage.getItem('karebata_username');
+    if (lastUser && lastUser.trim() && lastUser !== 'warga_kareba') {
+      return { isRegistered: true, username: lastUser.trim().slice(0, 13) };
+    }
     return { isRegistered: false, username: null };
   }
 }
@@ -779,14 +813,16 @@ export async function saveRegisteredUserProfile(
   const cleanUsername = username.trim().replace(/^@/, '').slice(0, 13);
   const cleanEmail = (email || '').trim().toLowerCase();
 
-  // Simpan ke cache lokal
+  // Simpan ke cache lokal permanen (agar tidak pernah hilang saat login ulang)
   if (cleanEmail) {
     localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUsername);
   }
   if (uid) {
     localStorage.setItem(`karebata_custom_username_${uid}`, cleanUsername);
+    localStorage.setItem(`karebata_registered_user_${uid}`, cleanUsername);
   }
   localStorage.setItem('karebata_username', cleanUsername);
+  localStorage.setItem('karebata_last_registered_username', cleanUsername);
 
   if (!db) return true;
 
