@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   MoreVertical,
   Link2,
+  Clock,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { FeedMedia } from "./components/FeedMedia";
@@ -112,6 +113,7 @@ export default function KarebaFeedFinal() {
   const [isExtractingThumbnail, setIsExtractingThumbnail] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState<"image" | "video">("image");
   const [selectedVideoDuration, setSelectedVideoDuration] = useState<number | null>(null);
+  const [videoDurationAlert, setVideoDurationAlert] = useState<{ isOpen: boolean; duration: number } | null>(null);
   const [description, setDescription] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
@@ -561,7 +563,7 @@ export default function KarebaFeedFinal() {
           const dur = await getVideoDuration(file);
           if (dur > MAX_VIDEO_DURATION_SECONDS) {
             setIsExtractingThumbnail(false);
-            showToast(`Durasi video (${formatDuration(dur)}) melebihi batas maksimal 60 detik (1 menit). Silakan pilih video yang lebih singkat.`);
+            setVideoDurationAlert({ isOpen: true, duration: dur });
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
           }
@@ -4009,6 +4011,61 @@ export default function KarebaFeedFinal() {
               setActiveDetailPost(null);
             }}
           />
+        )}
+
+        {/* MODAL PERINGATAN DURASI VIDEO LEBIH DARI 60 DETIK (1 MENIT) */}
+        {videoDurationAlert?.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-neutral-200 text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-xs">
+                <Clock className="w-7 h-7 text-amber-600" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-extrabold text-neutral-900">
+                  Durasi Video Terlalu Panjang
+                </h3>
+                <p className="text-xs text-neutral-600 leading-relaxed">
+                  Video yang Anda pilih berdurasi{" "}
+                  <span className="font-bold text-amber-600 font-mono">
+                    {formatDuration(videoDurationAlert.duration)}
+                  </span>
+                  . Batas durasi maksimal di Kareba&apos;Ta adalah{" "}
+                  <span className="font-bold text-[#00632B]">60 detik (1 menit)</span>.
+                </p>
+              </div>
+
+              <div className="bg-neutral-50 rounded-2xl p-3 border border-neutral-200 text-left space-y-1.5">
+                <p className="text-[11px] font-bold text-neutral-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#00632B]" />
+                  <span>Kenapa dibatasi 60 detik?</span>
+                </p>
+                <p className="text-[11px] text-neutral-500 leading-normal">
+                  Agar kabar warga tetap padat &amp; to the point, cepat diunggah di HP, serta hemat kuota dan tidak membuat warga lain *buffering* saat menonton di beranda.
+                </p>
+              </div>
+
+              <div className="pt-1 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVideoDurationAlert(null);
+                    openCustomGallery();
+                  }}
+                  className="w-full py-2.5 px-4 bg-[#00632B] hover:bg-[#004f22] active:scale-98 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  Pilih Video Lain (&lt; 60 Detik)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoDurationAlert(null)}
+                  className="w-full py-2 px-4 text-neutral-500 hover:text-neutral-800 text-xs font-semibold rounded-xl hover:bg-neutral-100 transition cursor-pointer"
+                >
+                  Tutup &amp; Potong di Galeri HP
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
