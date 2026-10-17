@@ -12,6 +12,7 @@ import {
   MapPin,
   Clock,
   RefreshCw,
+  WifiOff,
 } from "lucide-react";
 import { extractVideoThumbnail } from "../utils/thumbnail";
 import { isMediaCached, markMediaCached, preloadImage } from "../utils/mediaPreloader";
@@ -134,6 +135,45 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
       };
     }
   }, [thumbnail, isVideo, src]);
+
+  // Deteksi status koneksi internet pengguna secara real-time
+  const [isOffline, setIsOffline] = useState(() => (typeof navigator !== "undefined" ? !navigator.onLine : false));
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      if (videoRef.current) {
+        setHasVideoError(false);
+        videoRef.current.load();
+      }
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      if (videoRef.current && !videoRef.current.paused) {
+        safePause(videoRef.current);
+        setIsPlaying(false);
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const handleRetryVideo = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setHasVideoError(false);
+    setIsBuffering(true);
+    if (videoRef.current) {
+      videoRef.current.load();
+      safePlay(videoRef.current);
+    }
+  };
 
   // Helper aman untuk memutar (play) dan menjeda (pause) video tanpa error Promise browser
   const safePlay = (video: HTMLVideoElement | null) => {
@@ -581,16 +621,45 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             onPause={() => setIsPlaying(false)}
           />
 
-          {/* Tampilan pesan bila video rusak atau URL blob temporer */}
-          {hasVideoError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900/90 text-white p-4 text-center z-20 pointer-events-none">
-              <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center mb-2 border border-white/10">
-                <Video className="w-6 h-6 text-neutral-400" />
+          {/* Tampilan pesan bila koneksi terputus atau video gagal dimuat (Bukan layar hitam mati & Tanpa icon bawaan browser) */}
+          {(hasVideoError || isOffline) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center z-20 overflow-hidden">
+              {/* Gambar sampul/poster tetap tampil di latar belakang dengan efek redup elegan */}
+              {(posterUrl || thumbnail) ? (
+                <img
+                  src={posterUrl || thumbnail}
+                  alt="Sampul video"
+                  className="absolute inset-0 w-full h-full object-cover blur-[2px] opacity-35 scale-105 pointer-events-none select-none"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-neutral-950 pointer-events-none" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/70 to-black/85 pointer-events-none" />
+
+              {/* Kartu Pesan Elegan Khas Aplikasi Besar */}
+              <div className="relative z-10 flex flex-col items-center max-w-[260px] animate-fade-in pointer-events-auto">
+                <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-2.5 border border-white/15 shadow-lg text-amber-400">
+                  <WifiOff className="w-6 h-6 text-amber-400" />
+                </div>
+                <p className="text-xs font-bold text-white tracking-wide">
+                  {isOffline ? "Jaringan Internet Terputus" : "Video Belum Dapat Dimuat"}
+                </p>
+                <p className="text-[11px] text-neutral-300 mt-1 leading-relaxed">
+                  {isOffline
+                    ? "Periksa koneksi seluler atau Wi-Fi Anda untuk memutar kabar ini."
+                    : "Koneksi sedang lambat atau berkas video sedang disiapkan."}
+                </p>
+
+                {/* Tombol Coba Lagi / Refresh yang berfungsi nyata */}
+                <button
+                  type="button"
+                  onClick={handleRetryVideo}
+                  className="mt-3 px-4 py-2 bg-emerald-700/80 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border border-emerald-500/40 shadow-md transition cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Coba Putar Lagi</span>
+                </button>
               </div>
-              <p className="text-xs font-semibold text-neutral-200">Video tidak dapat dimuat</p>
-              <p className="text-[11px] text-neutral-400 mt-0.5 max-w-[240px]">
-                URL video telah kedaluwarsa atau berkas belum selesai diunggah.
-              </p>
             </div>
           )}
 

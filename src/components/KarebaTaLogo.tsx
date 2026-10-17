@@ -12,8 +12,14 @@ export function KarebaPinIcon({
       viewBox="0 0 100 120"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 ${className}`}
+      className={className}
       style={{
+        width: "40px",
+        height: "40px",
+        minWidth: "40px",
+        minHeight: "40px",
+        flexShrink: 0,
+        flexGrow: 0,
         ...style,
       }}
       aria-label="Logo Pin Kareba'Ta"
@@ -44,23 +50,74 @@ export function KarebaTaLogo({
 }) {
   return (
     <div
-      className={`select-none flex items-center gap-2 shrink-0 ${className}`}
-      style={style}
+      className={`select-none ${className}`}
+      style={{
+        height: "40px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        flexShrink: 0,
+        flexGrow: 0,
+        ...style,
+      }}
     >
-      {/* Ikon Pin Lokasi Kareba'Ta - Skala Responsif di Semua Layar HP */}
-      <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 flex items-center justify-center">
-        <KarebaPinIcon className="w-full h-full" />
+      <div
+        style={{
+          width: "40px",
+          height: "40px",
+          minWidth: "40px",
+          minHeight: "40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          flexGrow: 0,
+        }}
+      >
+        <KarebaPinIcon />
       </div>
 
-      {/* Tipografi Brand Kareba'Ta */}
-      <div className="flex flex-col justify-center leading-none shrink-0">
-        <div className="text-[17px] sm:text-[19px] font-black tracking-tight leading-none whitespace-nowrap font-sans">
-          <span className="text-[#00632B]">Kareba&apos;</span>
-          <span className="text-[#E5A000]">Ta</span>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          flexShrink: 0,
+          flexGrow: 0,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "18px",
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            flexGrow: 0,
+            fontWeight: 900,
+            letterSpacing: "-0.02em",
+            fontFamily: "'Poppins', system-ui, sans-serif",
+          }}
+        >
+          <span style={{ color: "#00632B" }}>Kareba&apos;</span>
+          <span style={{ color: "#E5A000" }}>Ta</span>
         </div>
 
         {showSubtitle && (
-          <span className="text-[8.5px] sm:text-[9.5px] font-extrabold tracking-wider text-[#E5A000] uppercase mt-0.5 whitespace-nowrap font-sans">
+          <span
+            style={{
+              fontSize: "9px",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              flexGrow: 0,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              color: "#E5A000",
+              marginTop: "2px",
+              textTransform: "uppercase",
+              fontFamily: "'Poppins', system-ui, sans-serif",
+            }}
+          >
             beritamu, suaramu
           </span>
         )}
@@ -70,4 +127,3 @@ export function KarebaTaLogo({
 }
 
 export default KarebaTaLogo;
-

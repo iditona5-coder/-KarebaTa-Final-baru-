@@ -2068,12 +2068,12 @@ export default function KarebaFeedFinal() {
                 <button
                   type="button"
                   onClick={scrollToTop}
-                  className="flex items-center text-left hover:opacity-80 active:scale-95 transition cursor-pointer"
+                  className="flex items-center text-left hover:opacity-80 active:scale-95 transition cursor-pointer shrink-0"
                   aria-label="Kembali ke media paling atas"
                 >
                   <KarebaTaLogo />
                 </button>
-                <div className="flex items-center gap-1 sm:gap-1.5">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                   <button
                     id="header-search-trigger"
                     type="button"
