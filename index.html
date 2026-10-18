@@ -10,7 +10,8 @@
     <meta name="application-name" content="Kareba'Ta" />
     <meta name="apple-mobile-web-app-title" content="Kareba'Ta" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/logo.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <title>Kareba'Ta</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,7 +24,24 @@
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-splash-screen" style="position:fixed;inset:0;background-color:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:'Poppins',system-ui,sans-serif;-webkit-user-select:none;user-select:none;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;">
+            <path d="M 50 118 C 47 108 10 70 10 46 A 40 40 0 1 1 90 46 C 90 70 53 108 50 118 Z" fill="#E5A000"/>
+            <path d="M 30 25 H 41 V 44.5 L 59.5 25 H 73.5 L 50.5 47.5 L 74.5 71 H 60.5 L 41 51 V 71 H 30 V 25 Z" fill="#ffffff"/>
+          </svg>
+          <div style="display:flex;flex-direction:column;">
+            <span style="font-size:26px;font-weight:900;line-height:1;letter-spacing:-0.02em;">
+              <span style="color:#00632B;">Kareba'</span><span style="color:#E5A000;">Ta</span>
+            </span>
+            <span style="font-size:10px;font-weight:800;color:#E5A000;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">
+              beritamu, suaramu
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

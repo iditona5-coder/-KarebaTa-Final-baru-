@@ -13,6 +13,7 @@ import {
   Eye,
   Video,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { FeedItem, PostItem } from "../types";
 
@@ -28,6 +29,8 @@ export interface SearchModalProps {
   activeCategory?: SearchFilterCategory;
   onSelectCategory?: (category: SearchFilterCategory) => void;
   onOpenPostDetail?: (post: PostItem | FeedItem) => void;
+  onDeletePost?: (id: string, title?: string, img?: string) => void;
+  isMyPost?: (post: FeedItem | PostItem) => boolean;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
@@ -40,6 +43,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   activeCategory: externalCategory,
   onSelectCategory: externalSetCategory,
   onOpenPostDetail,
+  onDeletePost,
+  isMyPost,
 }) => {
   const [internalQuery, setInternalQuery] = useState("");
   const [internalCategory, setInternalCategory] = useState<SearchFilterCategory>("all");
@@ -649,7 +654,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                                   <span className="text-[10px] text-neutral-400">Kawasan Sekitar</span>
                                 )}
 
-                                <div className="flex items-center gap-3 shrink-0 text-[10px] text-neutral-500 font-medium">
+                                <div className="flex items-center gap-2.5 shrink-0 text-[10px] text-neutral-500 font-medium">
                                   <span className="flex items-center gap-0.5">
                                     <Heart className="w-3 h-3 text-red-500" />
                                     <span>{post.like || 0}</span>
@@ -658,6 +663,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                                     <Eye className="w-3 h-3 text-neutral-400" />
                                     <span>{(post.views || 0).toLocaleString("id-ID")}</span>
                                   </span>
+                                  {isMyPost && isMyPost(post) && onDeletePost && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeletePost(post.id, post.text, post.img);
+                                      }}
+                                      className="p-1 px-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition cursor-pointer flex items-center gap-1 border border-rose-200/60 active:scale-95"
+                                      title="Hapus kabar ini"
+                                      aria-label="Hapus postingan"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      <span className="text-[10px] font-bold">Hapus</span>
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>

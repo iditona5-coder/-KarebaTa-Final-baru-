@@ -3992,6 +3992,10 @@ export default function KarebaFeedFinal() {
             const foundFeed = feed.find((f) => f.id === post.id);
             setActiveDetailPost((foundFeed || post) as PostItem);
           }}
+          onDeletePost={(id, title, img) => {
+            setPostToDelete({ id, title, img });
+          }}
+          isMyPost={(item) => isMyPost(item)}
         />
 
         {/* MODAL PUSAT BANTUAN & KONTAK WHATSAPP ADMIN DINAMIS */}
