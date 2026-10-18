@@ -3,23 +3,24 @@ import React from "react";
 export function KarebaPinIcon({
   className = "",
   style,
+  size = 36,
 }: {
   className?: string;
   style?: React.CSSProperties;
+  size?: number | string;
 }) {
+  const sizeVal = typeof size === "number" ? `${size}px` : size;
   return (
     <svg
       viewBox="0 0 100 120"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`shrink-0 ${className}`}
       style={{
-        width: "40px",
-        height: "40px",
-        minWidth: "40px",
-        minHeight: "40px",
-        flexShrink: 0,
-        flexGrow: 0,
+        width: sizeVal,
+        height: sizeVal,
+        minWidth: sizeVal,
+        minHeight: sizeVal,
         ...style,
       }}
       aria-label="Logo Pin Kareba'Ta"
@@ -41,80 +42,52 @@ export function KarebaPinIcon({
 
 export function KarebaTaLogo({
   showSubtitle = true,
+  compact = false,
   className = "",
   style,
 }: {
   showSubtitle?: boolean;
+  compact?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const pinSize = compact ? 32 : 38;
+
   return (
     <div
-      className={`select-none ${className}`}
+      dir="ltr"
+      className={`select-none flex items-center ${compact ? "gap-1.5 sm:gap-2" : "gap-2"} shrink-0 ${className}`}
       style={{
-        height: "40px",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        flexShrink: 0,
-        flexGrow: 0,
         ...style,
       }}
     >
-      <div
-        style={{
-          width: "40px",
-          height: "40px",
-          minWidth: "40px",
-          minHeight: "40px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          flexGrow: 0,
-        }}
-      >
-        <KarebaPinIcon />
+      <div className="shrink-0 flex items-center justify-center">
+        <KarebaPinIcon size={pinSize} />
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          flexShrink: 0,
-          flexGrow: 0,
-        }}
-      >
+      <div className="flex flex-col justify-center shrink-0 text-left">
         <div
+          className={`${
+            compact
+              ? "text-[16px] sm:text-[18px]"
+              : "text-[18px] sm:text-[20px]"
+          } font-black tracking-tight leading-none whitespace-nowrap`}
           style={{
-            fontSize: "18px",
-            lineHeight: 1,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-            flexGrow: 0,
-            fontWeight: 900,
-            letterSpacing: "-0.02em",
             fontFamily: "'Poppins', system-ui, sans-serif",
           }}
         >
-          <span style={{ color: "#00632B" }}>Kareba&apos;</span>
-          <span style={{ color: "#E5A000" }}>Ta</span>
+          <span className="text-[#00632B]">Kareba&apos;</span>
+          <span className="text-[#E5A000]">Ta</span>
         </div>
 
         {showSubtitle && (
           <span
+            className={`${
+              compact
+                ? "text-[7.5px] sm:text-[8.5px] tracking-[0.06em]"
+                : "text-[8.5px] sm:text-[9.5px] tracking-[0.08em]"
+            } font-extrabold uppercase text-[#E5A000] leading-none mt-0.5 whitespace-nowrap`}
             style={{
-              fontSize: "9px",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              flexGrow: 0,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              color: "#E5A000",
-              marginTop: "2px",
-              textTransform: "uppercase",
               fontFamily: "'Poppins', system-ui, sans-serif",
             }}
           >
@@ -127,3 +100,4 @@ export function KarebaTaLogo({
 }
 
 export default KarebaTaLogo;
+

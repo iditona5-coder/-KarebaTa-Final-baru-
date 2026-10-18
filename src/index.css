@@ -181,6 +181,7 @@ video {
   background-color: #ffffff !important;
   touch-action: pan-y !important;
   overscroll-behavior-x: none !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
 #karebata-feed-header,

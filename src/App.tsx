@@ -1995,7 +1995,8 @@ export default function KarebaFeedFinal() {
         >
           <header
             id="karebata-feed-header"
-            className="bg-white border-b border-neutral-200 px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[53px] overflow-hidden w-full"
+            dir="ltr"
+            className="bg-white border-b border-neutral-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[52px] overflow-hidden w-full"
           >
             {isSearchOpen ? (
               /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL PAPAN PENCARIAN */
@@ -2101,45 +2102,45 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
             ) : (
-              /* SAAT PENCARIAN TIDAK AKTIF: LOGO DI KIRI, ICON PENCARIAN, KAMERA, DAN MEDIA DI KANAN */
+              /* SAAT PENCARIAN TIDAK AKTIF: LOGO DI KIRI, ICON PENCARIAN, KAMERA, DAN MEDIA DI KANAN DENGAN RUANG LEGA */
               <>
                 <button
                   type="button"
                   onClick={scrollToTop}
-                  className="flex items-center text-left hover:opacity-80 active:scale-95 transition cursor-pointer shrink-0"
+                  className="flex items-center text-left hover:opacity-85 active:scale-95 transition cursor-pointer shrink-0 mr-auto"
                   aria-label="Kembali ke media paling atas"
                 >
-                  <KarebaTaLogo />
+                  <KarebaTaLogo compact={true} />
                 </button>
-                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0 ml-2">
                   <button
                     id="header-search-trigger"
                     type="button"
                     onClick={() => {
                       setIsSearchOpen(true);
                     }}
-                    className="p-2 text-neutral-800 hover:text-[#00632B] transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="p-1.5 sm:p-2 text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Cari"
                   >
-                    <Search className="w-6 h-6" strokeWidth={2} />
+                    <Search className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                   </button>
                   <button
                     id="header-camera-btn"
                     type="button"
                     onClick={handleCameraClick}
-                    className="p-2 text-neutral-800 hover:text-[#00632B] transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="p-1.5 sm:p-2 text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Buka Kamera"
                   >
-                    <CameraIcon className="w-6 h-6" strokeWidth={2} />
+                    <CameraIcon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                   </button>
                   <button
                     id="header-gallery-btn"
                     type="button"
                     onClick={handleGalleryClick}
-                    className="p-2 text-neutral-800 hover:text-[#00632B] transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="p-1.5 sm:p-2 text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Pilih Foto atau Video dari Galeri"
                   >
-                    <ImageIcon className="w-6 h-6" strokeWidth={2} />
+                    <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                   </button>
                 </div>
               </>
@@ -2286,6 +2287,9 @@ export default function KarebaFeedFinal() {
               ? "h-[144px]"
               : "h-[88px]"
           } shrink-0 transition-all duration-200`}
+          style={{
+            marginTop: "env(safe-area-inset-top, 0px)",
+          }}
           aria-hidden="true"
         />
 

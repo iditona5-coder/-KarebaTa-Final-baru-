@@ -283,6 +283,33 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             </button>
           </div>
         )}
+        {/* BILAH KONTROL HASIL PENCARIAN & TOMBOL HAPUS/BERSIHKAN PENCARIAN */}
+        {(query.trim() !== "" || selectedAccount || selectedLocation) && (
+          <div className="bg-white p-3 rounded-2xl border border-neutral-200/90 shadow-2xs flex items-center justify-between gap-3 animate-fade-in">
+            <div className="min-w-0 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-emerald-50 text-[#00632B] flex items-center justify-center shrink-0">
+                <Search className="w-3.5 h-3.5 text-[#00632B]" />
+              </div>
+              <p className="text-xs text-neutral-600 truncate">
+                Mencari: <span className="font-bold text-neutral-900">&ldquo;{query || selectedAccount || selectedLocation}&rdquo;</span>
+              </p>
+            </div>
+            <button
+              id="clear-all-search-btn"
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setSelectedAccount(null);
+                setSelectedLocation(null);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-rose-50 text-neutral-700 hover:text-rose-600 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 active:scale-95"
+              aria-label="Hapus semua pencarian"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Hapus Pencarian</span>
+            </button>
+          </div>
+        )}
 
         {/* JIKA QUERY MASIH KOSONG & BELUM MEMILIH DRILL-DOWN */}
         {query.trim() === "" && !selectedAccount && !selectedLocation ? (
