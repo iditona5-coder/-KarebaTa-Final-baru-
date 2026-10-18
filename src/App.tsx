@@ -92,12 +92,17 @@ import { SetupUsernamePage } from "./components/SetupUsernamePage";
 
 export default function KarebaFeedFinal() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [pendingUploadAction, setPendingUploadAction] = useState<"camera" | "gallery" | null>(null);
   const [loginRedirectMessage, setLoginRedirectMessage] = useState<string | null>(null);
 
-  const [userName, setUserName] = useState<string>("");
+  const [userName, setUserName] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_username") || "";
+    } catch {
+      return "";
+    }
+  });
   const userEmail = currentUser?.email || "";
   // Nama pengguna selalu bersumber dari ketikan user (maks 13 huruf), BUKAN alamat email
   const userDisplayName = userName;
@@ -230,6 +235,16 @@ export default function KarebaFeedFinal() {
 
   const [viewMode, setViewMode] = useState<"login" | "set_name" | "feed" | "admin">(() => {
     if (isDedicatedAdminRoute()) return "admin";
+    try {
+      if (typeof window !== "undefined") {
+        const hasActiveSession = sessionStorage.getItem("karebata_session_active") === "true";
+        const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
+        const cachedName = localStorage.getItem("karebata_username");
+        if (hasActiveSession && isLoggedIn && cachedName) {
+          return "feed";
+        }
+      }
+    } catch {}
     return "login";
   });
 
@@ -316,8 +331,6 @@ export default function KarebaFeedFinal() {
             setUserName("");
             setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
           }
-        } finally {
-          setIsAuthChecking(false);
         }
       } else {
         setCurrentUser(null);
@@ -331,7 +344,6 @@ export default function KarebaFeedFinal() {
         } catch {}
         // Wajib login: tidak ada pengunjung / halaman warga tanpa login!
         setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
-        setIsAuthChecking(false);
       }
     });
     return () => unsubAuth();
@@ -1887,30 +1899,8 @@ export default function KarebaFeedFinal() {
     );
   }
 
-  // JIKA SEDANG MEMERIKSA STATUS AUTENTIKASI AWAL
-  if (isAuthChecking) {
-    return (
-      <div className="fixed inset-0 w-full h-[100dvh] bg-white flex flex-col items-center justify-center p-6 select-none z-50">
-        <div className="w-20 h-24 flex items-center justify-center filter drop-shadow-md animate-pulse mb-3">
-          <KarebaPinIcon className="w-20 h-24" />
-        </div>
-        <h1 className="text-2xl font-[900] tracking-tight leading-none mb-1" style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}>
-          <span className="text-[#00632B]">Kareba'</span>
-          <span className="text-[#E5A000]">Ta</span>
-        </h1>
-        <p className="text-xs font-extrabold tracking-[0.12em] text-[#E5A000] uppercase mb-4" style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}>
-          beritamu, suaramu
-        </p>
-        <div className="flex items-center gap-2 text-xs text-neutral-500 font-medium">
-          <div className="w-4 h-4 rounded-full border-2 border-neutral-300 border-t-[#00632B] animate-spin" />
-          <span>Memeriksa status akun...</span>
-        </div>
-      </div>
-    );
-  }
-
   // JIKA BELUM LOGIN: WAJIB MASUK HALAMAN LOGIN TERLEBIH DAHULU (TIDAK ADA HALAMAN PENGUNJUNG TANPA LOGIN)
-  if (!currentUser || viewMode === "login") {
+  if (viewMode === "login" || (!currentUser && typeof window !== "undefined" && !localStorage.getItem("karebata_is_logged_in"))) {
     return (
       <>
         <LoginPage
