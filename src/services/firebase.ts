@@ -710,10 +710,6 @@ export async function checkRegisteredUser(
       return { isRegistered: true, username: localCachedUid.trim().slice(0, 13) };
     }
   }
-  const generalCached = localStorage.getItem('karebata_username') || localStorage.getItem('karebata_last_registered_username');
-  if (generalCached && generalCached.trim() && generalCached !== 'warga_kareba') {
-    return { isRegistered: true, username: generalCached.trim().slice(0, 13) };
-  }
 
   if (!db) {
     return { isRegistered: false, username: null };

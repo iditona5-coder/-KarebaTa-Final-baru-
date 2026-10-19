@@ -78,30 +78,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Main Content Area */}
       <main className="w-full max-w-sm sm:max-w-md mx-auto px-6 py-2 my-auto flex flex-col justify-center shrink-0">
-        {/* Logo Showcase dengan Gaya Bersih & Elegan */}
+        {/* Logo Showcase: Icon Lokasi Berada di Kiri Tulisan Kareba'Ta */}
         <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
-          <div className="relative mb-2 group">
-            <div className="w-20 h-24 sm:w-24 sm:h-28 flex items-center justify-center filter drop-shadow-md">
-              <KarebaPinIcon className="w-20 h-24 sm:w-24 sm:h-28" />
+          <div className="flex items-center justify-center gap-3 sm:gap-3.5 mb-2">
+            <div className="shrink-0 flex items-center justify-center filter drop-shadow-sm">
+              <KarebaPinIcon className="w-13 h-15 sm:w-16 sm:h-18" size={54} />
+            </div>
+            <div className="flex flex-col text-left justify-center">
+              <h1
+                className="text-3xl sm:text-4xl font-[900] tracking-tight leading-none"
+                style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
+              >
+                <span className="text-[#00632B]">Kareba'</span>
+                <span className="text-[#E5A000]">Ta</span>
+              </h1>
+              <p
+                className="text-[10px] sm:text-xs font-extrabold tracking-[0.12em] text-[#E5A000] mt-1 uppercase"
+                style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
+              >
+                beritamu, suaramu
+              </p>
             </div>
           </div>
 
-          <h1
-            className="text-3xl sm:text-4xl font-[900] tracking-tight leading-none"
-            style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
-          >
-            <span className="text-[#00632B]">Kareba'</span>
-            <span className="text-[#E5A000]">Ta</span>
-          </h1>
-
-          <p
-            className="text-xs sm:text-sm font-extrabold tracking-[0.12em] text-[#E5A000] mt-1.5 uppercase"
-            style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
-          >
-            beritamu, suaramu
-          </p>
-
-          <p className="text-xs text-neutral-600 mt-2.5 max-w-xs leading-relaxed font-normal">
+          <p className="text-xs text-neutral-600 mt-1 max-w-xs leading-relaxed font-normal">
             Masuk dengan Akun Google terlebih dahulu untuk menikmati dan membagikan kabar warga terkini.
           </p>
         </div>

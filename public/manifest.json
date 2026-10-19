@@ -3,6 +3,7 @@
   "short_name": "Kareba'Ta",
   "description": "Media sosial kabar dan momen warga terkini.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
@@ -30,7 +31,7 @@
       "src": "/logo.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

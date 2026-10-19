@@ -98,10 +98,20 @@ export default function KarebaFeedFinal() {
 
   const [userName, setUserName] = useState<string>(() => {
     try {
-      return localStorage.getItem("karebata_username") || "";
-    } catch {
-      return "";
-    }
+      if (typeof window !== "undefined") {
+        const activeUid = localStorage.getItem("karebata_active_uid");
+        const activeEmail = (localStorage.getItem("karebata_active_email") || "").toLowerCase();
+        if (activeUid) {
+          const cached = localStorage.getItem(`karebata_custom_username_${activeUid}`);
+          if (cached && cached.trim() && cached !== "warga_kareba") return cached.trim().slice(0, 13);
+        }
+        if (activeEmail) {
+          const cached = localStorage.getItem(`karebata_registered_${activeEmail}`);
+          if (cached && cached.trim() && cached !== "warga_kareba") return cached.trim().slice(0, 13);
+        }
+      }
+    } catch {}
+    return "";
   });
   const userEmail = currentUser?.email || "";
   // Nama pengguna selalu bersumber dari ketikan user (maks 13 huruf), BUKAN alamat email
@@ -532,27 +542,14 @@ export default function KarebaFeedFinal() {
     }
   };
 
-  // Fungsi Tarik Layar ke Bawah untuk Memperbarui (Pull-to-Refresh seperti di aplikasi Facebook)
+  // Fungsi Tarik Layar ke Bawah untuk Memperbarui (Pull-to-Refresh)
   const handlePullRefresh = async () => {
-    // Memberikan jeda loading natural
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Memberikan jeda loading alami tanpa menyuntikkan kabar/akun buatan
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
-    // Tambahkan kabar terkini baru di papan teks berjalan
-    const freshBulletin: BulletinItem = {
-      id: `b-refresh-${Date.now()}`,
-      category: "KABAR TERKINI",
-      text: "Pembaruan Langsung: Arus lalu lintas pesisir & kawasan jembatan utama lancar terkendali.",
-      location: "Pusat Kota",
-      time: "Baru saja",
-    };
-    setBulletins((prev) => [freshBulletin, ...prev.filter((b) => !b.id.startsWith("b-refresh-"))]);
-
-    // Segarkan waktu feed
+    // Sinkronisasi status feed yang ada tanpa menambahkan akun atau teks palsu
     setFeed((prev) =>
-      prev.map((item, idx) => ({
-        ...item,
-        time: idx === 0 ? "Baru saja" : item.time,
-      }))
+      prev.filter((f) => !isDummyMedia(f))
     );
   };
 
@@ -1986,7 +1983,7 @@ export default function KarebaFeedFinal() {
           <header
             id="karebata-feed-header"
             dir="ltr"
-            className="bg-white border-b border-neutral-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[52px] overflow-hidden w-full"
+            className="bg-white border-b border-neutral-200 px-4 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[52px] overflow-hidden w-full"
           >
             {isSearchOpen ? (
               /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL PAPAN PENCARIAN */
