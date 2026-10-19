@@ -101,6 +101,10 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 
       // Pastikan posisi tetap di puncak dan ditarik ke bawah melampaui deadzone awal
       if (diffY > DEADZONE && scrollTop <= 5) {
+        // Hentikan pull-to-reload bawaan peramban Chrome/Android agar tidak merestart halaman/splash screen
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         const effectivePull = diffY - DEADZONE;
         // Damping yang responsif dan elastis
         const damped = Math.min(80, effectivePull * 0.6);
@@ -204,7 +208,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
     };
 
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
     window.addEventListener("touchend", handleTouchEnd, { passive: true });
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
