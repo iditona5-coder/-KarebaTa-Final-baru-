@@ -55,6 +55,7 @@ import { checkContentModeration } from "./utils/contentModeration";
 import {
   savePostToFirestore,
   listenToFirestorePosts,
+  fetchLatestFirestorePosts,
   deletePostFromFirestore,
   togglePostLikeInFirestore,
   incrementPostViewInFirestore,
@@ -99,6 +100,12 @@ export default function KarebaFeedFinal() {
   const [userName, setUserName] = useState<string>(() => {
     try {
       if (typeof window !== "undefined") {
+        const directCached =
+          localStorage.getItem("karebata_username") ||
+          localStorage.getItem("karebata_last_registered_username");
+        if (directCached && directCached.trim() && directCached !== "warga_kareba") {
+          return directCached.trim().slice(0, 13);
+        }
         const activeUid = localStorage.getItem("karebata_active_uid");
         const activeEmail = (localStorage.getItem("karebata_active_email") || "").toLowerCase();
         if (activeUid) {
@@ -247,10 +254,9 @@ export default function KarebaFeedFinal() {
     if (isDedicatedAdminRoute()) return "admin";
     try {
       if (typeof window !== "undefined") {
-        const hasActiveSession = sessionStorage.getItem("karebata_session_active") === "true";
         const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
-        const cachedName = localStorage.getItem("karebata_username");
-        if (hasActiveSession && isLoggedIn && cachedName) {
+        const cachedName = localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username");
+        if (isLoggedIn && cachedName && cachedName !== "warga_kareba") {
           return "feed";
         }
       }
@@ -266,9 +272,11 @@ export default function KarebaFeedFinal() {
         return;
       }
       if (window.location.hash === "#feed") {
-        if (currentUser && userName && userName !== "warga_kareba") {
+        const existingName = userName || (typeof window !== "undefined" && (localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username")));
+        if (currentUser && existingName && existingName !== "warga_kareba") {
+          if (!userName && existingName) setUserName(existingName.slice(0, 13));
           setViewMode("feed");
-        } else if (currentUser) {
+        } else if (currentUser && !existingName) {
           setViewMode("set_name");
         } else {
           setViewMode("login");
@@ -295,69 +303,85 @@ export default function KarebaFeedFinal() {
     return () => unsubBulletins();
   }, []);
 
-  // Berlangganan status autentikasi Google Firebase (Wajib login terlebih dahulu saat masuk aplikasi)
+  // Berlangganan status autentikasi Google Firebase (Persisten & Aman saat Refresh)
   useEffect(() => {
     const unsubAuth = subscribeToAuth(async (user) => {
       if (user) {
         setCurrentUser(user);
         try {
           localStorage.setItem("karebata_is_logged_in", "true");
+          localStorage.setItem("karebata_active_uid", user.uid);
+          if (user.email) {
+            localStorage.setItem("karebata_active_email", user.email.toLowerCase());
+          }
+          sessionStorage.setItem("karebata_session_active", "true");
+          sessionStorage.setItem("karebata_active_session", "true");
         } catch {}
 
         try {
+          // Cari nama pengguna dari Firestore & cache lokal secara komprehensif
           const res = await checkRegisteredUser(user.email, user.uid);
+          
+          const localCached =
+            localStorage.getItem("karebata_username") ||
+            localStorage.getItem("karebata_last_registered_username") ||
+            (user.email ? localStorage.getItem(`karebata_registered_${user.email.toLowerCase()}`) : null) ||
+            localStorage.getItem(`karebata_custom_username_${user.uid}`);
+
+          let resolvedUsername = "";
           if (res.isRegistered && res.username && res.username.trim() && res.username.trim() !== "warga_kareba") {
-            const clean = res.username.trim().slice(0, 13);
-            setUserName(clean);
-            // Jika sesi tab aktif, langsung ke feed; jika sesi baru dibuka kembali dari awal, harus login dulu
-            const hasActiveSession = sessionStorage.getItem("karebata_session_active") === "true";
-            if (hasActiveSession) {
-              setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
-            } else {
-              setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
-            }
+            resolvedUsername = res.username.trim().slice(0, 13);
+          } else if (localCached && localCached.trim() && localCached !== "warga_kareba") {
+            resolvedUsername = localCached.trim().slice(0, 13);
+          } else if (userName && userName.trim() && userName !== "warga_kareba") {
+            resolvedUsername = userName.trim().slice(0, 13);
+          } else if (user.displayName && user.displayName.trim()) {
+            resolvedUsername = user.displayName.trim().replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13);
+          } else if (user.email) {
+            resolvedUsername = user.email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13);
+          }
+
+          if (resolvedUsername) {
+            setUserName(resolvedUsername);
+            try {
+              localStorage.setItem("karebata_username", resolvedUsername);
+              localStorage.setItem("karebata_last_registered_username", resolvedUsername);
+              localStorage.setItem(`karebata_custom_username_${user.uid}`, resolvedUsername);
+              if (user.email) {
+                localStorage.setItem(`karebata_registered_${user.email.toLowerCase()}`, resolvedUsername);
+              }
+              sessionStorage.setItem("karebata_session_active", "true");
+              sessionStorage.setItem("karebata_active_session", "true");
+            } catch {}
+            // Tetap di feed dan jangan pernah terlempar ke halaman edit nama saat penyegaran
+            setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
           } else {
-            // Belum pernah punya nama pengguna: Jika sesi aktif, arahkan ke pengetikan nama
-            setUserName("");
-            const hasActiveSession = sessionStorage.getItem("karebata_session_active") === "true";
-            if (hasActiveSession) {
-              setViewMode((prev) => (prev === "admin" ? "admin" : "set_name"));
-            } else {
-              setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
-            }
+            // Hanya jika benar-benar akun baru tanpa nama sama sekali dan bukan sedang di feed
+            setViewMode((prev) => (prev === "admin" ? "admin" : prev === "feed" ? "feed" : "set_name"));
           }
         } catch {
+          // Fallback aman saat jaringan Firestore sibuk: gunakan nama yang ada di memori/storage lokal
           const fallbackCached = 
-            localStorage.getItem(`karebata_registered_${(user.email || "").toLowerCase()}`) ||
-            localStorage.getItem(`karebata_custom_username_${user.uid}`) ||
+            localStorage.getItem("karebata_username") ||
             localStorage.getItem("karebata_last_registered_username") ||
-            localStorage.getItem("karebata_username");
-          if (fallbackCached && fallbackCached.trim() && fallbackCached !== "warga_kareba") {
-            const clean = fallbackCached.trim().slice(0, 13);
-            setUserName(clean);
-            const hasActiveSession = sessionStorage.getItem("karebata_session_active") === "true";
-            setViewMode((prev) => (prev === "admin" ? "admin" : (hasActiveSession ? "feed" : "login")));
-          } else {
-            setUserName("");
-            setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
-          }
+            userName ||
+            (user.displayName ? user.displayName.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13) : "Warga");
+          const clean = String(fallbackCached).trim().slice(0, 13);
+          setUserName(clean);
+          setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
         }
       } else {
-        setCurrentUser(null);
-        setUserName("");
-        try {
-          localStorage.removeItem("karebata_is_logged_in");
-          localStorage.removeItem("kareba_guest_mode");
-          sessionStorage.removeItem("kareba_guest_mode");
-          sessionStorage.removeItem("karebata_active_session");
-          sessionStorage.removeItem("karebata_session_active");
-        } catch {}
-        // Wajib login: tidak ada pengunjung / halaman warga tanpa login!
-        setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
+        // User null: jika status lokal masih login (sedang pemulihan token saat refresh), jangan langsung hapus
+        const wasLoggedIn = typeof window !== "undefined" && localStorage.getItem("karebata_is_logged_in") === "true";
+        if (!wasLoggedIn) {
+          setCurrentUser(null);
+          setUserName("");
+          setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
+        }
       }
     });
     return () => unsubAuth();
-  }, []);
+  }, [userName]);
 
   // Berlangganan data Akun Warga yang Ditangguhkan / Diblokir secara real-time
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
@@ -450,22 +474,47 @@ export default function KarebaFeedFinal() {
         // 1. AKUN SUDAH TERDAFTAR SEBELUMNYA: CUKUP LOGIN SAJA, LANGSUNG KE FEED!
         const clean = checkRes.username.trim().slice(0, 13);
         setUserName(clean);
+        try {
+          localStorage.setItem("karebata_username", clean);
+          localStorage.setItem("karebata_last_registered_username", clean);
+          localStorage.setItem("karebata_active_uid", uid);
+          if (email) localStorage.setItem("karebata_active_email", email.toLowerCase());
+        } catch {}
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
       } else {
-        // 2. AKUN BARU ATAU BELUM PERNAH ISI NAMA PENGGUNA: WAJIB MASUK HALAMAN PENGETIKAN NAMA
-        setUserName("");
-        setViewMode("set_name");
+        // Cek fallback lokal sebelum mengarahkan ke form nama
+        const localFallback =
+          localStorage.getItem("karebata_username") ||
+          localStorage.getItem("karebata_last_registered_username") ||
+          (email ? localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) : null) ||
+          localStorage.getItem(`karebata_custom_username_${uid}`);
+        if (localFallback && localFallback.trim() && localFallback !== "warga_kareba") {
+          const clean = localFallback.trim().slice(0, 13);
+          setUserName(clean);
+          setViewMode("feed");
+          showToast(`Selamat datang kembali, @${clean}!`);
+        } else {
+          // 2. AKUN BARU ATAU BELUM PERNAH ISI NAMA PENGGUNA: WAJIB MASUK HALAMAN PENGETIKAN NAMA
+          setUserName("");
+          setViewMode("set_name");
+        }
       }
     } catch {
       const fallbackCached = 
-        localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) ||
-        localStorage.getItem(`karebata_custom_username_${uid}`) ||
+        localStorage.getItem("karebata_username") ||
         localStorage.getItem("karebata_last_registered_username") ||
-        localStorage.getItem("karebata_username");
+        localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) ||
+        localStorage.getItem(`karebata_custom_username_${uid}`);
       if (fallbackCached && fallbackCached.trim() && fallbackCached !== "warga_kareba") {
         const clean = fallbackCached.trim().slice(0, 13);
         setUserName(clean);
+        try {
+          localStorage.setItem("karebata_username", clean);
+          localStorage.setItem("karebata_last_registered_username", clean);
+          localStorage.setItem("karebata_active_uid", uid);
+          if (email) localStorage.setItem("karebata_active_email", email.toLowerCase());
+        } catch {}
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
       } else {
@@ -486,6 +535,20 @@ export default function KarebaFeedFinal() {
     }
 
     setUserName(cleanName);
+    try {
+      localStorage.setItem("karebata_username", cleanName);
+      localStorage.setItem("karebata_last_registered_username", cleanName);
+      localStorage.setItem("karebata_is_logged_in", "true");
+      if (currentUser?.uid) {
+        localStorage.setItem("karebata_active_uid", currentUser.uid);
+        localStorage.setItem(`karebata_custom_username_${currentUser.uid}`, cleanName);
+      }
+      if (currentUser?.email) {
+        localStorage.setItem("karebata_active_email", currentUser.email.toLowerCase());
+        localStorage.setItem(`karebata_registered_${currentUser.email.toLowerCase()}`, cleanName);
+      }
+    } catch {}
+
     if (currentUser?.uid) {
       saveRegisteredUserProfile(currentUser.uid, cleanName, currentUser.email).catch(() => {});
     }
@@ -544,13 +607,41 @@ export default function KarebaFeedFinal() {
 
   // Fungsi Tarik Layar ke Bawah untuk Memperbarui (Pull-to-Refresh)
   const handlePullRefresh = async () => {
-    // Memberikan jeda loading alami tanpa menyuntikkan kabar/akun buatan
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      // 1. Tarik postingan paling mutakhir langsung dari server Firestore
+      const freshRemote = await fetchLatestFirestorePosts();
+      if (freshRemote && freshRemote.length > 0) {
+        const cleanRemote = freshRemote.filter((p) => !isDummyMedia(p));
+        const remoteIds = new Set(cleanRemote.map((p) => p.id));
+        setFeed((prevFeed) => {
+          const prevMap = new Map(prevFeed.map((p) => [p.id, p]));
+          const currentUid = (currentUser?.email || currentUser?.uid || userName || "").toLowerCase();
+          const updated = cleanRemote.map((r) => {
+            const prev = prevMap.get(r.id);
+            const isLiked =
+              likedPostIdsRef.current.includes(r.id) ||
+              (currentUid && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === currentUid)) ||
+              Boolean(prev?.isLiked);
+            return {
+              ...r,
+              isLiked: Boolean(isLiked),
+            };
+          });
+          const localOnly = prevFeed.filter((p) => !remoteIds.has(p.id) && !isDummyMedia(p));
+          return [...updated, ...localOnly];
+        });
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
 
-    // Sinkronisasi status feed yang ada tanpa menambahkan akun atau teks palsu
+    // 2. Sinkronisasi status feed yang ada tanpa menambahkan akun atau teks palsu
     setFeed((prev) =>
       prev.filter((f) => !isDummyMedia(f))
     );
+    showToast("Kabar terkini berhasil diperbarui!");
   };
 
   // Helper untuk mengecek apakah suatu postingan adalah milik akun sendiri:
@@ -1915,7 +2006,7 @@ export default function KarebaFeedFinal() {
   }
 
   // JIKA SETELAH LOGIN GOOGLE: HANYA MASUK KE HALAMAN NGETIK NAMA JIKA AKUN BARU DAN BELUM MEMILIKI NAMA
-  if (viewMode === "set_name" || !userName) {
+  if (viewMode === "set_name") {
     return (
       <>
         <SetupUsernamePage

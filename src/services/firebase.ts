@@ -108,6 +108,38 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
   }
 }
 
+export const parsePostDoc = (docSnap: any): FeedItem => {
+  const data = docSnap.data();
+  return {
+    id: docSnap.id,
+    user: data.user || 'Warga Kareba',
+    init: data.init || (data.user ? data.user[0].toUpperCase() : 'W'),
+    name: data.name || data.user || 'Warga',
+    email: data.email || '',
+    avatar: data.avatar,
+    time: data.time || 'Baru saja',
+    text: data.text || '',
+    img: data.img || '',
+    thumbnail: data.thumbnail,
+    fileId: data.fileId,
+    thumbFileId: data.thumbFileId,
+    mediaType: data.mediaType || 'image',
+    like: Number(data.like) || 0,
+    views: Number(data.views) || 0,
+    shares: Number(data.shares) || 0,
+    saves: Number(data.saves) || 0,
+    likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
+    isLiked: false, // Ditentukan oleh client lokal
+    comments: Array.isArray(data.comments) ? data.comments : [],
+    location: data.location || data.loc || 'Wilayah Sekitar',
+    authorUid: data.authorUid || data.uid || data.userId || '',
+    isHidden: Boolean(data.isHidden),
+    category: data.category || undefined,
+    isMyPost: false,
+    createdAtTimestamp: Number(data.createdAtTimestamp) || (data.createdAtServer?.toMillis ? data.createdAtServer.toMillis() : 0),
+  } as any;
+};
+
 /**
  * Berlangganan (Real-time listener) ke koleksi 'posts' di Firestore
  */
@@ -118,38 +150,6 @@ export function listenToFirestorePosts(
   if (!db) {
     return () => {};
   }
-
-  const parseDoc = (docSnap: any): FeedItem => {
-    const data = docSnap.data();
-    return {
-      id: docSnap.id,
-      user: data.user || 'Warga Kareba',
-      init: data.init || (data.user ? data.user[0].toUpperCase() : 'W'),
-      name: data.name || data.user || 'Warga',
-      email: data.email || '',
-      avatar: data.avatar,
-      time: data.time || 'Baru saja',
-      text: data.text || '',
-      img: data.img || '',
-      thumbnail: data.thumbnail,
-      fileId: data.fileId,
-      thumbFileId: data.thumbFileId,
-      mediaType: data.mediaType || 'image',
-      like: Number(data.like) || 0,
-      views: Number(data.views) || 0,
-      shares: Number(data.shares) || 0,
-      saves: Number(data.saves) || 0,
-      likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
-      isLiked: false, // Ditentukan oleh client lokal
-      comments: Array.isArray(data.comments) ? data.comments : [],
-      location: data.location || data.loc || 'Wilayah Sekitar',
-      authorUid: data.authorUid || data.uid || data.userId || '',
-      isHidden: Boolean(data.isHidden),
-      category: data.category || undefined,
-      isMyPost: false,
-      createdAtTimestamp: Number(data.createdAtTimestamp) || (data.createdAtServer?.toMillis ? data.createdAtServer.toMillis() : 0),
-    } as any;
-  };
 
   try {
     let fallbackUnsub: (() => void) | null = null;
@@ -163,7 +163,7 @@ export function listenToFirestorePosts(
       postsQuery,
       (snapshot) => {
         if (!snapshot.empty) {
-          const remotePosts: FeedItem[] = snapshot.docs.map(parseDoc);
+          const remotePosts: FeedItem[] = snapshot.docs.map(parsePostDoc);
           onUpdate(remotePosts);
         } else {
           onUpdate([]);
@@ -175,7 +175,7 @@ export function listenToFirestorePosts(
           fallbackUnsub = onSnapshot(
             collection(db, 'posts'),
             (snap) => {
-              const remote = snap.docs.map(parseDoc);
+              const remote = snap.docs.map(parsePostDoc);
               remote.sort((a: any, b: any) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
               onUpdate(remote);
             },
@@ -197,6 +197,35 @@ export function listenToFirestorePosts(
   } catch (err) {
     console.warn('[Firebase] Gagal menginisialisasi listener Firestore:', err);
     return () => {};
+  }
+}
+
+/**
+ * Mengambil (fetch on-demand) daftar postingan terbaru langsung dari server Firestore
+ * Digunakan saat pengguna menarik layar ke bawah (penyegaran / pull-to-refresh)
+ */
+export async function fetchLatestFirestorePosts(): Promise<FeedItem[]> {
+  if (!db) return [];
+  try {
+    const postsQuery = query(
+      collection(db, 'posts'),
+      orderBy('createdAtTimestamp', 'desc'),
+      limit(100)
+    );
+    const snapshot = await getDocs(postsQuery);
+    if (!snapshot.empty) {
+      return snapshot.docs.map(parsePostDoc);
+    }
+    return [];
+  } catch (err) {
+    try {
+      const snap = await getDocs(collection(db, 'posts'));
+      const list = snap.docs.map(parsePostDoc);
+      list.sort((a: any, b: any) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
+      return list;
+    } catch {
+      return [];
+    }
   }
 }
 
@@ -701,14 +730,29 @@ export async function checkRegisteredUser(
   if (cleanEmail) {
     const localCached = localStorage.getItem(`karebata_registered_${cleanEmail}`);
     if (localCached && localCached.trim() && localCached !== 'warga_kareba') {
-      return { isRegistered: true, username: localCached.trim().slice(0, 13) };
+      const clean = localCached.trim().slice(0, 13);
+      localStorage.setItem('karebata_username', clean);
+      localStorage.setItem('karebata_last_registered_username', clean);
+      return { isRegistered: true, username: clean };
     }
   }
   if (cleanUid) {
     const localCachedUid = localStorage.getItem(`karebata_custom_username_${cleanUid}`) || localStorage.getItem(`karebata_registered_user_${cleanUid}`);
     if (localCachedUid && localCachedUid.trim() && localCachedUid !== 'warga_kareba') {
-      return { isRegistered: true, username: localCachedUid.trim().slice(0, 13) };
+      const clean = localCachedUid.trim().slice(0, 13);
+      localStorage.setItem('karebata_username', clean);
+      localStorage.setItem('karebata_last_registered_username', clean);
+      return { isRegistered: true, username: clean };
     }
+  }
+
+  // Cek cache global username umum
+  const globalCached = localStorage.getItem('karebata_username') || localStorage.getItem('karebata_last_registered_username');
+  if (globalCached && globalCached.trim() && globalCached !== 'warga_kareba') {
+    const clean = globalCached.trim().slice(0, 13);
+    if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, clean);
+    if (cleanUid) localStorage.setItem(`karebata_custom_username_${cleanUid}`, clean);
+    return { isRegistered: true, username: clean };
   }
 
   if (!db) {
