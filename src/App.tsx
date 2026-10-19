@@ -90,8 +90,10 @@ import { preloadFeedMedia } from "./utils/mediaPreloader";
 import { LoginModal } from "./components/LoginModal";
 import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
+import { SplashScreen } from "./components/SplashScreen";
 
 export default function KarebaFeedFinal() {
+  const [showSplash, setShowSplash] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [pendingUploadAction, setPendingUploadAction] = useState<"camera" | "gallery" | null>(null);
@@ -1930,6 +1932,7 @@ export default function KarebaFeedFinal() {
   if (viewMode === "admin") {
     return (
       <>
+        {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <AdminDashboard
           feedPosts={feed}
           onBackToFeed={() => {
@@ -1991,6 +1994,7 @@ export default function KarebaFeedFinal() {
   if (viewMode === "login" || (!currentUser && typeof window !== "undefined" && !localStorage.getItem("karebata_is_logged_in"))) {
     return (
       <>
+        {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <LoginPage
           onLoginSuccess={handleLoginSuccess}
           initialMessage={loginRedirectMessage}
@@ -2009,6 +2013,7 @@ export default function KarebaFeedFinal() {
   if (viewMode === "set_name") {
     return (
       <>
+        {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <SetupUsernamePage
           currentUser={currentUser}
           initialValue={userName && userName !== "warga_kareba" ? userName : ""}
@@ -2027,6 +2032,7 @@ export default function KarebaFeedFinal() {
 
   return (
     <div className="w-full bg-neutral-100 text-neutral-900 flex justify-center selection:bg-[#00632B] selection:text-white min-h-screen">
+      {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
       <div id="karebata-feed-app" className={`w-full max-w-md bg-white relative font-sans shadow-sm flex flex-col min-h-screen ${selectedImage ? "pb-36" : displayFeed.length === 0 ? "pb-28" : "pb-16"}`}>
         {/* INPUT TERSEMBUNYI - INI KUNCINYA, TIDAK KELIHATAN */}
         <input
