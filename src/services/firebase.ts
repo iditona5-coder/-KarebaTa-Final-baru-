@@ -71,6 +71,7 @@ export const db: Firestore = (() => {
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
       localCache: persistentLocalCache(),
+      ignoreUndefinedProperties: true,
     });
   } catch {
     return getFirestore(app);
@@ -86,24 +87,50 @@ if (typeof window !== "undefined") {
  * Menyimpan postingan baru ke koleksi 'posts' di Firestore
  */
 export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem): Promise<boolean> {
-  if (!db) return false;
+  if (!db) {
+    console.warn('[Firebase] Database belum siap.');
+    return false;
+  }
   try {
     const postRef = doc(db, 'posts', feedItem.id);
-    await setDoc(postRef, {
-      ...feedItem,
-      isMyPost: false,
+    const cleanDoc: Record<string, any> = {
+      id: feedItem.id,
+      user: feedItem.user || postItem.user || 'Warga Kareba',
+      init: feedItem.init || postItem.init || (feedItem.user ? feedItem.user[0].toUpperCase() : 'W'),
+      name: feedItem.name || postItem.name || feedItem.user || 'Warga',
       authorUid: feedItem.authorUid || postItem.authorUid || '',
       email: feedItem.email || postItem.email || '',
+      time: feedItem.time || postItem.createdAt || 'Baru saja',
+      text: feedItem.text || postItem.title || postItem.caption || 'Momen spesial hari ini 📸',
+      img: feedItem.img || postItem.img || '',
+      thumbnail: feedItem.thumbnail || postItem.thumbnail || '',
+      fileId: feedItem.fileId || postItem.fileId || '',
+      thumbFileId: feedItem.thumbFileId || postItem.thumbFileId || '',
+      mediaType: feedItem.mediaType || postItem.mediaType || 'image',
+      like: Number(feedItem.like) || 0,
       views: Number(feedItem.views) || 0,
-      title: postItem.title,
-      loc: postItem.loc,
+      shares: Number(feedItem.shares) || 0,
+      saves: Number(feedItem.saves) || 0,
+      likedBy: Array.isArray(feedItem.likedBy) ? feedItem.likedBy : [],
+      comments: Array.isArray(feedItem.comments) ? feedItem.comments : [],
+      location: feedItem.location || postItem.loc || 'Kawasan Sekitar',
+      loc: postItem.loc || feedItem.location || 'Kawasan Sekitar',
+      title: postItem.title || feedItem.text || '',
+      isMyPost: false,
+      isHidden: false,
       createdAtServer: serverTimestamp(),
-      createdAtTimestamp: Date.now(),
-    });
-    console.log(`[Firebase] Postingan ${feedItem.id} berhasil disimpan ke Firestore!`);
+      createdAtTimestamp: feedItem.createdAtTimestamp || Date.now(),
+    };
+
+    if (feedItem.avatar) {
+      cleanDoc.avatar = feedItem.avatar;
+    }
+
+    await setDoc(postRef, cleanDoc, { merge: true });
+    console.log(`[Firebase] Postingan ${feedItem.id} BERHASIL disimpan ke Firestore server!`);
     return true;
   } catch (error) {
-    console.warn('[Firebase] Catatan: Gagal menyimpan ke Firestore (kemungkinan rules belum diatur di Firebase Console):', error);
+    console.error('[Firebase] Gagal menyimpan postingan ke Firestore:', error);
     return false;
   }
 }

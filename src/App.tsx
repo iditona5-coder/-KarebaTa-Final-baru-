@@ -1100,6 +1100,28 @@ export default function KarebaFeedFinal() {
         // Pertahankan semua postingan lokal yang baru dibuat dan belum tersinkron di remote (JANGAN DIHAPUS!)
         const localOnly = prevFeed.filter((p) => !remoteIds.has(p.id) && !isDummyMedia(p));
 
+        // Otomatis sinkronkan postingan lokal warga ke Firestore cloud agar muncul di semua HP warga lainnya
+        if (localOnly.length > 0) {
+          localOnly.forEach((localItem) => {
+            const matchingPost: PostItem = {
+              id: localItem.id,
+              title: localItem.text || "Kabar Warga",
+              loc: localItem.location || "Wilayah Sekitar",
+              img: localItem.img,
+              thumbnail: localItem.thumbnail,
+              mediaType: localItem.mediaType || "image",
+              caption: localItem.text || "",
+              createdAt: localItem.time || "Baru saja",
+              name: localItem.name || localItem.user || "Warga",
+              email: localItem.email || "",
+              user: localItem.user || "warga",
+              init: localItem.init || "W",
+              isMyPost: true,
+            };
+            savePostToFirestore(localItem, matchingPost).catch(() => {});
+          });
+        }
+
         return [...updatedRemote, ...localOnly];
       });
 
@@ -1767,8 +1789,8 @@ export default function KarebaFeedFinal() {
         carouselRef.current?.scrollTo({ left: 0, behavior: "smooth" });
       }, 100);
 
-      // Simpan ke Firestore proyek pribadi di latar belakang
-      savePostToFirestore(newFeedItem, newPostItem);
+      // Simpan ke Firestore proyek pribadi di cloud agar langsung tersinkron ke semua HP
+      await savePostToFirestore(newFeedItem, newPostItem);
 
       // Hentikan status loading di bawah tombol
       setUploadingCount((prev) => Math.max(0, prev - 1));

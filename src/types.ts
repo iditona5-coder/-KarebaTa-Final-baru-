@@ -56,6 +56,7 @@ export interface FeedItem {
   views?: number;
   isHidden?: boolean;
   category?: string;
+  createdAtTimestamp?: number;
 }
 
 export interface ReportItem {
