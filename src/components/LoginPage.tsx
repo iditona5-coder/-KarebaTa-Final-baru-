@@ -82,18 +82,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
           <div className="flex items-center justify-center gap-3 sm:gap-3.5 mb-2">
             <div className="shrink-0 flex items-center justify-center filter drop-shadow-sm">
-              <KarebaPinIcon className="w-13 h-15 sm:w-16 sm:h-18" size={54} />
+              <KarebaPinIcon size="clamp(46px, 12vw, 58px)" />
             </div>
             <div className="flex flex-col text-left justify-center">
               <h1
-                className="text-3xl sm:text-4xl font-[900] tracking-tight leading-none"
+                className="text-[clamp(28px,7.5vw,36px)] font-[900] tracking-tight leading-none"
                 style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
               >
                 <span className="text-[#00632B]">Kareba'</span>
                 <span className="text-[#E5A000]">Ta</span>
               </h1>
               <p
-                className="text-[10px] sm:text-xs font-extrabold tracking-[0.12em] text-[#E5A000] mt-1 uppercase"
+                className="text-[clamp(10px,2.6vw,12.5px)] font-extrabold tracking-[0.14em] text-[#E5A000] mt-1 uppercase"
                 style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
               >
                 beritamu, suaramu
@@ -101,7 +101,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-neutral-600 mt-1 max-w-xs leading-relaxed font-normal">
+          <p className="text-[clamp(13px,3.4vw,14.5px)] text-neutral-600 mt-1 max-w-xs leading-relaxed font-normal">
             Masuk dengan Akun Google terlebih dahulu untuk menikmati dan membagikan kabar warga terkini.
           </p>
         </div>

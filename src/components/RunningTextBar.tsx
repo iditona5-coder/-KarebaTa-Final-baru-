@@ -148,21 +148,22 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
   return (
     <>
       {/* Papan Teks Berjalan Mandiri (Custom Engine Tanpa Tag Marquee Bawaan Browser & Tanpa Native Tooltip) */}
+      {/* Papan Teks Berjalan Mandiri (Custom Engine Tanpa Tag Marquee Bawaan Browser & Tanpa Native Tooltip) */}
       <div
         id="running-text-board"
-        className="w-full max-w-full bg-neutral-900 border-b border-neutral-800 text-white flex items-center h-7 sm:h-7.5 overflow-hidden relative select-none shadow-2xs z-30"
+        className="w-full max-w-full bg-neutral-900 border-b border-neutral-800 text-white flex items-center h-8 sm:h-8.5 overflow-hidden relative select-none shadow-2xs z-30"
         style={{ touchAction: "pan-y" }}
       >
         {/* Label Badge Statis Kiri - Merah Kontras Modern */}
         <button
           type="button"
           onClick={() => setIsListOpen(true)}
-          className="bg-red-600 hover:bg-red-700 active:scale-95 transition text-white h-full px-2 sm:px-2.5 flex items-center gap-1.5 shrink-0 z-20 font-black text-[9px] sm:text-[10px] tracking-wider uppercase shadow-xs cursor-pointer select-none"
+          className="bg-red-600 hover:bg-red-700 active:scale-95 transition text-white h-full px-2.5 sm:px-3 flex items-center gap-1.5 shrink-0 z-20 font-black text-[clamp(10px,2.8vw,11.5px)] tracking-wider uppercase shadow-xs cursor-pointer select-none"
           aria-label="Buka info pengumuman warga"
         >
-          <span className="relative flex h-1.5 w-1.5">
+          <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
           </span>
           <span className="whitespace-nowrap font-extrabold tracking-tight">INFO</span>
         </button>
@@ -193,13 +194,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
               <div
                 key={`m1-${item.id}-${idx}`}
                 onClick={() => handleItemPress(item)}
-                className="inline-flex items-center gap-1.5 px-3 text-[11px] text-neutral-300 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
               >
-                <span className="text-[9px] font-bold text-amber-300 bg-neutral-800/90 px-1 py-0.5 rounded border border-neutral-700/60 leading-none">
+                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-1.5 py-0.5 rounded border border-neutral-700/60 leading-none">
                   {item.category}
                 </span>
                 <span className="font-normal">{item.text}</span>
-                <span className="text-neutral-600 text-[10px] mx-1">•</span>
+                <span className="text-neutral-500 text-[11px] mx-1">•</span>
               </div>
             ))}
 
@@ -208,13 +209,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
               <div
                 key={`m2-${item.id}-${idx}`}
                 onClick={() => handleItemPress(item)}
-                className="inline-flex items-center gap-1.5 px-3 text-[11px] text-neutral-300 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
               >
-                <span className="text-[9px] font-bold text-amber-300 bg-neutral-800/90 px-1 py-0.5 rounded border border-neutral-700/60 leading-none">
+                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-1.5 py-0.5 rounded border border-neutral-700/60 leading-none">
                   {item.category}
                 </span>
                 <span className="font-normal">{item.text}</span>
-                <span className="text-neutral-600 text-[10px] mx-1">•</span>
+                <span className="text-neutral-500 text-[11px] mx-1">•</span>
               </div>
             ))}
           </div>

@@ -167,6 +167,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     if (e) {
       e.stopPropagation();
     }
+    const freshSrc = normalizeMediaUrl(src, isVideo);
+    setActiveVideoSrc(freshSrc);
     setHasVideoError(false);
     setIsBuffering(true);
     if (videoRef.current) {
@@ -467,7 +469,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           {isVideo ? (
             <video
               ref={fullscreenVideoRef}
-              src={src}
+              src={activeVideoSrc || src}
               poster={posterUrl || thumbnail}
               playsInline
               loop
@@ -591,7 +593,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
         >
           <video
             ref={videoRef}
-            src={src}
+            src={activeVideoSrc || src}
             poster={posterUrl || thumbnail}
             preload="auto"
             className="w-full h-full object-cover object-center cursor-pointer block pointer-events-none"
@@ -637,14 +639,14 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/70 to-black/85 pointer-events-none" />
 
               {/* Kartu Pesan Elegan Khas Aplikasi Besar */}
-              <div className="relative z-10 flex flex-col items-center max-w-[260px] animate-fade-in pointer-events-auto">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-2.5 border border-white/15 shadow-lg text-amber-400">
-                  <WifiOff className="w-6 h-6 text-amber-400" />
+              <div className="relative z-10 flex flex-col items-center max-w-[300px] px-3 animate-fade-in pointer-events-auto">
+                <div className="w-[clamp(44px,11vw,52px)] h-[clamp(44px,11vw,52px)] rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-2.5 border border-white/15 shadow-lg text-amber-400">
+                  <WifiOff className="w-[clamp(22px,5.5vw,26px)] h-[clamp(22px,5.5vw,26px)] text-amber-400" />
                 </div>
-                <p className="text-xs font-bold text-white tracking-wide">
+                <p className="text-[clamp(14px,3.8vw,16px)] font-bold text-white tracking-wide">
                   {isOffline ? "Jaringan Internet Terputus" : "Video Belum Dapat Dimuat"}
                 </p>
-                <p className="text-[11px] text-neutral-300 mt-1 leading-relaxed">
+                <p className="text-[clamp(12px,3.3vw,13.5px)] text-neutral-300 mt-1 leading-relaxed">
                   {isOffline
                     ? "Periksa koneksi seluler atau Wi-Fi Anda untuk memutar kabar ini."
                     : "Koneksi sedang lambat atau berkas video sedang disiapkan."}
@@ -654,9 +656,9 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
                 <button
                   type="button"
                   onClick={handleRetryVideo}
-                  className="mt-3 px-4 py-2 bg-emerald-700/80 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border border-emerald-500/40 shadow-md transition cursor-pointer"
+                  className="mt-3.5 px-5 py-2.5 min-h-[44px] bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white text-[clamp(13px,3.5vw,14.5px)] font-bold rounded-xl flex items-center gap-2 border border-emerald-500/40 shadow-md transition cursor-pointer"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-[clamp(15px,4vw,17px)] h-[clamp(15px,4vw,17px)]" />
                   <span>Coba Putar Lagi</span>
                 </button>
               </div>

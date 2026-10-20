@@ -93,7 +93,18 @@ import { SetupUsernamePage } from "./components/SetupUsernamePage";
 import { SplashScreen } from "./components/SplashScreen";
 
 export default function KarebaFeedFinal() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      if (typeof window !== "undefined") {
+        if (sessionStorage.getItem("karebata_splash_shown") === "true") {
+          return false;
+        }
+        sessionStorage.setItem("karebata_splash_shown", "true");
+        return true;
+      }
+    } catch {}
+    return false;
+  });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [pendingUploadAction, setPendingUploadAction] = useState<"camera" | "gallery" | null>(null);
@@ -2196,35 +2207,35 @@ export default function KarebaFeedFinal() {
                 >
                   <KarebaTaLogo compact={true} />
                 </button>
-                <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0 ml-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-2">
                   <button
                     id="header-search-trigger"
                     type="button"
                     onClick={() => {
                       setIsSearchOpen(true);
                     }}
-                    className="p-1.5 sm:p-2 text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Cari"
                   >
-                    <Search className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <Search className="w-[clamp(24px,6.5vw,28px)] h-[clamp(24px,6.5vw,28px)]" strokeWidth={2.3} />
                   </button>
                   <button
                     id="header-camera-btn"
                     type="button"
                     onClick={handleCameraClick}
-                    className="p-1.5 sm:p-2 text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Buka Kamera"
                   >
-                    <CameraIcon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <CameraIcon className="w-[clamp(24px,6.5vw,28px)] h-[clamp(24px,6.5vw,28px)]" strokeWidth={2.3} />
                   </button>
                   <button
                     id="header-gallery-btn"
                     type="button"
                     onClick={handleGalleryClick}
-                    className="p-1.5 sm:p-2 text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Pilih Foto atau Video dari Galeri"
                   >
-                    <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <ImageIcon className="w-[clamp(24px,6.5vw,28px)] h-[clamp(24px,6.5vw,28px)]" strokeWidth={2.3} />
                   </button>
                 </div>
               </>
@@ -2388,10 +2399,10 @@ export default function KarebaFeedFinal() {
                 <img
                   src={currentUser.photoURL}
                   alt={userName}
-                  className="w-13 h-13 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-emerald-600/20 ring-offset-2 ring-offset-white shadow-xs select-none"
+                  className="w-[clamp(48px,13vw,56px)] h-[clamp(48px,13vw,56px)] rounded-full object-cover ring-2 ring-emerald-600/20 ring-offset-2 ring-offset-white shadow-xs select-none"
                 />
               ) : (
-                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-xl font-bold shadow-xs text-white select-none tracking-tight">
+                <div className="w-[clamp(48px,13vw,56px)] h-[clamp(48px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-[clamp(20px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
                   {initial}
                 </div>
               )}
@@ -2399,7 +2410,7 @@ export default function KarebaFeedFinal() {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
-                <h2 className="font-bold text-[16px] sm:text-[17px] text-neutral-900 tracking-[-0.015em] truncate max-w-[150px] sm:max-w-[200px]">
+                <h2 className="font-bold text-[clamp(16px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate max-w-[150px] sm:max-w-[200px]">
                   {userName.startsWith("@") ? userName.replace(/^@/, "") : userName}
                 </h2>
                 <span
@@ -2413,7 +2424,7 @@ export default function KarebaFeedFinal() {
                   <Check className="w-2.5 h-2.5 stroke-[3]" />
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium mt-0.5 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 text-[clamp(13px,3.6vw,14.5px)] text-neutral-500 font-medium mt-0.5 whitespace-nowrap">
                 <span className="text-neutral-500 font-medium tracking-tight">
                   @{userName.replace(/^@/, "").toLowerCase()}
                 </span>
@@ -2487,7 +2498,7 @@ export default function KarebaFeedFinal() {
         )}
 
         {/* STATS - RAPAT KANAN KIRI: ICON DI ATAS, ANGKA DI BAWAH, SEMUA ICON MONOKROM / TIDAK BERWARNA */}
-        <section id="stats-section" className="w-full flex items-center justify-around py-2.5 border-b border-neutral-200 bg-neutral-50/70">
+        <section id="stats-section" className="w-full flex items-center justify-around py-3 border-b border-neutral-200 bg-neutral-50/70">
           <button
             type="button"
             onClick={() => {
@@ -2495,30 +2506,30 @@ export default function KarebaFeedFinal() {
               const el = document.getElementById("my-posts-carousel");
               if (el) el.scrollIntoView({ behavior: "smooth" });
             }}
-            className="flex-1 flex flex-col items-center justify-center py-0.5 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer"
+            className="flex-1 flex flex-col items-center justify-center py-1 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer min-h-[44px]"
             aria-label="Suka kabar kamu (klik untuk melihat Kabar Kamu)"
           >
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Suka">
-              <Heart className="w-4 h-4 text-neutral-700" />
+              <Heart className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] text-neutral-700" />
             </div>
-            <p className="font-bold text-base text-neutral-900 leading-tight">
+            <p className="font-bold text-[clamp(15px,4.2vw,17.5px)] text-neutral-900 leading-tight">
               {myTotalLikes > 0
                 ? (myTotalLikes >= 1000 ? `${(myTotalLikes / 1000).toFixed(1)}k` : myTotalLikes)
                 : 0}
             </p>
           </button>
-          <div className="w-px h-7 bg-neutral-200" />
-          <div className="flex-1 flex flex-col items-center justify-center py-0.5" aria-label="Total kabar kamu dibagikan">
+          <div className="w-px h-8 bg-neutral-200" />
+          <div className="flex-1 flex flex-col items-center justify-center py-1 min-h-[44px]" aria-label="Total kabar kamu dibagikan">
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Bagikan">
-              <Share2 className="w-4 h-4 text-neutral-700" />
+              <Share2 className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] text-neutral-700" />
             </div>
-            <p className="font-bold text-base text-neutral-900 leading-tight">
+            <p className="font-bold text-[clamp(15px,4.2vw,17.5px)] text-neutral-900 leading-tight">
               {myTotalShares > 0
                 ? (myTotalShares >= 1000 ? `${(myTotalShares / 1000).toFixed(1)}k` : myTotalShares)
                 : 0}
             </p>
           </div>
-          <div className="w-px h-7 bg-neutral-200" />
+          <div className="w-px h-8 bg-neutral-200" />
           <button
             type="button"
             onClick={() => {
@@ -2526,13 +2537,13 @@ export default function KarebaFeedFinal() {
               const el = document.getElementById("my-posts-carousel");
               if (el) el.scrollIntoView({ behavior: "smooth" });
             }}
-            className="flex-1 flex flex-col items-center justify-center py-0.5 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer"
+            className="flex-1 flex flex-col items-center justify-center py-1 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer min-h-[44px]"
             aria-label="Total kabar kamu disimpan (klik untuk melihat Tersimpan)"
           >
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Simpan">
-              <Bookmark className="w-4 h-4 text-neutral-700" />
+              <Bookmark className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] text-neutral-700" />
             </div>
-            <p className="font-bold text-base text-neutral-900 leading-tight">
+            <p className="font-bold text-[clamp(15px,4.2vw,17.5px)] text-neutral-900 leading-tight">
               {myTotalSaves > 0
                 ? (myTotalSaves >= 1000 ? `${(myTotalSaves / 1000).toFixed(1)}k` : myTotalSaves)
                 : 0}
@@ -3126,16 +3137,16 @@ export default function KarebaFeedFinal() {
                   )}
                 {/* Post Header: Nama & Waktu tetap satu baris, tidak turun ke bawah */}
                 <div className="px-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     {/* Foto Profil Penulis Kabar */}
                     {f.avatar ? (
                       <img
                         src={f.avatar}
                         alt={f.user}
-                        className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white shadow-xs select-none"
+                        className="w-[clamp(44px,12vw,52px)] h-[clamp(44px,12vw,52px)] min-w-[clamp(44px,12vw,52px)] min-h-[clamp(44px,12vw,52px)] rounded-full object-cover shrink-0 ring-2 ring-emerald-600/25 ring-offset-1 ring-offset-white shadow-xs select-none"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
+                      <div className="w-[clamp(44px,12vw,52px)] h-[clamp(44px,12vw,52px)] min-w-[clamp(44px,12vw,52px)] min-h-[clamp(44px,12vw,52px)] rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-1 ring-offset-white flex items-center justify-center text-[clamp(18px,5vw,22px)] font-bold text-white shadow-xs shrink-0 select-none">
                         {(f.user.trim().replace(/^@/, "")[0] || f.init || "W").toUpperCase()}
                       </div>
                     )}
@@ -3149,18 +3160,18 @@ export default function KarebaFeedFinal() {
                             setSearchQuery(`@${targetUser.replace(/^@/, "")}`);
                             setIsSearchOpen(true);
                           }}
-                          className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[130px] sm:max-w-[180px] hover:text-[#00632B] transition-colors cursor-pointer text-left"
+                          className="text-[clamp(15px,4.2vw,17.5px)] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[150px] sm:max-w-[220px] hover:text-[#00632B] transition-colors cursor-pointer text-left"
                           aria-label={`Lihat hanya postingan @${f.user}`}
                         >
                           {f.user.startsWith("@") ? f.user : `@${f.user}`}
                         </button>
-                        <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
-                        <span className="text-[12px] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
+                        <span className="text-neutral-300 shrink-0 select-none">·</span>
+                        <span className="text-[clamp(13px,3.5vw,14.5px)] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
                           {f.time}
                         </span>
                       </div>
                       {f.location && (
-                        <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-0.5">
+                        <div className="flex items-center gap-1 text-[clamp(13px,3.5vw,14.5px)] text-neutral-500 mt-0.5">
                           <button
                             type="button"
                             onClick={() => {
@@ -3168,10 +3179,10 @@ export default function KarebaFeedFinal() {
                               setSearchQuery(f.location!);
                               setIsSearchOpen(true);
                             }}
-                            className="flex items-center gap-0.5 text-neutral-600 font-medium truncate max-w-[180px] hover:text-[#00632B] transition cursor-pointer text-left"
+                            className="flex items-center gap-1 text-neutral-600 font-medium truncate max-w-[200px] hover:text-[#00632B] transition cursor-pointer text-left"
                             aria-label={`Lihat semua postingan di ${f.location}`}
                           >
-                            <MapPin className="w-3 h-3 text-yellow-500 shrink-0 inline" />
+                            <MapPin className="w-[clamp(15px,4vw,17px)] h-[clamp(15px,4vw,17px)] text-yellow-500 shrink-0 inline" />
                             <span className="truncate">{f.location}</span>
                           </button>
                         </div>
@@ -3185,10 +3196,10 @@ export default function KarebaFeedFinal() {
                       id={`post-menu-btn-${f.id}`}
                       type="button"
                       onClick={() => setActiveMenuPostId((prev) => (prev === f.id ? null : f.id))}
-                      className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
+                      className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
                       aria-label="Opsi postingan"
                     >
-                      <MoreVertical className="w-5 h-5 text-neutral-600" />
+                      <MoreVertical className="w-[clamp(22px,6vw,25px)] h-[clamp(22px,6vw,25px)] text-neutral-600" />
                     </button>
 
                     {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Salin) */}
@@ -3334,14 +3345,14 @@ export default function KarebaFeedFinal() {
                         className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
                       >
                         <h3
-                          className={`text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight leading-snug transition-all ${
+                          className={`text-[clamp(18px,5vw,22px)] font-bold text-neutral-900 tracking-tight leading-snug transition-all ${
                             isLong && !expandedPosts[f.id] ? "line-clamp-2" : ""
                           }`}
                         >
                           {f.text}
                         </h3>
                         {isLong && (
-                          <span className="text-xs font-semibold text-[#00632B] hover:text-[#004f22] mt-1 inline-block">
+                          <span className="text-[clamp(14px,3.8vw,16px)] font-bold text-[#00632B] hover:text-[#004f22] mt-1.5 inline-block">
                             {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
                           </span>
                         )}
@@ -3351,18 +3362,18 @@ export default function KarebaFeedFinal() {
                 </div>
 
                 {/* Post Actions: Suka, Komentar, Bagikan, Laporkan/Hapus, Dilihat */}
-                <div className="px-4 flex items-center gap-4 sm:gap-6 text-xs font-semibold text-neutral-600">
+                <div className="px-4 flex items-center gap-5 sm:gap-7 text-[clamp(14.5px,4vw,16.5px)] font-bold text-neutral-700">
                   <button
                     id={`like-btn-${f.id}`}
                     type="button"
                     onClick={() => handleToggleLike(f.id)}
-                    className={`flex items-center gap-1.5 py-1 transition ${
+                    className={`flex items-center gap-2 py-2 min-h-[44px] cursor-pointer transition ${
                       f.isLiked ? "text-red-500 font-bold" : "hover:text-red-500 text-neutral-600"
                     }`}
                     aria-label="Suka"
                   >
                     <Heart
-                      className={`w-4 h-4 transition-transform active:scale-125 ${
+                      className={`w-[clamp(22px,6vw,26px)] h-[clamp(22px,6vw,26px)] transition-transform active:scale-125 ${
                         f.isLiked ? "fill-red-500 text-red-500" : "text-neutral-500"
                       }`}
                     />
@@ -3373,22 +3384,22 @@ export default function KarebaFeedFinal() {
                     id={`share-btn-${f.id}`}
                     type="button"
                     onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
-                    className={`flex items-center gap-1.5 py-1 transition ${
+                    className={`flex items-center gap-2 py-2 min-h-[44px] cursor-pointer transition ${
                       activeSharePostId === f.id ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
                     }`}
                     aria-label="Bagikan"
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-[clamp(22px,6vw,26px)] h-[clamp(22px,6vw,26px)]" />
                     <span>Bagikan</span>
                   </button>
 
                   {/* Ikon Tayangan / View (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
                   <div
-                    className="flex items-center gap-1.5 py-1 text-neutral-500 select-none ml-auto sm:ml-0"
+                    className="flex items-center gap-1.5 py-2 min-h-[44px] text-neutral-500 select-none ml-auto sm:ml-0"
                     aria-label={`${(f.views || 0).toLocaleString("id-ID")} kali dilihat`}
                   >
-                    <Eye className="w-4 h-4 text-neutral-400" />
-                    <span>{f.views ? f.views.toLocaleString("id-ID") : 0} dilihat</span>
+                    <Eye className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)] text-neutral-400" />
+                    <span className="text-[clamp(13.5px,3.8vw,15px)]">{f.views ? f.views.toLocaleString("id-ID") : 0} dilihat</span>
                   </div>
                 </div>
 
@@ -3452,11 +3463,11 @@ export default function KarebaFeedFinal() {
             id="scroll-to-top-btn"
             type="button"
             onClick={scrollToTop}
-            className="fixed bottom-6 right-5 z-40 bg-neutral-900/90 hover:bg-neutral-900 active:scale-95 text-white pl-3.5 pr-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md border border-neutral-700/60 flex items-center gap-2 transition-all duration-200 cursor-pointer animate-fade-in group"
+            className="fixed bottom-6 right-5 z-40 bg-neutral-900/90 hover:bg-neutral-900 active:scale-95 text-white pl-4 pr-4.5 py-3 min-h-[44px] rounded-full shadow-2xl backdrop-blur-md border border-neutral-700/60 flex items-center gap-2 transition-all duration-200 cursor-pointer animate-fade-in group"
             aria-label="Kembali ke media paling atas"
           >
-            <ChevronUp className="w-4 h-4 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
-            <span className="text-xs font-semibold tracking-tight">Ke Atas</span>
+            <ChevronUp className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
+            <span className="text-[clamp(13px,3.6vw,14.5px)] font-bold tracking-tight">Ke Atas</span>
           </button>
         )}
 
