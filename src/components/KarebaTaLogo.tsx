@@ -51,12 +51,12 @@ export function KarebaTaLogo({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const pinSize = compact ? "clamp(40px, 11vw, 52px)" : "clamp(44px, 12vw, 56px)";
+  const pinSize = compact ? "clamp(30px, 8vw, 36px)" : "clamp(42px, 11vw, 50px)";
 
   return (
     <div
       dir="ltr"
-      className={`select-none flex items-center ${compact ? "gap-2 sm:gap-2.5" : "gap-2.5 sm:gap-3"} shrink-0 ${className}`}
+      className={`select-none flex items-center ${compact ? "gap-1.5 sm:gap-2" : "gap-2.5 sm:gap-3"} shrink-0 ${className}`}
       style={{
         ...style,
       }}
@@ -69,8 +69,8 @@ export function KarebaTaLogo({
         <div
           className={`${
             compact
-              ? "text-[clamp(19px,5.2vw,24px)]"
-              : "text-[clamp(22px,6vw,28px)]"
+              ? "text-[clamp(16px,4.4vw,20px)]"
+              : "text-[clamp(22px,6vw,26px)]"
           } font-black tracking-tight leading-none whitespace-nowrap`}
           style={{
             fontFamily: "'Poppins', system-ui, sans-serif",
@@ -84,8 +84,8 @@ export function KarebaTaLogo({
           <span
             className={`${
               compact
-                ? "text-[clamp(9.5px,2.6vw,11.5px)] tracking-[0.1em]"
-                : "text-[clamp(10.5px,2.8vw,12.5px)] tracking-[0.12em]"
+                ? "text-[clamp(8px,2.1vw,9.5px)] tracking-[0.05em]"
+                : "text-[clamp(10px,2.7vw,12px)] tracking-[0.1em]"
             } font-extrabold uppercase text-[#E5A000] leading-none mt-1 whitespace-nowrap`}
             style={{
               fontFamily: "'Poppins', system-ui, sans-serif",

@@ -19,6 +19,7 @@ export interface PostItem {
   shares?: number;
   saves?: number;
   views?: number;
+  createdAtTimestamp?: number;
 }
 
 export interface CommentItem {

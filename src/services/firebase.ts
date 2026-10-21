@@ -8,6 +8,8 @@ import {
   initializeFirestore,
   getFirestore,
   persistentLocalCache,
+  persistentMultipleTabManager,
+  memoryLocalCache,
   setLogLevel,
   collection,
   doc,
@@ -65,16 +67,26 @@ try {
   setLogLevel('error');
 } catch {}
 
-// Inisialisasi Firestore dengan auto-detect long polling dan persistent local cache
+// Inisialisasi Firestore dengan auto-detect long polling dan persistent multiple tab manager
 export const db: Firestore = (() => {
   try {
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
-      localCache: persistentLocalCache(),
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
       ignoreUndefinedProperties: true,
     });
-  } catch {
-    return getFirestore(app);
+  } catch (e1) {
+    try {
+      return initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        localCache: memoryLocalCache(),
+        ignoreUndefinedProperties: true,
+      });
+    } catch {
+      return getFirestore(app);
+    }
   }
 })();
 
@@ -125,6 +137,13 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
     if (feedItem.avatar) {
       cleanDoc.avatar = feedItem.avatar;
     }
+
+    // Pastikan tidak ada field bertipe undefined yang dapat menyebabkan penolakan Firestore
+    Object.keys(cleanDoc).forEach((key) => {
+      if (cleanDoc[key] === undefined) {
+        delete cleanDoc[key];
+      }
+    });
 
     await setDoc(postRef, cleanDoc, { merge: true });
     console.log(`[Firebase] Postingan ${feedItem.id} BERHASIL disimpan ke Firestore server!`);
@@ -179,47 +198,26 @@ export function listenToFirestorePosts(
   }
 
   try {
-    let fallbackUnsub: (() => void) | null = null;
-    const postsQuery = query(
-      collection(db, 'posts'),
-      orderBy('createdAtTimestamp', 'desc'),
-      limit(100)
-    );
-
+    // Berlangganan langsung ke koleksi 'posts' secara realtime tanpa bergantung index query
     const unsubscribe = onSnapshot(
-      postsQuery,
+      collection(db, 'posts'),
       (snapshot) => {
         if (!snapshot.empty) {
           const remotePosts: FeedItem[] = snapshot.docs.map(parsePostDoc);
+          remotePosts.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
           onUpdate(remotePosts);
         } else {
           onUpdate([]);
         }
       },
       (error) => {
-        console.warn('[Firebase] Query dengan orderBy dialihkan ke fallback realtime:', error);
-        try {
-          fallbackUnsub = onSnapshot(
-            collection(db, 'posts'),
-            (snap) => {
-              const remote = snap.docs.map(parsePostDoc);
-              remote.sort((a: any, b: any) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
-              onUpdate(remote);
-            },
-            (err2) => {
-              console.warn('[Firebase] Fallback listener error:', err2);
-              if (onError) onError(err2);
-            }
-          );
-        } catch {
-          if (onError) onError(error);
-        }
+        console.warn('[Firebase] Listener error pada koleksi posts:', error);
+        if (onError) onError(error);
       }
     );
 
     return () => {
       unsubscribe();
-      if (fallbackUnsub) fallbackUnsub();
     };
   } catch (err) {
     console.warn('[Firebase] Gagal menginisialisasi listener Firestore:', err);
@@ -234,25 +232,16 @@ export function listenToFirestorePosts(
 export async function fetchLatestFirestorePosts(): Promise<FeedItem[]> {
   if (!db) return [];
   try {
-    const postsQuery = query(
-      collection(db, 'posts'),
-      orderBy('createdAtTimestamp', 'desc'),
-      limit(100)
-    );
-    const snapshot = await getDocs(postsQuery);
-    if (!snapshot.empty) {
-      return snapshot.docs.map(parsePostDoc);
+    const snap = await getDocs(collection(db, 'posts'));
+    if (!snap.empty) {
+      const list = snap.docs.map(parsePostDoc);
+      list.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
+      return list;
     }
     return [];
   } catch (err) {
-    try {
-      const snap = await getDocs(collection(db, 'posts'));
-      const list = snap.docs.map(parsePostDoc);
-      list.sort((a: any, b: any) => (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0));
-      return list;
-    } catch {
-      return [];
-    }
+    console.warn('[Firebase] Gagal fetchLatestFirestorePosts:', err);
+    return [];
   }
 }
 

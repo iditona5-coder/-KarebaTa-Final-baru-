@@ -77,7 +77,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <div className="h-2 sm:h-4 shrink-0" />
 
       {/* Main Content Area */}
-      <main className="w-full max-w-sm sm:max-w-md mx-auto px-6 py-2 my-auto flex flex-col justify-center shrink-0">
+      <main className="w-full max-w-sm sm:max-w-md mx-auto px-4 sm:px-6 py-2 my-auto flex flex-col justify-center shrink-0">
         {/* Logo Showcase: Icon Lokasi Berada di Kiri Tulisan Kareba'Ta */}
         <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
           <div className="flex items-center justify-center gap-3 sm:gap-3.5 mb-2">
@@ -145,19 +145,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         ) : null}
 
-        {/* TOMBOL UTAMA: MASUK DENGAN AKUN GOOGLE */}
+        {/* TOMBOL UTAMA: MASUK DENGAN GOOGLE (RESPONSIF & BEBAS PATAH TEKS) */}
         <div className="space-y-3.5">
           <button
             id="login-google-btn"
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full py-4 px-5 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-xl font-bold text-base flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-60"
+            className="w-full py-3.5 sm:py-4 px-4 sm:px-5 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-xl font-bold text-[clamp(13px,3.8vw,15.5px)] flex items-center justify-center gap-2.5 sm:gap-3 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-60"
           >
             {isLoading ? (
               <div className="flex items-center gap-2.5">
-                <div className="w-5 h-5 rounded-full border-2 border-neutral-400 border-t-[#00632B] animate-spin" />
-                <span className="text-neutral-700 text-sm font-semibold">Menghubungkan Akun Google...</span>
+                <div className="w-5 h-5 rounded-full border-2 border-neutral-400 border-t-[#00632B] animate-spin shrink-0" />
+                <span className="text-neutral-700 text-xs sm:text-sm font-semibold whitespace-nowrap">Menghubungkan Akun Google...</span>
               </div>
             ) : (
               <>
@@ -180,7 +180,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>Masuk dengan Akun Google</span>
+                <span className="whitespace-nowrap font-bold tracking-tight">Masuk dengan Google</span>
               </>
             )}
           </button>

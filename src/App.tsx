@@ -141,6 +141,10 @@ export default function KarebaFeedFinal() {
   const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
+  const currentUserRef = useRef<User | null>(currentUser);
+  currentUserRef.current = currentUser;
+  const userNameRef = useRef<string>(userName);
+  userNameRef.current = userName;
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -641,7 +645,9 @@ export default function KarebaFeedFinal() {
             };
           });
           const localOnly = prevFeed.filter((p) => !remoteIds.has(p.id) && !isDummyMedia(p));
-          return [...updated, ...localOnly];
+          const combined = [...updated, ...localOnly];
+          combined.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
+          return combined;
         });
       } else {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -661,9 +667,11 @@ export default function KarebaFeedFinal() {
   // - Pada postingan sendiri: HANYA kita yang melihat icon X (Hapus), dan TIDAK melihat icon Laporkan.
   // - Pada postingan orang lain: kita melihat icon Laporkan, dan TIDAK melihat icon X (Hapus).
   const isMyPost = (item: { isMyPost?: boolean; user?: string; email?: string; authorUid?: string }) => {
-    if (!currentUser) return false;
-    const myUid = (currentUser.uid || "").trim();
-    const myEmail = (currentUser.email || "").trim().toLowerCase();
+    const user = currentUserRef.current || currentUser;
+    const name = (userNameRef.current || userName || "").trim().toLowerCase();
+    if (!user && !name) return false;
+    const myUid = (user?.uid || "").trim();
+    const myEmail = (user?.email || "").trim().toLowerCase();
 
     // 1. Cek kecocokan UID unik akun Google (paling presisi antar akun)
     if (myUid && item.authorUid && item.authorUid.trim() === myUid) {
@@ -672,6 +680,11 @@ export default function KarebaFeedFinal() {
 
     // 2. Cek kecocokan alamat email akun Google
     if (myEmail && item.email && item.email.trim().toLowerCase() === myEmail) {
+      return true;
+    }
+
+    // 3. Cek kecocokan username / nama akun
+    if (name && item.user && item.user.trim().toLowerCase() === name) {
       return true;
     }
 
@@ -1083,7 +1096,7 @@ export default function KarebaFeedFinal() {
 
       setFeed((prevFeed) => {
         const prevMap = new Map(prevFeed.map((p) => [p.id, p]));
-        const currentUid = (currentUser?.email || currentUser?.uid || userName || "").toLowerCase();
+        const currentUid = (currentUserRef.current?.email || currentUserRef.current?.uid || userNameRef.current || "").toLowerCase();
 
         const updatedRemote = remoteList.map((r) => {
           const prev = prevMap.get(r.id);
@@ -1117,12 +1130,15 @@ export default function KarebaFeedFinal() {
               user: localItem.user || "warga",
               init: localItem.init || "W",
               isMyPost: true,
+              createdAtTimestamp: Number(localItem.createdAtTimestamp) || Date.now(),
             };
             savePostToFirestore(localItem, matchingPost).catch(() => {});
           });
         }
 
-        return [...updatedRemote, ...localOnly];
+        const combined = [...updatedRemote, ...localOnly];
+        combined.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
+        return combined;
       });
 
       // Sinkronkan juga daftar "Kabar Kamu" (carousel atas)
@@ -1143,12 +1159,15 @@ export default function KarebaFeedFinal() {
             user: p.user || "warga",
             init: p.init || (p.user ? p.user[0].toUpperCase() : "W"),
             isMyPost: true,
+            createdAtTimestamp: Number(p.createdAtTimestamp) || Date.now(),
           }));
 
         const remoteUserIds = new Set(remoteUserPosts.map((p) => p.id));
         const localUserPosts = prevPosts.filter((p) => !remoteUserIds.has(p.id) && isMyPost(p) && !isDummyMedia(p));
 
-        return [...remoteUserPosts, ...localUserPosts];
+        const combinedPosts = [...remoteUserPosts, ...localUserPosts];
+        combinedPosts.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
+        return combinedPosts;
       });
     });
 
@@ -1750,6 +1769,7 @@ export default function KarebaFeedFinal() {
         location: finalLoc || undefined,
         comments: [],
         isMyPost: true,
+        createdAtTimestamp: Date.now(),
       };
 
       const newPostItem: PostItem = {
@@ -1769,6 +1789,7 @@ export default function KarebaFeedFinal() {
         user: userName,
         init: initial,
         isMyPost: true,
+        createdAtTimestamp: Date.now(),
       };
 
       setFeed((prev) => [newFeedItem, ...prev]);
@@ -2113,7 +2134,7 @@ export default function KarebaFeedFinal() {
           <header
             id="karebata-feed-header"
             dir="ltr"
-            className="bg-white border-b border-neutral-200 px-4 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[52px] overflow-hidden w-full"
+            className="bg-white border-b border-neutral-200 px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[52px] w-full"
           >
             {isSearchOpen ? (
               /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL PAPAN PENCARIAN */
@@ -2224,40 +2245,40 @@ export default function KarebaFeedFinal() {
                 <button
                   type="button"
                   onClick={scrollToTop}
-                  className="flex items-center text-left hover:opacity-85 active:scale-95 transition cursor-pointer shrink-0 mr-auto"
+                  className="flex items-center text-left hover:opacity-85 active:scale-95 transition cursor-pointer shrink-0"
                   aria-label="Kembali ke media paling atas"
                 >
                   <KarebaTaLogo compact={true} />
                 </button>
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
                   <button
                     id="header-search-trigger"
                     type="button"
                     onClick={() => {
                       setIsSearchOpen(true);
                     }}
-                    className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Cari"
                   >
-                    <Search className="w-[clamp(24px,6.5vw,28px)] h-[clamp(24px,6.5vw,28px)]" strokeWidth={2.3} />
+                    <Search className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
                   </button>
                   <button
                     id="header-camera-btn"
                     type="button"
                     onClick={handleCameraClick}
-                    className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Buka Kamera"
                   >
-                    <CameraIcon className="w-[clamp(24px,6.5vw,28px)] h-[clamp(24px,6.5vw,28px)]" strokeWidth={2.3} />
+                    <CameraIcon className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
                   </button>
                   <button
                     id="header-gallery-btn"
                     type="button"
                     onClick={handleGalleryClick}
-                    className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Pilih Foto atau Video dari Galeri"
                   >
-                    <ImageIcon className="w-[clamp(24px,6.5vw,28px)] h-[clamp(24px,6.5vw,28px)]" strokeWidth={2.3} />
+                    <ImageIcon className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
                   </button>
                 </div>
               </>
