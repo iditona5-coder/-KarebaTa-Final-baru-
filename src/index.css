@@ -23,6 +23,18 @@
   outline: none !important;
 }
 
+/* SISTEM SKALA RESPONSIF FLUID ALA APLIKASI BESAR (INSTAGRAM, TIKTOK, TWITTER) */
+:root {
+  --app-max-width: 448px;
+  --fluid-icon-sm: clamp(16px, 4.4vw, 18px);
+  --fluid-icon-md: clamp(19px, 5.2vw, 22px);
+  --fluid-icon-lg: clamp(22px, 6vw, 26px);
+  --fluid-touch-sm: clamp(34px, 9.2vw, 38px);
+  --fluid-touch-md: clamp(40px, 10.5vw, 44px);
+  --fluid-avatar-sm: clamp(32px, 8.5vw, 38px);
+  --fluid-avatar-md: clamp(42px, 11vw, 48px);
+}
+
 html {
   max-width: 100%;
   width: 100%;

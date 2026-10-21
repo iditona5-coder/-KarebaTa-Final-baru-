@@ -3208,13 +3208,13 @@ export default function KarebaFeedFinal() {
                         >
                           {f.user.startsWith("@") ? f.user : `@${f.user}`}
                         </button>
-                        <span className="text-neutral-300 shrink-0 select-none">·</span>
-                        <span className="text-[clamp(13px,3.5vw,14.5px)] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
+                        <span className="text-neutral-300 text-[10px] shrink-0 select-none">·</span>
+                        <span className="text-[clamp(11.5px,3vw,13px)] text-neutral-400 font-normal shrink-0 whitespace-nowrap">
                           {f.time}
                         </span>
                       </div>
                       {f.location && (
-                        <div className="flex items-center gap-1 text-[clamp(13px,3.5vw,14.5px)] text-neutral-500 mt-0.5">
+                        <div className="flex items-center gap-1 text-[clamp(11.5px,3vw,13px)] text-neutral-500 mt-0.5">
                           <button
                             type="button"
                             onClick={() => {
@@ -3222,10 +3222,10 @@ export default function KarebaFeedFinal() {
                               setSearchQuery(f.location!);
                               setIsSearchOpen(true);
                             }}
-                            className="flex items-center gap-1 text-neutral-600 font-medium truncate max-w-[200px] hover:text-[#00632B] transition cursor-pointer text-left"
+                            className="flex items-center gap-1 text-neutral-500 hover:text-[#00632B] font-normal truncate max-w-[200px] transition cursor-pointer text-left"
                             aria-label={`Lihat semua postingan di ${f.location}`}
                           >
-                            <MapPin className="w-[clamp(15px,4vw,17px)] h-[clamp(15px,4vw,17px)] text-yellow-500 shrink-0 inline" />
+                            <MapPin className="w-[clamp(12px,3.2vw,13.5px)] h-[clamp(12px,3.2vw,13.5px)] text-yellow-500 shrink-0 inline" />
                             <span className="truncate">{f.location}</span>
                           </button>
                         </div>
@@ -3404,45 +3404,45 @@ export default function KarebaFeedFinal() {
                   })()}
                 </div>
 
-                {/* Post Actions: Suka, Komentar, Bagikan, Laporkan/Hapus, Dilihat */}
-                <div className="px-4 flex items-center gap-5 sm:gap-7 text-[clamp(14.5px,4vw,16.5px)] font-bold text-neutral-700">
+                {/* Post Actions: Suka, Komentar, Bagikan, Laporkan/Hapus, Dilihat (Ukuran Ramping & Profesional) */}
+                <div className="px-4 flex items-center gap-4 sm:gap-6 text-[clamp(12.5px,3.4vw,14px)] font-bold text-neutral-700">
                   <button
                     id={`like-btn-${f.id}`}
                     type="button"
                     onClick={() => handleToggleLike(f.id)}
-                    className={`flex items-center gap-2 py-2 min-h-[44px] cursor-pointer transition ${
+                    className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition ${
                       f.isLiked ? "text-red-500 font-bold" : "hover:text-red-500 text-neutral-600"
                     }`}
                     aria-label="Suka"
                   >
                     <Heart
-                      className={`w-[clamp(22px,6vw,26px)] h-[clamp(22px,6vw,26px)] transition-transform active:scale-125 ${
+                      className={`w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] transition-transform active:scale-125 ${
                         f.isLiked ? "fill-red-500 text-red-500" : "text-neutral-500"
                       }`}
                     />
-                    <span>Suka</span>
+                    <span className="whitespace-nowrap font-bold">Suka</span>
                   </button>
 
                   <button
                     id={`share-btn-${f.id}`}
                     type="button"
                     onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
-                    className={`flex items-center gap-2 py-2 min-h-[44px] cursor-pointer transition ${
+                    className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition ${
                       activeSharePostId === f.id ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
                     }`}
                     aria-label="Bagikan"
                   >
-                    <Share2 className="w-[clamp(22px,6vw,26px)] h-[clamp(22px,6vw,26px)]" />
-                    <span>Bagikan</span>
+                    <Share2 className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
+                    <span className="whitespace-nowrap font-bold">Bagikan</span>
                   </button>
 
                   {/* Ikon Tayangan / View (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
                   <div
-                    className="flex items-center gap-1.5 py-2 min-h-[44px] text-neutral-500 select-none ml-auto sm:ml-0"
+                    className="flex items-center gap-1.5 py-1.5 min-h-[40px] text-neutral-500 select-none ml-auto sm:ml-0"
                     aria-label={`${(f.views || 0).toLocaleString("id-ID")} kali dilihat`}
                   >
-                    <Eye className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)] text-neutral-400" />
-                    <span className="text-[clamp(13.5px,3.8vw,15px)]">{f.views ? f.views.toLocaleString("id-ID") : 0} dilihat</span>
+                    <Eye className="w-[clamp(16px,4.2vw,18.5px)] h-[clamp(16px,4.2vw,18.5px)] text-neutral-400" />
+                    <span className="text-[clamp(11.5px,3vw,13px)] text-neutral-500 font-normal whitespace-nowrap">{f.views ? f.views.toLocaleString("id-ID") : 0} dilihat</span>
                   </div>
                 </div>
 
