@@ -30,7 +30,7 @@ import {
   Megaphone,
   AlertTriangle,
   ShieldCheck,
-  MoreVertical,
+  MoreHorizontal,
   Link2,
   Clock,
 } from "lucide-react";
@@ -3239,10 +3239,10 @@ export default function KarebaFeedFinal() {
                       id={`post-menu-btn-${f.id}`}
                       type="button"
                       onClick={() => setActiveMenuPostId((prev) => (prev === f.id ? null : f.id))}
-                      className="w-[clamp(44px,11.5vw,48px)] h-[clamp(44px,11.5vw,48px)] flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
+                      className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
                       aria-label="Opsi postingan"
                     >
-                      <MoreVertical className="w-[clamp(22px,6vw,25px)] h-[clamp(22px,6vw,25px)] text-neutral-600" />
+                      <MoreHorizontal className="w-[clamp(19px,5vw,22px)] h-[clamp(19px,5vw,22px)] text-neutral-600" />
                     </button>
 
                     {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Salin) */}

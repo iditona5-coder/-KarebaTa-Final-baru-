@@ -87,13 +87,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Reset drill-down saat modal ditutup atau dibuka kembali
+  // Reset drill-down dan pencarian saat modal ditutup sehingga otomatis bersih
   useEffect(() => {
     if (!isOpen) {
       setSelectedAccount(null);
       setSelectedLocation(null);
+      setInternalQuery("");
+      setInternalCategory("all");
+      if (externalSetQuery) {
+        externalSetQuery("");
+      }
+      if (externalSetCategory) {
+        externalSetCategory("all");
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, externalSetQuery, externalSetCategory]);
 
   const rawCleanQuery = query.trim().toLowerCase();
   const searchAccountQuery = rawCleanQuery.replace(/^@+/, "");
@@ -316,129 +324,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           </div>
         )}
 
-        {/* JIKA QUERY MASIH KOSONG & BELUM MEMILIH DRILL-DOWN */}
+        {/* JIKA QUERY MASIH KOSONG: TAMPILAN BERSIH MENUNGGU KETIKAN PENGGUNA */}
         {query.trim() === "" && !selectedAccount && !selectedLocation ? (
-          <div className="space-y-4">
-            {/* Kartu Petunjuk Pencarian Cepat */}
-            <section className="p-4 bg-white rounded-2xl border border-neutral-200 shadow-2xs space-y-3">
-              <div className="flex items-center gap-2 pb-1.5 border-b border-neutral-100">
-                <Search className="w-4 h-4 text-[#00632B]" />
-                <h3 className="font-bold text-neutral-800 text-xs">Pencarian Halaman Tersedia:</h3>
-              </div>
-
-              <p className="text-xs text-neutral-500 leading-relaxed">
-                Ketik kata kunci apa saja di atas. Seluruh hasil pencarian akan langsung muncul secara eksklusif di halaman ini tanpa mengubah tampilan beranda.
+          <div className="py-20 px-4 text-center space-y-3 animate-fade-in select-none">
+            <div className="w-12 h-12 rounded-full bg-neutral-100 mx-auto flex items-center justify-center text-neutral-400">
+              <Search className="w-5 h-5 text-neutral-400" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-neutral-600">Ketik kata kunci untuk mencari</p>
+              <p className="text-[11px] text-neutral-400 max-w-xs mx-auto">
+                Cari kabar berita warga, nama akun, atau wilayah sekitar.
               </p>
-
-              {/* Saran Cepat Berdasarkan Kategori */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("account")}
-                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                    activeCategory === "account"
-                      ? "bg-[#00632B]/10 border-[#00632B] text-[#00632B]"
-                      : "bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-neutral-700"
-                  }`}
-                >
-                  <User className="w-4 h-4 mb-1 text-[#00632B]" />
-                  <span className="block text-[11px] font-bold">Akun Warga</span>
-                  <span className="block text-[10px] text-neutral-400">Cari profil</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("location")}
-                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                    activeCategory === "location"
-                      ? "bg-yellow-50 border-yellow-500 text-yellow-800"
-                      : "bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-neutral-700"
-                  }`}
-                >
-                  <MapPin className="w-4 h-4 mb-1 text-yellow-500" />
-                  <span className="block text-[11px] font-bold">Lokasi</span>
-                  <span className="block text-[10px] text-neutral-400">Cari tempat</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("news")}
-                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                    activeCategory === "news"
-                      ? "bg-emerald-50 border-emerald-500 text-[#00632B]"
-                      : "bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-neutral-700"
-                  }`}
-                >
-                  <Newspaper className="w-4 h-4 mb-1 text-emerald-600" />
-                  <span className="block text-[11px] font-bold">Berita</span>
-                  <span className="block text-[10px] text-neutral-400">Cari kabar</span>
-                </button>
-              </div>
-            </section>
-
-            {/* Lokasi Populer di Aplikasi */}
-            {matchedLocations.length > 0 && (
-              <section className="bg-white p-3.5 rounded-2xl border border-neutral-200 shadow-2xs space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700">
-                  <MapPin className="w-3.5 h-3.5 text-yellow-500" />
-                  <span>Jelajahi Lokasi Warga</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {matchedLocations.slice(0, 8).map((locItem) => (
-                    <button
-                      key={locItem.loc}
-                      type="button"
-                      onClick={() => {
-                        setSelectedLocation(locItem.loc);
-                        setSelectedAccount(null);
-                      }}
-                      className="px-2.5 py-1 bg-neutral-100 hover:bg-yellow-50 hover:border-yellow-300 border border-neutral-200/80 rounded-full text-[11px] font-medium text-neutral-700 transition cursor-pointer flex items-center gap-1"
-                    >
-                      <MapPin className="w-2.5 h-2.5 text-yellow-500 shrink-0" />
-                      <span>{locItem.loc}</span>
-                      <span className="text-[9px] text-neutral-400">({locItem.count})</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Akun Warga Aktif */}
-            {matchedAccounts.length > 0 && (
-              <section className="bg-white p-3.5 rounded-2xl border border-neutral-200 shadow-2xs space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700">
-                  <User className="w-3.5 h-3.5 text-[#00632B]" />
-                  <span>Akun Warga yang Pernah Berbagi Kabar</span>
-                </div>
-                <div className="divide-y divide-neutral-100">
-                  {matchedAccounts.slice(0, 5).map((acc) => (
-                    <div
-                      key={acc.user}
-                      onClick={() => {
-                        setSelectedAccount(acc.user);
-                        setSelectedLocation(null);
-                      }}
-                      className="py-2 flex items-center justify-between hover:bg-neutral-50 px-1 rounded-xl transition cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-                          {acc.init}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-neutral-900 group-hover:text-[#00632B] transition truncate">
-                            @{acc.user}
-                          </p>
-                          <p className="text-[10px] text-neutral-400 truncate">{acc.name}</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-semibold bg-[#00632B]/10 text-[#00632B] px-2 py-0.5 rounded-full shrink-0">
-                        {acc.postCount} postingan
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+            </div>
           </div>
         ) : (
           /* SAAT USER MENGETIK / MEMILIH FILTER: HASIL MUNCUL LANGSUNG DI SINI */

@@ -8,7 +8,7 @@ import {
   Heart,
   Trash2,
   Eye,
-  MoreVertical,
+  MoreHorizontal,
   Link2,
 } from "lucide-react";
 import { PostItem, FeedItem } from "../types";
@@ -158,7 +158,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                 className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
                 aria-label="Opsi postingan"
               >
-                <MoreVertical className="w-5 h-5 text-neutral-600" />
+                <MoreHorizontal className="w-5 h-5 text-neutral-600" />
               </button>
 
               {/* Dropdown Menu Titik 3 */}
