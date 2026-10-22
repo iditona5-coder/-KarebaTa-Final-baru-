@@ -1,5 +1,5 @@
-import React, { useRef } from "react";
-import { MessageCircle, ExternalLink, Megaphone, MapPin } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { MessageCircle, ExternalLink, Megaphone, MapPin, Play, Pause, Volume2, VolumeX, Video as VideoIcon } from "lucide-react";
 import { SponsorAd } from "../types";
 
 interface SponsorAdCardProps {
@@ -95,7 +95,41 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
     }
   };
 
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   const initialLetter = ad.advertiserName ? ad.advertiserName.trim().charAt(0).toUpperCase() : "S";
+
+  const isVideo =
+    ad.mediaType === "video" ||
+    Boolean(ad.videoUrl) ||
+    (ad.imageUrl &&
+      (ad.imageUrl.startsWith("data:video") ||
+        ad.imageUrl.includes(".mp4") ||
+        ad.imageUrl.includes(".webm") ||
+        ad.imageUrl.includes("video")));
+
+  const mediaSource = ad.videoUrl || ad.imageUrl;
+
+  const toggleVideoPlayback = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+      setIsPlaying(true);
+    } else {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const toggleAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    videoRef.current.muted = !videoRef.current.muted;
+    setIsMuted(videoRef.current.muted);
+  };
 
   return (
     <article
@@ -116,7 +150,8 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 {ad.advertiserName}
               </h4>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-amber-500/15 to-yellow-500/20 text-amber-900 border border-amber-300/80">
-                <span>{ad.badgeText || "Iklan Bersponsor"}</span>
+                {isVideo && <VideoIcon className="w-2.5 h-2.5 text-amber-700 inline" />}
+                <span>{ad.badgeText || (isVideo ? "Video Sponsor" : "Iklan Bersponsor")}</span>
               </span>
             </div>
 
@@ -130,22 +165,72 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
         </div>
       </div>
 
-      {/* GAMBAR BANNER / POSTER IKLAN (Dimensi stabil anti loncat/kedip) */}
-      {ad.imageUrl && (
-        <div className="w-full relative bg-neutral-900 overflow-hidden cursor-pointer group aspect-[16/9] sm:aspect-[2/1] min-h-[220px] max-h-[460px]" onClick={handleActionClick}>
-          <img
-            src={ad.imageUrl}
-            alt={ad.title}
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-            className="w-full h-full object-cover sm:object-contain bg-neutral-950 transition duration-300 group-hover:scale-[1.01]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-            <span className="text-white text-xs font-bold drop-shadow">
-              Ketuk untuk membuka promosi &rarr;
-            </span>
-          </div>
+      {/* MEDIA BANNER: VIDEO ATAU POSTER FOTO */}
+      {mediaSource && (
+        <div
+          className="w-full relative bg-neutral-900 overflow-hidden cursor-pointer group aspect-[16/9] sm:aspect-[2/1] min-h-[220px] max-h-[460px]"
+          onClick={handleActionClick}
+        >
+          {isVideo ? (
+            <div className="relative w-full h-full flex items-center justify-center bg-black">
+              <video
+                ref={videoRef}
+                src={mediaSource}
+                poster={ad.thumbnailUrl}
+                playsInline
+                loop
+                autoPlay
+                muted={isMuted}
+                className="w-full h-full object-cover sm:object-contain bg-black"
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+              />
+
+              {/* Tombol Kontrol Suara & Putar Video di Pojok Bawah */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
+                <button
+                  type="button"
+                  onClick={toggleAudio}
+                  className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md text-white flex items-center justify-center transition shadow-md cursor-pointer active:scale-95 border border-white/20"
+                  aria-label={isMuted ? "Bunyikan Suara" : "Matikan Suara"}
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleVideoPlayback}
+                  className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md text-white flex items-center justify-center transition shadow-md cursor-pointer active:scale-95 border border-white/20"
+                  aria-label={isPlaying ? "Jeda Video" : "Putar Video"}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white translate-x-0.5" />}
+                </button>
+              </div>
+
+              {/* Label Video Promo Pojok Kiri Atas */}
+              <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                <span className="px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1.5 border border-white/20 shadow-xs">
+                  <VideoIcon className="w-3 h-3 text-emerald-400" />
+                  <span>Video Promosi</span>
+                </span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <img
+                src={mediaSource}
+                alt={ad.title}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                className="w-full h-full object-cover sm:object-contain bg-neutral-950 transition duration-300 group-hover:scale-[1.01]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                <span className="text-white text-xs font-bold drop-shadow">
+                  Ketuk untuk membuka promosi &rarr;
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
 

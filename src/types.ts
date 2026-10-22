@@ -109,7 +109,10 @@ export interface SponsorAd {
   advertiserName: string;
   badgeText?: string;
   description: string;
+  mediaType?: "image" | "video";
   imageUrl: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
   actionType: "whatsapp" | "link";
   actionTarget: string; // Nomor WhatsApp atau URL website
   actionButtonText: string;
@@ -117,11 +120,15 @@ export interface SponsorAd {
   createdAt: number;
   expiryDate?: string;
   location?: string;
+  // Format tampilan: "feed" (di sela postingan), "popup" (modal pop-up melayang), atau "both" (keduanya)
+  displayFormat?: "feed" | "popup" | "both";
 }
 
 export interface AdSettings {
   isEnabled: boolean;
   frequency: number; // Muncul setiap N postingan di feed
+  popupEnabled?: boolean; // Apakah iklan pop-up diaktifkan
+  popupDelaySeconds?: number; // Jeda detik sebelum pop-up muncul saat buka beranda (default: 2)
   ads: SponsorAd[];
   updatedAt?: number;
 }
@@ -129,6 +136,8 @@ export interface AdSettings {
 export const DEFAULT_AD_SETTINGS: AdSettings = {
   isEnabled: false,
   frequency: 4,
+  popupEnabled: true,
+  popupDelaySeconds: 2,
   ads: [],
 };
 

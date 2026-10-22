@@ -258,10 +258,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   return (
     <div
       id="search-page-overlay"
-      className="fixed inset-x-0 bottom-0 top-[88px] sm:top-[92px] z-40 bg-white flex flex-col max-w-md mx-auto shadow-2xl animate-fade-in overflow-hidden"
+      className="fixed inset-x-0 bottom-0 top-[52px] sm:top-[56px] z-50 bg-white flex flex-col max-w-md mx-auto shadow-2xl animate-fade-in overflow-hidden h-[calc(100dvh-52px)] sm:h-[calc(100dvh-56px)]"
+      style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
     >
-      {/* Konten Halaman Pencarian */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50/60 pb-20">
+      {/* Konten Halaman Pencarian - Latar Solid 100% Opaque Anti Tembus Pandang */}
+      <div
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-white pb-28 overscroll-contain"
+        style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+      >
         {/* BANNER FILTER AKTIF JIKA MEMILIH AKUN / LOKASI TERTENTU */}
         {(selectedAccount || selectedLocation) && (
           <div className="bg-white p-3 rounded-2xl border border-[#00632B]/30 shadow-xs flex items-center justify-between gap-3 animate-fade-in">

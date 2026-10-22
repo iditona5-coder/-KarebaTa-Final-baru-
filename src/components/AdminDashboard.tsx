@@ -43,6 +43,11 @@ import {
   HelpCircle,
   Smartphone,
   Laptop,
+  Sparkles,
+  Video as VideoIcon,
+  Image as ImageIcon,
+  Play,
+  Upload,
 } from "lucide-react";
 import {
   loginAdminWithEmailPassword,
@@ -88,7 +93,7 @@ import {
   DEFAULT_ADMIN_APP_CONFIG,
 } from "../types";
 import { BulletinItem } from "./RunningTextBar";
-import { deleteFromImageKit } from "../services/imagekit";
+import { deleteFromImageKit, uploadToImageKit } from "../services/imagekit";
 
 export type AdminMenuKey =
   | "dashboard"
@@ -186,12 +191,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adFormTitle, setAdFormTitle] = useState("");
   const [adFormAdvertiser, setAdFormAdvertiser] = useState("");
   const [adFormDesc, setAdFormDesc] = useState("");
+  const [adFormMediaType, setAdFormMediaType] = useState<"image" | "video">("image");
   const [adFormImg, setAdFormImg] = useState("");
+  const [isAdMediaUploading, setIsAdMediaUploading] = useState(false);
   const [adFormActionType, setAdFormActionType] = useState<"whatsapp" | "link">("whatsapp");
   const [adFormTarget, setAdFormTarget] = useState("");
   const [adFormBtnText, setAdFormBtnText] = useState("Pesan via WhatsApp");
   const [adFormLocation, setAdFormLocation] = useState("Wilayah & Sekitarnya");
   const [adFormExpiry, setAdFormExpiry] = useState("Aktif Selamanya");
+  const [adFormFormat, setAdFormFormat] = useState<"feed" | "popup" | "both">("both");
 
   // State Fitur Menu 8: Pengaturan & Ganti Password / Passcode
   const [settingsAppName, setSettingsAppName] = useState(appConfig.appName);
@@ -1468,25 +1476,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Iklan muncul di sela beranda kabar warga dengan tombol langsung ke WhatsApp toko.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingAd(null);
-                      setAdFormTitle("");
-                      setAdFormAdvertiser("");
-                      setAdFormDesc("");
-                      setAdFormImg("");
-                      setAdFormTarget(appConfig.adminWhatsapp || "085351037179");
-                      setIsAdModalOpen(true);
-                    }}
-                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition"
-                  >
-                    + Pasang Iklan Baru
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== "undefined" && (window as any).__KAREBATA_TRIGGER_POPUP_AD__) {
+                          (window as any).__KAREBATA_TRIGGER_POPUP_AD__();
+                        } else {
+                          showToast("Buka beranda warga untuk melihat tampilan pop-up.");
+                        }
+                      }}
+                      className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs rounded-xl border border-neutral-300 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Uji Tampil Pop-up Sekarang</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingAd(null);
+                        setAdFormTitle("");
+                        setAdFormAdvertiser("");
+                        setAdFormDesc("");
+                        setAdFormMediaType("image");
+                        setAdFormFormat("both");
+                        setAdFormImg("");
+                        setAdFormTarget(appConfig.adminWhatsapp || "085351037179");
+                        setIsAdModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer"
+                    >
+                      + Pasang Iklan Baru
+                    </button>
+                  </div>
                 </div>
 
-                {/* Saklar Global & Frekuensi */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Saklar Global, Pop-up & Frekuensi */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-neutral-900">Status Iklan di Beranda</p>
@@ -1516,7 +1542,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Frekuensi Tayang</p>
+                      <p className="text-xs font-bold text-neutral-900">Iklan Pop-up Otomatis</p>
+                      <p className="text-[11px] text-neutral-500">
+                        {adSettings.popupEnabled !== false ? "Aktif saat buka beranda" : "Nonaktifkan pop-up"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const newPopup = adSettings.popupEnabled === false ? true : false;
+                        await saveAdSettingsToFirestore({ popupEnabled: newPopup });
+                        showToast(newPopup ? "Pop-up iklan otomatis diaktifkan." : "Pop-up iklan otomatis dimatikan.");
+                      }}
+                      className="cursor-pointer"
+                    >
+                      {adSettings.popupEnabled !== false ? (
+                        <ToggleRight className="w-10 h-10 text-emerald-600" />
+                      ) : (
+                        <ToggleLeft className="w-10 h-10 text-slate-600" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-neutral-900">Frekuensi Tayang Feed</p>
                       <p className="text-[11px] text-neutral-500">Tampil setiap berapa kabar?</p>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -1528,13 +1578,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             await saveAdSettingsToFirestore({ frequency: num });
                             showToast(`Frekuensi diubah: 1 iklan tiap ${num} kabar`);
                           }}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                          className={`px-2 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                             adSettings.frequency === num
                               ? "bg-amber-500 text-slate-950"
                               : "bg-neutral-100 text-neutral-600"
                           }`}
                         >
-                          Tiap {num}
+                          {num}
                         </button>
                       ))}
                     </div>
@@ -1548,13 +1598,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       key={ad.id}
                       className="bg-neutral-50 border border-neutral-200 rounded-2xl overflow-hidden flex flex-col justify-between"
                     >
-                      <div className="h-40 bg-black/50 overflow-hidden relative">
-                        {ad.imageUrl && (
+                      <div className="h-40 bg-black/60 overflow-hidden relative flex items-center justify-center">
+                        {ad.mediaType === "video" || ad.imageUrl?.includes(".mp4") || ad.imageUrl?.startsWith("data:video") ? (
+                          <div className="w-full h-full relative flex items-center justify-center bg-black">
+                            <video src={ad.imageUrl} className="w-full h-full object-cover" muted />
+                            <div className="w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center absolute shadow-md border border-white/20">
+                              <Play className="w-4 h-4 fill-white translate-x-0.5" />
+                            </div>
+                          </div>
+                        ) : ad.imageUrl ? (
                           <img src={ad.imageUrl} alt="" className="w-full h-full object-cover" />
-                        )}
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500 text-slate-950">
-                          {ad.badgeText || "Bersponsor"}
-                        </span>
+                        ) : null}
+                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500 text-slate-950 shadow-xs">
+                            {ad.badgeText || "Bersponsor"}
+                          </span>
+                          {(ad.mediaType === "video" || ad.imageUrl?.includes(".mp4") || ad.imageUrl?.startsWith("data:video")) && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-600 text-white flex items-center gap-1 shadow-xs">
+                              <VideoIcon className="w-2.5 h-2.5" /> Video
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="p-4 space-y-1 flex-1">
@@ -1565,21 +1629,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </p>
                       </div>
 
-                      <div className="p-3 bg-white/60 border-t border-neutral-200 flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            await toggleAdActiveStatus(ad.id, !ad.isActive);
-                            showToast(!ad.isActive ? "Iklan diaktifkan." : "Iklan dijeda.");
-                          }}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                            ad.isActive
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          }`}
-                        >
-                          {ad.isActive ? "Jeda Iklan" : "Aktifkan"}
-                        </button>
+                      <div className="p-3 bg-white/60 border-t border-neutral-200 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await toggleAdActiveStatus(ad.id, !ad.isActive);
+                              showToast(!ad.isActive ? "Iklan diaktifkan." : "Iklan dijeda.");
+                            }}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${
+                              ad.isActive
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            }`}
+                          >
+                            {ad.isActive ? "Jeda Iklan" : "Aktifkan"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAd(ad);
+                              setAdFormTitle(ad.title);
+                              setAdFormAdvertiser(ad.advertiserName);
+                              setAdFormDesc(ad.description);
+                              setAdFormMediaType(ad.mediaType === "video" || ad.imageUrl?.includes(".mp4") ? "video" : "image");
+                              setAdFormFormat(ad.displayFormat || "both");
+                              setAdFormImg(ad.imageUrl);
+                              setAdFormTarget(ad.actionTarget);
+                              setAdFormBtnText(ad.actionButtonText || "Pesan via WhatsApp");
+                              setAdFormLocation(ad.location || "Wilayah & Sekitarnya");
+                              setIsAdModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg hover:bg-neutral-100 transition cursor-pointer"
+                            title="Edit Iklan"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </div>
 
                         <button
                           type="button"
@@ -1595,7 +1682,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               },
                             });
                           }}
-                          className="p-1.5 text-slate-500 hover:text-rose-600"
+                          className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1616,27 +1703,106 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <form
                       onSubmit={async (e) => {
                         e.preventDefault();
+                        const cleanMedia = adFormImg.trim();
+                        const isVid = adFormMediaType === "video" || cleanMedia.includes(".mp4") || cleanMedia.startsWith("data:video");
                         const adToSave: SponsorAd = {
                           id: editingAd?.id || `ad-${Date.now()}`,
                           title: adFormTitle.trim(),
                           advertiserName: adFormAdvertiser.trim(),
-                          badgeText: "Iklan Bersponsor",
+                          badgeText: isVid ? "Video Sponsor" : "Iklan Bersponsor",
                           description: adFormDesc.trim(),
-                          imageUrl: adFormImg.trim(),
+                          mediaType: isVid ? "video" : "image",
+                          imageUrl: cleanMedia,
+                          videoUrl: isVid ? cleanMedia : undefined,
                           actionType: adFormActionType,
                           actionTarget: adFormTarget.trim(),
                           actionButtonText: adFormBtnText.trim(),
                           location: adFormLocation.trim(),
                           expiryDate: adFormExpiry.trim(),
+                          displayFormat: adFormFormat,
                           isActive: true,
                           createdAt: editingAd?.createdAt || Date.now(),
                         };
                         await upsertSponsorAd(adToSave);
-                        showToast("Iklan sponsor berhasil disimpan!");
+                        showToast(`Iklan ${isVid ? "video" : "foto"} sponsor berhasil disimpan!`);
                         setIsAdModalOpen(false);
                       }}
                       className="space-y-3"
                     >
+                      {/* Pilihan Format Tampilan: Feed, Pop-up, atau Keduanya */}
+                      <div>
+                        <label className="text-xs font-bold text-neutral-800 block mb-1">Bentuk / Penempatan Iklan *</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAdFormFormat("feed")}
+                            className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer ${
+                              adFormFormat === "feed"
+                                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <span>Di Sela Beranda</span>
+                            <span className="text-[10px] font-normal opacity-80">(Feed Saja)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdFormFormat("popup")}
+                            className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer ${
+                              adFormFormat === "popup"
+                                ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <span>Pop-up Layar</span>
+                            <span className="text-[10px] font-normal opacity-80">(Pop-up Saja)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdFormFormat("both")}
+                            className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer ${
+                              adFormFormat === "both"
+                                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <span>Keduanya</span>
+                            <span className="text-[10px] font-normal opacity-80">(Feed &amp; Pop-up)</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Pilihan Jenis Media: Foto vs Video */}
+                      <div>
+                        <label className="text-xs font-bold text-neutral-800 block mb-1">Jenis Media Iklan *</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAdFormMediaType("image")}
+                            className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer ${
+                              adFormMediaType === "image"
+                                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                            <span>Foto / Banner</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdFormMediaType("video")}
+                            className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer ${
+                              adFormMediaType === "video"
+                                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <VideoIcon className="w-4 h-4" />
+                            <span>Video Promosi (MP4)</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="text-xs text-neutral-600 block mb-1">Judul Promosi *</label>
                         <input
@@ -1672,15 +1838,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         />
                       </div>
 
+                      {/* Input Media Video / Foto dengan Opsi Upload & Preview */}
                       <div>
-                        <label className="text-xs text-neutral-600 block mb-1">URL Poster / Banner</label>
-                        <input
-                          type="url"
-                          value={adFormImg}
-                          onChange={(e) => setAdFormImg(e.target.value)}
-                          placeholder="https://..."
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                        />
+                        <label className="text-xs text-neutral-600 block mb-1">
+                          {adFormMediaType === "video" ? "Media Video (MP4) *" : "Media Poster / Foto *"}
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="url"
+                              value={adFormImg}
+                              onChange={(e) => setAdFormImg(e.target.value)}
+                              placeholder={adFormMediaType === "video" ? "https://... promo.mp4" : "https://... banner.jpg"}
+                              className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                            />
+                            <label className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl border border-neutral-200 cursor-pointer flex items-center gap-1.5 shrink-0 transition">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{isAdMediaUploading ? "Mengunggah..." : "Unggah"}</span>
+                              <input
+                                type="file"
+                                accept={adFormMediaType === "video" ? "video/*" : "image/*"}
+                                className="hidden"
+                                disabled={isAdMediaUploading}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  try {
+                                    setIsAdMediaUploading(true);
+                                    showToast(`Sedang mengunggah ${adFormMediaType === "video" ? "video" : "foto"} ke CDN...`);
+                                    const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
+                                    if (res && res.url) {
+                                      setAdFormImg(res.url);
+                                      showToast("Media iklan berhasil diunggah!");
+                                    }
+                                  } catch (err) {
+                                    showToast("Gagal mengunggah media iklan.");
+                                  } finally {
+                                    setIsAdMediaUploading(false);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {/* Pratinjau Langsung Media */}
+                          {adFormImg && (
+                            <div className="relative rounded-xl overflow-hidden bg-black/80 h-36 flex items-center justify-center border border-neutral-200">
+                              {adFormMediaType === "video" || adFormImg.includes(".mp4") || adFormImg.startsWith("data:video") ? (
+                                <video src={adFormImg} className="w-full h-full object-contain" controls autoPlay muted />
+                              ) : (
+                                <img src={adFormImg} alt="Preview Iklan" className="w-full h-full object-cover" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">

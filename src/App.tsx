@@ -43,6 +43,7 @@ import { CommentActions } from "./components/CommentActions";
 import { ShareBar } from "./components/ShareBar";
 import { HelpContactModal } from "./components/HelpContactModal";
 import { SponsorAdCard } from "./components/SponsorAdCard";
+import { SponsorPopupModal } from "./components/SponsorPopupModal";
 import {
   extractVideoThumbnail,
   getVideoDuration,
@@ -411,12 +412,70 @@ export default function KarebaFeedFinal() {
 
   // Berlangganan data Pengaturan Iklan Bersponsor secara real-time
   const [adSettings, setAdSettings] = useState<AdSettings>(DEFAULT_AD_SETTINGS);
+  const [activePopupAd, setActivePopupAd] = useState<SponsorAd | null>(null);
+
   useEffect(() => {
     const unsubAds = listenToAdSettings((settings) => {
       setAdSettings(settings);
     });
     return () => unsubAds();
   }, []);
+
+  // Penanganan Iklan Pop-up Otomatis saat Pengguna Membuka Beranda
+  useEffect(() => {
+    if (!adSettings.isEnabled) return;
+    if (adSettings.popupEnabled === false) return;
+    const activeAds = adSettings.ads.filter((a) => a.isActive);
+    if (activeAds.length === 0) return;
+
+    // Filter iklan yang memiliki format popup atau both, atau default jika belum disetel spesifik
+    const popupAds = activeAds.filter(
+      (a) => a.displayFormat === "popup" || a.displayFormat === "both" || !a.displayFormat
+    );
+    if (popupAds.length === 0) return;
+
+    // Cek apakah iklan pop-up sudah pernah ditampilkan di sesi saat ini
+    const isShown = typeof window !== "undefined" && sessionStorage.getItem("karebata_popup_ad_shown");
+    if (!isShown && viewMode === "feed" && !activePopupAd && !showSplash) {
+      const delay = Math.max(1, adSettings.popupDelaySeconds || 2) * 1000;
+      const timer = setTimeout(() => {
+        const randomAd = popupAds[Math.floor(Math.random() * popupAds.length)];
+        setActivePopupAd(randomAd);
+        try {
+          sessionStorage.setItem("karebata_popup_ad_shown", "true");
+        } catch {}
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [adSettings, viewMode, showSplash, activePopupAd]);
+
+  // Window helper untuk memicu atau menguji tampilan pop-up ad secara instan (misal dari Admin Dashboard)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__KAREBATA_TRIGGER_POPUP_AD__ = (targetAd?: SponsorAd) => {
+        if (targetAd) {
+          setActivePopupAd(targetAd);
+        } else {
+          const activeAds = adSettings.ads.filter((a) => a.isActive);
+          const popupAds = activeAds.filter(
+            (a) => a.displayFormat === "popup" || a.displayFormat === "both" || !a.displayFormat
+          );
+          if (popupAds.length > 0) {
+            setActivePopupAd(popupAds[0]);
+          } else if (activeAds.length > 0) {
+            setActivePopupAd(activeAds[0]);
+          } else {
+            showToast("Belum ada iklan aktif yang dapat ditampilkan sebagai pop-up.");
+          }
+        }
+      };
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        delete (window as any).__KAREBATA_TRIGGER_POPUP_AD__;
+      }
+    };
+  }, [adSettings]);
 
   // Periksa status penangguhan akun pengguna saat ini
   const currentBanStatus = useMemo(() => {
@@ -1222,9 +1281,10 @@ export default function KarebaFeedFinal() {
     });
   };
 
-  // Kunci scroll layar latar belakang saat modal aktif agar halaman belakang tidak ikut tergulir (scroll-lock)
+  // Kunci scroll layar latar belakang saat modal/pencarian aktif agar halaman belakang tidak ikut tergulir (scroll-lock)
   useEffect(() => {
     const isAnyModalOpen = Boolean(
+      isSearchOpen ||
       isHelpOpen ||
       isEditProfileOpen ||
       reportPostData ||
@@ -1243,6 +1303,7 @@ export default function KarebaFeedFinal() {
       document.body.style.overflow = "";
     };
   }, [
+    isSearchOpen,
     isHelpOpen,
     isEditProfileOpen,
     reportPostData,
@@ -2137,107 +2198,46 @@ export default function KarebaFeedFinal() {
             className="bg-white border-b border-neutral-200 px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 min-h-[52px] w-full"
           >
             {isSearchOpen ? (
-              /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL PAPAN PENCARIAN */
-              <div className="w-full flex flex-col gap-2 py-1 animate-fade-in">
-                <div className="w-full flex items-center gap-2">
-                  <div className="flex-1 flex items-center gap-2.5 bg-neutral-100 rounded-full px-3.5 py-1.5 border border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00632B]/20 transition">
-                    <Search className="w-4 h-4 text-neutral-400 shrink-0" />
-                    <input
-                      id="header-search-input"
-                      type="text"
-                      autoFocus
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={
-                        searchCategory === "account"
-                          ? "Ketik nama akun (@username)..."
-                          : searchCategory === "location"
-                          ? "Ketik nama lokasi / tempat..."
-                          : searchCategory === "news"
-                          ? "Ketik kata kunci berita / topik..."
-                          : "Cari berita, lokasi, atau nama akun..."
-                      }
-                      className="w-full bg-transparent text-sm text-neutral-900 placeholder-neutral-400 outline-none"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery("");
-                          setHighlightedPostId(null);
-                        }}
-                        className="p-1 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-200 transition cursor-pointer"
-                        aria-label="Hapus ketikan"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    id="search-header-cancel-btn"
-                    type="button"
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchCategory("all");
-                      setSearchQuery("");
-                      setHighlightedPostId(null);
-                    }}
-                    className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 px-2 py-1.5 rounded-lg hover:bg-neutral-100 transition cursor-pointer shrink-0"
-                  >
-                    Batal
-                  </button>
+              /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL BAR PENCARIAN BERSIH */
+              <div className="w-full flex items-center gap-2 py-0.5 animate-fade-in">
+                <div className="flex-1 flex items-center gap-2 bg-neutral-100 rounded-full px-3.5 py-1.5 border border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00632B]/20 transition">
+                  <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                  <input
+                    id="header-search-input"
+                    type="text"
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari berita, lokasi, atau nama akun..."
+                    className="w-full bg-transparent text-sm text-neutral-900 placeholder-neutral-400 outline-none"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setHighlightedPostId(null);
+                      }}
+                      className="p-1 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-200 transition cursor-pointer"
+                      aria-label="Hapus ketikan"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-
-                {/* TAB FILTER KATEGORI: SEMUA | AKUN | LOKASI | BERITA */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 overscroll-x-contain">
-                  <button
-                    type="button"
-                    onClick={() => setSearchCategory("all")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                      searchCategory === "all"
-                        ? "bg-[#00632B] text-white shadow-2xs"
-                        : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
-                    }`}
-                  >
-                    Semua
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchCategory("account")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
-                      searchCategory === "account"
-                        ? "bg-[#00632B] text-white shadow-2xs"
-                        : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
-                    }`}
-                  >
-                    <UserIcon className="w-3.5 h-3.5" />
-                    <span>Akun</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchCategory("location")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
-                      searchCategory === "location"
-                        ? "bg-[#00632B] text-white shadow-2xs"
-                        : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
-                    }`}
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-yellow-500" />
-                    <span>Lokasi</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchCategory("news")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
-                      searchCategory === "news"
-                        ? "bg-[#00632B] text-white shadow-2xs"
-                        : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
-                    }`}
-                  >
-                    <Newspaper className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Berita</span>
-                  </button>
-                </div>
+                <button
+                  id="search-header-cancel-btn"
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchCategory("all");
+                    setSearchQuery("");
+                    setHighlightedPostId(null);
+                  }}
+                  className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 px-2 py-1.5 rounded-lg hover:bg-neutral-100 transition cursor-pointer shrink-0"
+                >
+                  Batal
+                </button>
               </div>
             ) : (
               /* SAAT PENCARIAN TIDAK AKTIF: LOGO DI KIRI, ICON PENCARIAN, KAMERA, DAN MEDIA DI KANAN DENGAN RUANG LEGA */
@@ -2419,8 +2419,8 @@ export default function KarebaFeedFinal() {
           className={`${
             isSearchOpen
               ? uploadStatus === "uploading" || lastUploadedPost
-                ? "h-[161px]"
-                : "h-[105px]"
+                ? "h-[108px]"
+                : "h-[54px]"
               : uploadStatus === "uploading" || lastUploadedPost
               ? "h-[144px]"
               : "h-[88px]"
@@ -3472,7 +3472,9 @@ export default function KarebaFeedFinal() {
               {/* KARTU IKLAN BERSPONSOR DI SELA-SELA FEED BERITA WARGA */}
               {(() => {
                 if (!adSettings.isEnabled) return null;
-                const activeAds = adSettings.ads.filter((a) => a.isActive);
+                const activeAds = adSettings.ads.filter(
+                  (a) => a.isActive && (a.displayFormat === "feed" || a.displayFormat === "both" || !a.displayFormat)
+                );
                 if (activeAds.length === 0) return null;
 
                 const freq = Math.max(2, adSettings.frequency || 4);
@@ -3501,7 +3503,7 @@ export default function KarebaFeedFinal() {
         </PullToRefresh>
 
         {/* TOMBOL MELAYANG KEMBALI KE MEDIA DI ATAS (MUNCUL OTOMATIS SAAT TERSCROLL KE BAWAH) */}
-        {showScrollTop && (
+        {showScrollTop && !isSearchOpen && (
           <button
             id="scroll-to-top-btn"
             type="button"
@@ -4134,6 +4136,14 @@ export default function KarebaFeedFinal() {
             setPostToDelete({ id, title, img });
           }}
           isMyPost={(item) => isMyPost(item)}
+        />
+
+        {/* MODAL IKLAN POP-UP PROMOSI BERSPONSOR */}
+        <SponsorPopupModal
+          ad={activePopupAd}
+          isOpen={Boolean(activePopupAd)}
+          onClose={() => setActivePopupAd(null)}
+          onShowToast={showToast}
         />
 
         {/* MODAL PUSAT BANTUAN & KONTAK WHATSAPP ADMIN DINAMIS */}
