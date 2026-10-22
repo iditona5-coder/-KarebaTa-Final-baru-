@@ -424,8 +424,10 @@ export default function KarebaFeedFinal() {
   // Penanganan Iklan Pop-up Otomatis saat Pengguna Membuka Beranda
   useEffect(() => {
     if (!adSettings.isEnabled) return;
-    if (adSettings.popupEnabled === false) return;
-    const activeAds = adSettings.ads.filter((a) => a.isActive);
+    const now = Date.now();
+    const activeAds = adSettings.ads.filter(
+      (a) => a.isActive && (!a.expiresAt || a.expiresAt > now)
+    );
     if (activeAds.length === 0) return;
 
     // Filter iklan yang memiliki format popup atau both, atau default jika belum disetel spesifik
@@ -3472,8 +3474,12 @@ export default function KarebaFeedFinal() {
               {/* KARTU IKLAN BERSPONSOR DI SELA-SELA FEED BERITA WARGA */}
               {(() => {
                 if (!adSettings.isEnabled) return null;
+                const now = Date.now();
                 const activeAds = adSettings.ads.filter(
-                  (a) => a.isActive && (a.displayFormat === "feed" || a.displayFormat === "both" || !a.displayFormat)
+                  (a) =>
+                    a.isActive &&
+                    (!a.expiresAt || a.expiresAt > now) &&
+                    (a.displayFormat === "feed" || a.displayFormat === "both" || !a.displayFormat)
                 );
                 if (activeAds.length === 0) return null;
 
@@ -3508,11 +3514,15 @@ export default function KarebaFeedFinal() {
             id="scroll-to-top-btn"
             type="button"
             onClick={scrollToTop}
-            className="fixed bottom-6 right-5 z-40 bg-neutral-900/90 hover:bg-neutral-900 active:scale-95 text-white pl-4 pr-4.5 py-3 min-h-[44px] rounded-full shadow-2xl backdrop-blur-md border border-neutral-700/60 flex items-center gap-2 transition-all duration-200 cursor-pointer animate-fade-in group"
+            className="fixed z-40 bg-neutral-900/85 hover:bg-neutral-950 active:scale-90 text-white px-2.5 sm:px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md border border-neutral-700/50 flex items-center gap-1.5 transition-all duration-200 cursor-pointer animate-fade-in group select-none"
+            style={{
+              bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))",
+              right: "max(0.875rem, calc((100vw - 448px) / 2 + 0.875rem))",
+            }}
             aria-label="Kembali ke media paling atas"
           >
-            <ChevronUp className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
-            <span className="text-[clamp(13px,3.6vw,14.5px)] font-bold tracking-tight">Ke Atas</span>
+            <ChevronUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
+            <span className="text-[11px] sm:text-xs font-semibold tracking-tight">Ke Atas</span>
           </button>
         )}
 

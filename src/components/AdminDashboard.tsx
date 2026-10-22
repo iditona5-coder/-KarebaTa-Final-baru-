@@ -200,6 +200,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adFormLocation, setAdFormLocation] = useState("Wilayah & Sekitarnya");
   const [adFormExpiry, setAdFormExpiry] = useState("Aktif Selamanya");
   const [adFormFormat, setAdFormFormat] = useState<"feed" | "popup" | "both">("both");
+  const [adFormDuration, setAdFormDuration] = useState<number>(0); // 0 = Selamanya, 3, 7, 14, 30 hari
 
   // State Fitur Menu 8: Pengaturan & Ganti Password / Passcode
   const [settingsAppName, setSettingsAppName] = useState(appConfig.appName);
@@ -1500,6 +1501,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setAdFormDesc("");
                         setAdFormMediaType("image");
                         setAdFormFormat("both");
+                        setAdFormDuration(0);
                         setAdFormImg("");
                         setAdFormTarget(appConfig.adminWhatsapp || "085351037179");
                         setIsAdModalOpen(true);
@@ -1621,16 +1623,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </div>
 
-                      <div className="p-4 space-y-1 flex-1">
-                        <h4 className="text-xs font-bold text-neutral-900">{ad.title}</h4>
-                        <p className="text-xs text-amber-600 font-semibold">{ad.advertiserName}</p>
-                        <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
-                          {ad.description}
-                        </p>
+                      <div className="p-4 space-y-2 flex-1">
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-900">{ad.title}</h4>
+                          <p className="text-xs text-amber-600 font-semibold">{ad.advertiserName}</p>
+                          <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed mt-1">
+                            {ad.description}
+                          </p>
+                        </div>
+
+                        {/* Indikator Masa Tayang & Sisa Waktu */}
+                        {(() => {
+                          const isExpired = Boolean(ad.expiresAt && Date.now() > ad.expiresAt);
+                          const remainingDays = ad.expiresAt
+                            ? Math.max(0, Math.ceil((ad.expiresAt - Date.now()) / (24 * 60 * 60 * 1000)))
+                            : null;
+
+                          return (
+                            <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px]">
+                              <span className="text-neutral-500 flex items-center gap-1 font-medium">
+                                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                                <span>Masa Tayang:</span>
+                              </span>
+                              {isExpired ? (
+                                <span className="font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                  Kedaluwarsa (Berhenti)
+                                </span>
+                              ) : remainingDays !== null ? (
+                                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  Sisa {remainingDays} hari
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded-full">
+                                  Aktif Selamanya
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
-                      <div className="p-3 bg-white/60 border-t border-neutral-200 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
+                      <div className="p-3 bg-white/60 border-t border-neutral-200 flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={async () => {
@@ -1646,6 +1680,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {ad.isActive ? "Jeda Iklan" : "Aktifkan"}
                           </button>
 
+                          {ad.expiresAt && Date.now() > ad.expiresAt && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const newExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+                                const newDateText = `Hingga ${new Date(newExpiresAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`;
+                                await upsertSponsorAd({
+                                  ...ad,
+                                  isActive: true,
+                                  expiresAt: newExpiresAt,
+                                  expiryDate: newDateText,
+                                  durationDays: 7,
+                                });
+                                showToast(`Iklan ${ad.advertiserName} diperpanjang 7 hari lagi!`);
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer shadow-xs"
+                              title="Perpanjang masa tayang 7 hari"
+                            >
+                              + Perpanjang 7 Hari
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => {
@@ -1655,6 +1711,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setAdFormDesc(ad.description);
                               setAdFormMediaType(ad.mediaType === "video" || ad.imageUrl?.includes(".mp4") ? "video" : "image");
                               setAdFormFormat(ad.displayFormat || "both");
+                              setAdFormDuration(ad.durationDays !== undefined ? ad.durationDays : 0);
                               setAdFormImg(ad.imageUrl);
                               setAdFormTarget(ad.actionTarget);
                               setAdFormBtnText(ad.actionButtonText || "Pesan via WhatsApp");
@@ -1709,6 +1766,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           return;
                         }
                         const isVid = adFormMediaType === "video" || cleanMedia.includes(".mp4") || cleanMedia.startsWith("data:video");
+                        const now = Date.now();
+                        const expiresAt = adFormDuration > 0 ? now + adFormDuration * 24 * 60 * 60 * 1000 : undefined;
+                        const expiryDateText = adFormDuration > 0
+                          ? `Hingga ${new Date(now + adFormDuration * 24 * 60 * 60 * 1000).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                          : "Aktif Selamanya";
+
                         const adToSave: SponsorAd = {
                           id: editingAd?.id || `ad-${Date.now()}`,
                           title: adFormTitle.trim(),
@@ -1722,7 +1785,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           actionTarget: adFormTarget.trim(),
                           actionButtonText: adFormBtnText.trim(),
                           location: adFormLocation.trim(),
-                          expiryDate: adFormExpiry.trim(),
+                          expiryDate: expiryDateText,
+                          expiresAt: expiresAt,
+                          durationDays: adFormDuration,
                           displayFormat: adFormFormat,
                           isActive: true,
                           createdAt: editingAd?.createdAt || Date.now(),
@@ -1733,6 +1798,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       }}
                       className="space-y-3"
                     >
+                      {/* Pilihan Masa Tayang Iklan: Selamanya, 3 Hari, 7 Hari, 14 Hari, 30 Hari */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-neutral-800">Masa Tayang Iklan *</label>
+                          <span className="text-[10px] text-neutral-500 font-medium">
+                            {adFormDuration === 0 ? "Tayang tanpa batas waktu" : `Otomatis berhenti setelah ${adFormDuration} hari`}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {[
+                            { days: 0, label: "Selamanya" },
+                            { days: 3, label: "3 Hari" },
+                            { days: 7, label: "7 Hari" },
+                            { days: 14, label: "14 Hari" },
+                            { days: 30, label: "30 Hari" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.days}
+                              type="button"
+                              onClick={() => setAdFormDuration(opt.days)}
+                              className={`py-2 px-1 rounded-xl border text-[11px] font-bold text-center transition cursor-pointer ${
+                                adFormDuration === opt.days
+                                  ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
+                                  : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Pilihan Format Tampilan: Feed, Pop-up, atau Keduanya */}
                       <div>
                         <label className="text-xs font-bold text-neutral-800 block mb-1">Bentuk / Penempatan Iklan *</label>

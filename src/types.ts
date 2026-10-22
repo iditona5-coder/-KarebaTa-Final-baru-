@@ -119,6 +119,8 @@ export interface SponsorAd {
   isActive: boolean;
   createdAt: number;
   expiryDate?: string;
+  expiresAt?: number; // Timestamp milidetik saat iklan otomatis berakhir (0 / undefined = selamanya)
+  durationDays?: number; // Pilihan durasi: 0 (selamanya), 3, 7, 14, 30 hari
   location?: string;
   // Format tampilan: "feed" (di sela postingan), "popup" (modal pop-up melayang), atau "both" (keduanya)
   displayFormat?: "feed" | "popup" | "both";
