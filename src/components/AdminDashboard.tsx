@@ -1704,6 +1704,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       onSubmit={async (e) => {
                         e.preventDefault();
                         const cleanMedia = adFormImg.trim();
+                        if (!cleanMedia) {
+                          showToast(`Silakan ambil ${adFormMediaType === "video" ? "video" : "foto"} dari galeri HP terlebih dahulu.`);
+                          return;
+                        }
                         const isVid = adFormMediaType === "video" || cleanMedia.includes(".mp4") || cleanMedia.startsWith("data:video");
                         const adToSave: SponsorAd = {
                           id: editingAd?.id || `ad-${Date.now()}`,
@@ -1838,60 +1842,112 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         />
                       </div>
 
-                      {/* Input Media Video / Foto dengan Opsi Upload & Preview */}
+                      {/* Pemilih Media Foto / Video Langsung dari Galeri HP (Tanpa Perlu Link) */}
                       <div>
-                        <label className="text-xs text-neutral-600 block mb-1">
-                          {adFormMediaType === "video" ? "Media Video (MP4) *" : "Media Poster / Foto *"}
+                        <label className="text-xs font-bold text-neutral-800 block mb-1.5">
+                          {adFormMediaType === "video" ? "Ambil Video Iklan (MP4) *" : "Ambil Foto / Poster Iklan *"}
                         </label>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="url"
-                              value={adFormImg}
-                              onChange={(e) => setAdFormImg(e.target.value)}
-                              placeholder={adFormMediaType === "video" ? "https://... promo.mp4" : "https://... banner.jpg"}
-                              className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                            />
-                            <label className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl border border-neutral-200 cursor-pointer flex items-center gap-1.5 shrink-0 transition">
-                              <Upload className="w-3.5 h-3.5" />
-                              <span>{isAdMediaUploading ? "Mengunggah..." : "Unggah"}</span>
-                              <input
-                                type="file"
-                                accept={adFormMediaType === "video" ? "video/*" : "image/*"}
-                                className="hidden"
-                                disabled={isAdMediaUploading}
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  try {
-                                    setIsAdMediaUploading(true);
-                                    showToast(`Sedang mengunggah ${adFormMediaType === "video" ? "video" : "foto"} ke CDN...`);
-                                    const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
-                                    if (res && res.url) {
-                                      setAdFormImg(res.url);
-                                      showToast("Media iklan berhasil diunggah!");
-                                    }
-                                  } catch (err) {
-                                    showToast("Gagal mengunggah media iklan.");
-                                  } finally {
-                                    setIsAdMediaUploading(false);
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
 
-                          {/* Pratinjau Langsung Media */}
-                          {adFormImg && (
-                            <div className="relative rounded-xl overflow-hidden bg-black/80 h-36 flex items-center justify-center border border-neutral-200">
+                        {!adFormImg ? (
+                          /* KOTAK PILIH LANGSUNG DARI GALERI HP (TANPA LINK) */
+                          <label className="w-full h-36 rounded-2xl border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 flex flex-col items-center justify-center p-4 cursor-pointer transition group text-center shadow-2xs">
+                            <div className="w-11 h-11 rounded-full bg-amber-100 group-hover:bg-amber-200 text-amber-700 flex items-center justify-center mb-2 group-hover:scale-110 transition shadow-xs">
+                              {isAdMediaUploading ? (
+                                <RefreshCw className="w-5 h-5 animate-spin text-amber-600" />
+                              ) : adFormMediaType === "video" ? (
+                                <VideoIcon className="w-5 h-5 text-emerald-600" />
+                              ) : (
+                                <ImageIcon className="w-5 h-5 text-amber-700" />
+                              )}
+                            </div>
+                            <p className="text-xs font-extrabold text-neutral-900">
+                              {isAdMediaUploading
+                                ? "Sedang Mengunggah dari Galeri..."
+                                : `Ketuk untuk Ambil ${adFormMediaType === "video" ? "Video" : "Foto"} dari Galeri HP`}
+                            </p>
+                            <p className="text-[11px] text-neutral-500 mt-0.5">
+                              {isAdMediaUploading
+                                ? "Mohon tunggu sejenak hingga selesai..."
+                                : "Buka galeri & dokumen HP Anda langsung"}
+                            </p>
+                            <input
+                              type="file"
+                              accept={adFormMediaType === "video" ? "video/*" : "image/*"}
+                              className="hidden"
+                              disabled={isAdMediaUploading}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  setIsAdMediaUploading(true);
+                                  showToast(`Mengambil ${adFormMediaType === "video" ? "video" : "foto"} dari galeri HP...`);
+                                  const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
+                                  if (res && res.url) {
+                                    setAdFormImg(res.url);
+                                    showToast("Berhasil diambil dari galeri!");
+                                  }
+                                } catch (err) {
+                                  showToast("Gagal mengambil media dari galeri.");
+                                } finally {
+                                  setIsAdMediaUploading(false);
+                                }
+                              }}
+                            />
+                          </label>
+                        ) : (
+                          /* PRATINJAU MEDIA DARI GALERI DENGAN TOMBOL GANTI & HAPUS */
+                          <div className="space-y-2">
+                            <div className="relative rounded-2xl overflow-hidden bg-black h-40 flex items-center justify-center border border-neutral-200 shadow-xs">
                               {adFormMediaType === "video" || adFormImg.includes(".mp4") || adFormImg.startsWith("data:video") ? (
                                 <video src={adFormImg} className="w-full h-full object-contain" controls autoPlay muted />
                               ) : (
                                 <img src={adFormImg} alt="Preview Iklan" className="w-full h-full object-cover" />
                               )}
+                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-xs">
+                                {adFormMediaType === "video" ? "Video dari Galeri" : "Foto dari Galeri"}
+                              </span>
                             </div>
-                          )}
-                        </div>
+
+                            {/* Tombol Ganti / Hapus */}
+                            <div className="flex items-center gap-2">
+                              <label className="flex-1 py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-300 cursor-pointer flex items-center justify-center gap-1.5 transition active:scale-95 text-center">
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>{isAdMediaUploading ? "Sedang Mengunggah..." : "Ganti dari Galeri HP"}</span>
+                                <input
+                                  type="file"
+                                  accept={adFormMediaType === "video" ? "video/*" : "image/*"}
+                                  className="hidden"
+                                  disabled={isAdMediaUploading}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                      setIsAdMediaUploading(true);
+                                      showToast(`Mengunggah ${adFormMediaType === "video" ? "video" : "foto"} baru dari galeri...`);
+                                      const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
+                                      if (res && res.url) {
+                                        setAdFormImg(res.url);
+                                        showToast("Media berhasil diganti!");
+                                      }
+                                    } catch (err) {
+                                      showToast("Gagal mengganti media.");
+                                    } finally {
+                                      setIsAdMediaUploading(false);
+                                    }
+                                  }}
+                                />
+                              </label>
+
+                              <button
+                                type="button"
+                                onClick={() => setAdFormImg("")}
+                                className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-200 cursor-pointer transition active:scale-95 shrink-0"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
