@@ -2055,6 +2055,7 @@ export default function KarebaFeedFinal() {
           onBackToFeed={() => {
             if (typeof window !== "undefined") {
               try {
+                sessionStorage.removeItem("karebata_admin_passcode_verified");
                 window.history.pushState(null, "", "/");
               } catch {}
               window.location.hash = "";
@@ -2484,6 +2485,9 @@ export default function KarebaFeedFinal() {
                 type="button"
                 onClick={() => {
                   if (typeof window !== "undefined") {
+                    try {
+                      sessionStorage.removeItem("karebata_admin_passcode_verified");
+                    } catch {}
                     window.location.hash = "#admin";
                   }
                   setViewMode("admin");

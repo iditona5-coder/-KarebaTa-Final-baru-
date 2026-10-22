@@ -124,10 +124,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Verifikasi Kunci Rahasia / Admin Passcode
-  const [isPasscodeVerified, setIsPasscodeVerified] = useState<boolean>(() => {
-    return sessionStorage.getItem("karebata_admin_passcode_verified") === "true";
-  });
+  // Verifikasi Kunci Rahasia / Admin Passcode (Selalu meminta PIN setiap kali admin masuk)
+  const [isPasscodeVerified, setIsPasscodeVerified] = useState<boolean>(false);
   const [passcodeInput, setPasscodeInput] = useState("");
   const [passcodeError, setPasscodeError] = useState<string | null>(null);
   const [showPasscode, setShowPasscode] = useState(false);
@@ -290,9 +288,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Keluar dari Dasbor Admin dan kembali ke beranda warga (selalu kunci ulang PIN)
+  const handleExitToFeed = () => {
+    try {
+      sessionStorage.removeItem("karebata_admin_passcode_verified");
+    } catch {}
+    setIsPasscodeVerified(false);
+    setPasscodeInput("");
+    onBackToFeed();
+  };
+
   // Handler Logout
   const handleLogout = async () => {
-    sessionStorage.removeItem("karebata_admin_passcode_verified");
+    try {
+      sessionStorage.removeItem("karebata_admin_passcode_verified");
+    } catch {}
     setIsPasscodeVerified(false);
     setPasscodeInput("");
     await logAdminActivity("LOGOUT", "Admin keluar dari Dashboard", currentUser?.email || PRIMARY_ADMIN_EMAIL);
@@ -399,7 +409,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="pt-2 border-t border-neutral-200 text-center">
             <button
               type="button"
-              onClick={onBackToFeed}
+              onClick={handleExitToFeed}
               className="text-xs text-neutral-500 hover:text-emerald-700 font-semibold transition flex items-center justify-center gap-1 mx-auto cursor-pointer"
             >
               <span>← Kembali ke Aplikasi Kabar Warga</span>
@@ -719,7 +729,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onBackToFeed}
+              onClick={handleExitToFeed}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 text-xs font-bold rounded-xl transition cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
