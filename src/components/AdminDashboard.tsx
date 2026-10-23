@@ -198,7 +198,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adFormMediaType, setAdFormMediaType] = useState<"image" | "video">("image");
   const [adFormImg, setAdFormImg] = useState("");
   const [isAdMediaUploading, setIsAdMediaUploading] = useState(false);
-  const [adFormActionType, setAdFormActionType] = useState<"whatsapp" | "link">("whatsapp");
+  const [adFormActionType, setAdFormActionType] = useState<"none" | "whatsapp" | "link">("none");
   const [adFormTarget, setAdFormTarget] = useState("");
   const [adFormBtnText, setAdFormBtnText] = useState("Pesan via WhatsApp");
   const [adFormLocation, setAdFormLocation] = useState("Wilayah & Sekitarnya");
@@ -1581,7 +1581,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setAdFormFormat("both");
                         setAdFormDuration(0);
                         setAdFormImg("");
-                        setAdFormTarget(appConfig.adminWhatsapp || "085351037179");
+                        setAdFormActionType("none");
+                        setAdFormTarget("");
+                        setAdFormBtnText("");
                         setIsAdModalOpen(true);
                       }}
                       className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer"
@@ -1791,8 +1793,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setAdFormFormat(ad.displayFormat || "both");
                               setAdFormDuration(ad.durationDays !== undefined ? ad.durationDays : 0);
                               setAdFormImg(ad.imageUrl);
-                              setAdFormTarget(ad.actionTarget);
-                              setAdFormBtnText(ad.actionButtonText || "Pesan via WhatsApp");
+                              setAdFormActionType(ad.actionType || "none");
+                              setAdFormTarget(ad.actionTarget || "");
+                              setAdFormBtnText(ad.actionButtonText || (ad.actionType === "whatsapp" ? "Pesan via WhatsApp" : ""));
                               setAdFormLocation(ad.location || "Wilayah & Sekitarnya");
                               setIsAdModalOpen(true);
                             }}
@@ -1860,8 +1863,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           imageUrl: cleanMedia,
                           videoUrl: isVid ? cleanMedia : undefined,
                           actionType: adFormActionType,
-                          actionTarget: adFormTarget.trim(),
-                          actionButtonText: adFormBtnText.trim(),
+                          actionTarget: adFormActionType === "none" ? "" : adFormTarget.trim(),
+                          actionButtonText: adFormActionType === "none" ? "" : (adFormBtnText.trim() || (adFormActionType === "whatsapp" ? "Pesan via WhatsApp" : "Kunjungi Website")),
                           location: adFormLocation.trim(),
                           expiryDate: expiryDateText,
                           expiresAt: expiresAt,
@@ -2128,10 +2131,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       {/* Tujuan Klik Iklan Saat Warga Mengetuk Tombol */}
                       <div className="space-y-2 pt-2 border-t border-neutral-200">
-                        <label className="text-xs font-bold text-neutral-800 block">
-                          Tindakan Tombol Saat Warga Mengetuk Iklan *
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-neutral-800 block">
+                            Tombol Aksi Iklan
+                          </label>
+                          <span className="text-[10px] text-neutral-500">
+                            {adFormActionType === "none" ? "Bisa dipasang tanpa link" : "Dengan tombol klik"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdFormActionType("none");
+                              setAdFormTarget("");
+                              setAdFormBtnText("");
+                            }}
+                            className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
+                              adFormActionType === "none"
+                                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <span>Tanpa Link</span>
+                            <span className="text-[9px] font-normal opacity-85">(Spanduk Saja)</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -2140,14 +2164,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 setAdFormBtnText("Pesan via WhatsApp");
                               }
                             }}
-                            className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                            className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormActionType === "whatsapp"
                                 ? "bg-[#25D366] text-white border-[#25D366] shadow-xs"
                                 : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
                             }`}
                           >
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>Pesan via WhatsApp</span>
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              <span>WhatsApp</span>
+                            </span>
+                            <span className="text-[9px] font-normal opacity-85">(Nomor WA)</span>
                           </button>
                           <button
                             type="button"
@@ -2157,47 +2184,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 setAdFormBtnText("Kunjungi Website");
                               }
                             }}
-                            className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                            className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormActionType === "link"
                                 ? "bg-blue-600 text-white border-blue-600 shadow-xs"
                                 : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
                             }`}
                           >
-                            <Globe className="w-3.5 h-3.5" />
-                            <span>Tautan Web / Medsos</span>
+                            <span className="flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              <span>Website</span>
+                            </span>
+                            <span className="text-[9px] font-normal opacity-85">(Link Web/IG)</span>
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          <div>
-                            <label className="text-xs text-neutral-600 block mb-1">
-                              {adFormActionType === "whatsapp" ? "Nomor WhatsApp Toko *" : "Tautan Website / Akun Medsos *"}
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              value={adFormTarget}
-                              onChange={(e) => setAdFormTarget(e.target.value)}
-                              placeholder={adFormActionType === "whatsapp" ? "Contoh: 081234567890" : "Contoh: https://instagram.com/toko"}
-                              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                            />
-                            <p className="text-[10px] text-neutral-400 mt-0.5">
-                              {adFormActionType === "whatsapp"
-                                ? "Nomor WhatsApp yang otomatis terbuka saat warga mengklik tombol iklan"
-                                : "Link halaman web atau medsos yang dituju warga"}
-                            </p>
+                        {adFormActionType === "none" ? (
+                          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Iklan ini tayang sebagai spanduk informasi <b>100% tanpa link</b> (hanya foto/video, judul &amp; nama usaha).</span>
                           </div>
-                          <div>
-                            <label className="text-xs text-neutral-600 block mb-1">Teks di Tombol Aksi</label>
-                            <input
-                              type="text"
-                              value={adFormBtnText}
-                              onChange={(e) => setAdFormBtnText(e.target.value)}
-                              placeholder={adFormActionType === "whatsapp" ? "Pesan via WhatsApp" : "Kunjungi Website"}
-                              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                            />
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="text-xs text-neutral-600 block mb-1">
+                                {adFormActionType === "whatsapp" ? "Nomor WhatsApp Toko *" : "Tautan Website / Akun Medsos *"}
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={adFormTarget}
+                                onChange={(e) => setAdFormTarget(e.target.value)}
+                                placeholder={adFormActionType === "whatsapp" ? "Contoh: 081234567890" : "Contoh: https://instagram.com/toko"}
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                              />
+                              <p className="text-[10px] text-neutral-400 mt-0.5">
+                                {adFormActionType === "whatsapp"
+                                  ? "Nomor WhatsApp yang otomatis terbuka saat warga mengklik tombol iklan"
+                                  : "Link halaman web atau medsos yang dituju warga"}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="text-xs text-neutral-600 block mb-1">Teks di Tombol Aksi</label>
+                              <input
+                                type="text"
+                                value={adFormBtnText}
+                                onChange={(e) => setAdFormBtnText(e.target.value)}
+                                placeholder={adFormActionType === "whatsapp" ? "Pesan via WhatsApp" : "Kunjungi Website"}
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                              />
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200">

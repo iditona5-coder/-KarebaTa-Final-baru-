@@ -293,6 +293,9 @@ export default function KarebaFeedFinal() {
         setViewMode("admin");
         return;
       }
+      try {
+        sessionStorage.removeItem("karebata_admin_passcode_verified");
+      } catch {}
       if (window.location.hash === "#feed") {
         const isSessionActive = typeof window !== "undefined" && sessionStorage.getItem("karebata_session_active") === "true";
         const existingName = userName || (typeof window !== "undefined" && (localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username")));

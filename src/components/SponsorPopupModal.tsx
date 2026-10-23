@@ -66,7 +66,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
 
   const handleActionClick = () => {
     if (ad.actionType === "whatsapp") {
-      const cleanPhone = ad.actionTarget.replace(/[^0-9]/g, "");
+      const cleanPhone = (ad.actionTarget || "").replace(/[^0-9]/g, "");
       let formattedPhone = cleanPhone;
       if (formattedPhone.startsWith("0")) {
         formattedPhone = "62" + formattedPhone.slice(1);
@@ -77,7 +77,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
       const waUrl = `https://wa.me/${formattedPhone}?text=${greeting}`;
       window.open(waUrl, "_blank", "noopener,noreferrer");
     } else {
-      let targetUrl = ad.actionTarget.trim();
+      let targetUrl = (ad.actionTarget || "").trim();
       if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
         targetUrl = "https://" + targetUrl;
       }
@@ -233,30 +233,32 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
             </p>
           </div>
 
-          {/* TOMBOL AKSI UTAMA (WHATSAPP ATAU LINK WEBSITE) */}
+          {/* TOMBOL AKSI UTAMA (WHATSAPP ATAU LINK WEBSITE JIKA DIPILIH) */}
           <div className="pt-1 space-y-2">
-            <button
-              id="popup-ad-cta-btn"
-              type="button"
-              onClick={handleActionClick}
-              className={`w-full py-3 px-4 rounded-2xl font-extrabold text-sm text-white flex items-center justify-center gap-2 shadow-lg transition active:scale-98 cursor-pointer ${
-                ad.actionType === "whatsapp"
-                  ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-600/25"
-                  : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-600/25"
-              }`}
-            >
-              {ad.actionType === "whatsapp" ? (
-                <>
-                  <MessageCircle className="w-4 h-4 fill-white" />
-                  <span>{ad.actionButtonText || "Hubungi via WhatsApp"}</span>
-                </>
-              ) : (
-                <>
-                  <ExternalLink className="w-4 h-4" />
-                  <span>{ad.actionButtonText || "Kunjungi Website Resmi"}</span>
-                </>
-              )}
-            </button>
+            {ad.actionType !== "none" && (
+              <button
+                id="popup-ad-cta-btn"
+                type="button"
+                onClick={handleActionClick}
+                className={`w-full py-3 px-4 rounded-2xl font-extrabold text-sm text-white flex items-center justify-center gap-2 shadow-lg transition active:scale-98 cursor-pointer ${
+                  ad.actionType === "whatsapp"
+                    ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-600/25"
+                    : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-600/25"
+                }`}
+              >
+                {ad.actionType === "whatsapp" ? (
+                  <>
+                    <MessageCircle className="w-4 h-4 fill-white" />
+                    <span>{ad.actionButtonText || "Hubungi via WhatsApp"}</span>
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4" />
+                    <span>{ad.actionButtonText || "Kunjungi Website Resmi"}</span>
+                  </>
+                )}
+              </button>
+            )}
 
             <button
               type="button"

@@ -113,8 +113,8 @@ export interface SponsorAd {
   imageUrl: string;
   videoUrl?: string;
   thumbnailUrl?: string;
-  actionType: "whatsapp" | "link";
-  actionTarget: string; // Nomor WhatsApp atau URL website
+  actionType: "whatsapp" | "link" | "none";
+  actionTarget?: string; // Nomor WhatsApp atau URL website (opsional)
   actionButtonText: string;
   isActive: boolean;
   createdAt: number;

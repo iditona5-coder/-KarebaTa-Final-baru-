@@ -76,7 +76,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
     }
     touchTrackRef.current.initiated = false;
     if (ad.actionType === "whatsapp") {
-      const cleanPhone = ad.actionTarget.replace(/[^0-9]/g, "");
+      const cleanPhone = (ad.actionTarget || "").replace(/[^0-9]/g, "");
       let formattedPhone = cleanPhone;
       if (formattedPhone.startsWith("0")) {
         formattedPhone = "62" + formattedPhone.slice(1);
@@ -87,7 +87,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
       const waUrl = `https://wa.me/${formattedPhone}?text=${greeting}`;
       window.open(waUrl, "_blank", "noopener,noreferrer");
     } else {
-      let targetUrl = ad.actionTarget.trim();
+      let targetUrl = (ad.actionTarget || "").trim();
       if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
         targetUrl = "https://" + targetUrl;
       }
@@ -247,25 +247,27 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
 
         {/* TOMBOL AKSI UTAMA (CTA) */}
         <div className="pt-1 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onClick={handleActionClick}
-            className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98 cursor-pointer ${
-              ad.actionType === "whatsapp"
-                ? "bg-[#25D366] hover:bg-[#20ba59] text-white shadow-emerald-900/20"
-                : "bg-neutral-900 hover:bg-neutral-800 text-white shadow-neutral-900/20"
-            }`}
-          >
-            {ad.actionType === "whatsapp" ? (
-              <MessageCircle className="w-4 h-4" />
-            ) : (
-              <ExternalLink className="w-4 h-4" />
-            )}
-            <span>{ad.actionButtonText || (ad.actionType === "whatsapp" ? "Hubungi WhatsApp Toko" : "Kunjungi Website")}</span>
-          </button>
+          {ad.actionType !== "none" && (
+            <button
+              type="button"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onClick={handleActionClick}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98 cursor-pointer ${
+                ad.actionType === "whatsapp"
+                  ? "bg-[#25D366] hover:bg-[#20ba59] text-white shadow-emerald-900/20"
+                  : "bg-neutral-900 hover:bg-neutral-800 text-white shadow-neutral-900/20"
+              }`}
+            >
+              {ad.actionType === "whatsapp" ? (
+                <MessageCircle className="w-4 h-4" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
+              <span>{ad.actionButtonText || (ad.actionType === "whatsapp" ? "Hubungi WhatsApp Toko" : "Kunjungi Website")}</span>
+            </button>
+          )}
 
           {onOpenHelp && (
             <button
