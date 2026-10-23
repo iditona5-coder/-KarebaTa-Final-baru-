@@ -272,10 +272,14 @@ export default function KarebaFeedFinal() {
     if (isDedicatedAdminRoute()) return "admin";
     try {
       if (typeof window !== "undefined") {
-        const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
-        const cachedName = localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username");
-        if (isLoggedIn && cachedName && cachedName !== "warga_kareba") {
-          return "feed";
+        const isSessionActive = sessionStorage.getItem("karebata_session_active") === "true";
+        // Hanya izinkan langsung ke feed jika masih berada dalam sesi aktif (misal refresh halaman)
+        if (isSessionActive) {
+          const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
+          const cachedName = localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username");
+          if (isLoggedIn && cachedName && cachedName !== "warga_kareba") {
+            return "feed";
+          }
         }
       }
     } catch {}
@@ -290,11 +294,12 @@ export default function KarebaFeedFinal() {
         return;
       }
       if (window.location.hash === "#feed") {
+        const isSessionActive = typeof window !== "undefined" && sessionStorage.getItem("karebata_session_active") === "true";
         const existingName = userName || (typeof window !== "undefined" && (localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username")));
-        if (currentUser && existingName && existingName !== "warga_kareba") {
+        if (isSessionActive && currentUser && existingName && existingName !== "warga_kareba") {
           if (!userName && existingName) setUserName(existingName.slice(0, 13));
           setViewMode("feed");
-        } else if (currentUser && !existingName) {
+        } else if (isSessionActive && currentUser && !existingName) {
           setViewMode("set_name");
         } else {
           setViewMode("login");
@@ -321,10 +326,20 @@ export default function KarebaFeedFinal() {
     return () => unsubBulletins();
   }, []);
 
-  // Berlangganan status autentikasi Google Firebase (Persisten & Aman saat Refresh)
+  // Berlangganan status autentikasi Google Firebase
   useEffect(() => {
     const unsubAuth = subscribeToAuth(async (user) => {
+      const isSessionActive = typeof window !== "undefined" && sessionStorage.getItem("karebata_session_active") === "true";
+
       if (user) {
+        // Jika aplikasi baru dibuka dari luar (bukan reload di sesi aktif yang sama),
+        // pengguna wajib menekan tombol login terlebih dahulu.
+        if (!isSessionActive) {
+          setCurrentUser(null);
+          setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
+          return;
+        }
+
         setCurrentUser(user);
         try {
           localStorage.setItem("karebata_is_logged_in", "true");
@@ -3941,9 +3956,13 @@ export default function KarebaFeedFinal() {
                       setUserName(trimmed);
                       if (currentUser) {
                         localStorage.setItem(`karebata_custom_username_${currentUser.uid}`, trimmed);
-                        saveUserProfile(currentUser.uid, trimmed).catch(() => {});
+                        if (currentUser.email) {
+                          localStorage.setItem(`karebata_registered_${currentUser.email.toLowerCase()}`, trimmed);
+                        }
+                        saveUserProfile(currentUser.uid, trimmed, currentUser.email || undefined).catch(() => {});
                       }
                       localStorage.setItem("karebata_username", trimmed);
+                      localStorage.setItem("karebata_last_registered_username", trimmed);
                       const cleanInit = (trimmed[0] || "W").toUpperCase();
                       setFeed((prev) =>
                         prev.map((item) =>

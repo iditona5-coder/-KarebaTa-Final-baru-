@@ -40,7 +40,7 @@ import {
   signOut, 
   onAuthStateChanged, 
   setPersistence,
-  browserLocalPersistence,
+  browserSessionPersistence,
   User 
 } from 'firebase/auth';
 export type { User };
@@ -92,7 +92,15 @@ export const db: Firestore = (() => {
 
 export const auth: Auth = getAuth(app);
 if (typeof window !== "undefined") {
-  setPersistence(auth, browserLocalPersistence).catch(() => {});
+  setPersistence(auth, browserSessionPersistence).catch(() => {});
+  // Jika aplikasi baru dibuka setelah sebelumnya keluar / ditutup (bukan sekadar reload halaman dalam sesi aktif),
+  // pastikan sesi login sebelumnya ditutup agar pengguna diwajibkan login kembali saat masuk.
+  if (!sessionStorage.getItem("karebata_session_active")) {
+    try {
+      localStorage.removeItem("karebata_is_logged_in");
+    } catch {}
+    signOut(auth).catch(() => {});
+  }
 }
 
 /**
@@ -450,7 +458,7 @@ export async function loginWithGoogle(): Promise<{ user: User | null; error?: st
 
   isLoginInProgress = true;
   try {
-    await setPersistence(auth, browserLocalPersistence);
+    await setPersistence(auth, browserSessionPersistence);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     const result = await signInWithPopup(auth, provider);

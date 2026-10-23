@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -165,7 +165,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [suspendDurationDays, setSuspendDurationDays] = useState(7);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
-  // State Fitur Menu 3: Postingan
+  // State Fitur Menu 3: Postingan (Sinkron Real-time dan Instan Saat Dihapus)
+  const [postsList, setPostsList] = useState<FeedItem[]>(feedPosts);
+  useEffect(() => {
+    setPostsList(feedPosts);
+  }, [feedPosts]);
+
   const [searchPostQuery, setSearchPostQuery] = useState("");
   const [postMediaFilter, setPostMediaFilter] = useState<"all" | "image" | "video" | "hidden">("all");
   const [selectedPostForEdit, setSelectedPostForEdit] = useState<FeedItem | null>(null);
@@ -173,6 +178,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editPostLocation, setEditPostLocation] = useState("");
   const [editPostCategory, setEditPostCategory] = useState("Kabar Warga");
   const [postToDelete, setPostToDelete] = useState<FeedItem | null>(null);
+  const adFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // State Fitur Menu 4: Laporan
   const [reportFilter, setReportFilter] = useState<"all" | "pending" | "resolved">("pending");
@@ -227,6 +233,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setIsAuthLoading(false);
     });
     return () => unsub();
+  }, []);
+
+  // Kunci otomatis setiap kali keluar dari Dasbor Admin (selalu minta PIN saat masuk lagi)
+  useEffect(() => {
+    return () => {
+      try {
+        sessionStorage.removeItem("karebata_admin_passcode_verified");
+      } catch {}
+      setIsPasscodeVerified(false);
+      setPasscodeInput("");
+    };
   }, []);
 
   // 2. Berlangganan Pengaturan Umum & PIN Passcode Admin Real-Time (Aktif sejak awal buka halaman)
@@ -312,17 +329,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // 1. DATA AGREGASI DASHBOARD (MENU 1)
   const totalUsersCount = useMemo(() => {
-    const fromPosts = new Set(feedPosts.map((p) => p.user || p.name).filter(Boolean));
+    const fromPosts = new Set(postsList.map((p) => p.user || p.name).filter(Boolean));
     return Math.max(usersList.length, fromPosts.size, 1);
-  }, [usersList, feedPosts]);
+  }, [usersList, postsList]);
 
   const totalViewsCount = useMemo(() => {
-    return feedPosts.reduce((acc, p) => acc + (p.views || 0), 0);
-  }, [feedPosts]);
+    return postsList.reduce((acc, p) => acc + (p.views || 0), 0);
+  }, [postsList]);
 
   const totalLikesCount = useMemo(() => {
-    return feedPosts.reduce((acc, p) => acc + (p.like || 0), 0);
-  }, [feedPosts]);
+    return postsList.reduce((acc, p) => acc + (p.like || 0), 0);
+  }, [postsList]);
 
   const pendingReportsCount = useMemo(() => {
     return reportsList.filter((r) => r.status === "pending").length;
@@ -528,7 +545,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>3. Postingan</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
-              {feedPosts.length}
+              {postsList.length}
             </span>
           </button>
 
@@ -663,7 +680,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
-            <span className="flex-1 text-left">10. Keluar</span>
+            <span className="flex-1 text-left">10. Keluar & Kunci PIN</span>
           </button>
         </nav>
 
@@ -730,10 +747,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               type="button"
               onClick={handleExitToFeed}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 text-xs font-bold rounded-xl transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95"
+              title="Keluar dari dasbor dan kunci kembali dengan PIN"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline">Lihat Aplikasi Warga</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Keluar Dasbor</span>
             </button>
           </div>
         </header>
@@ -762,7 +780,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <FileText className="w-4 h-4" />
                   </div>
                   <p className="text-[11px] text-neutral-500 font-semibold">Total Postingan</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{feedPosts.length}</h3>
+                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{postsList.length}</h3>
                 </div>
 
                 {/* 3. Views */}
@@ -1077,7 +1095,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {feedPosts
+                  {postsList
+                    .filter((p) => {
+                      if (postMediaFilter === "hidden") return Boolean(p.isHidden);
+                      if (postMediaFilter === "image") return p.mediaType !== "video" && !p.isHidden;
+                      if (postMediaFilter === "video") return p.mediaType === "video" && !p.isHidden;
+                      return true;
+                    })
                     .filter((p) => {
                       if (!searchPostQuery.trim()) return true;
                       const q = searchPostQuery.toLowerCase();
@@ -1140,11 +1164,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <button
                               type="button"
                               onClick={async () => {
-                                await toggleHidePostInFirestore(post.id, !post.isHidden);
+                                const nextHidden = !post.isHidden;
+                                setPostsList((prev) =>
+                                  prev.map((p) => (p.id === post.id ? { ...p, isHidden: nextHidden } : p))
+                                );
+                                await toggleHidePostInFirestore(post.id, nextHidden);
+                                await logAdminActivity(
+                                  "EDIT_DATA",
+                                  nextHidden
+                                    ? `Admin menyembunyikan postingan #${post.id} milik @${post.user || post.name}`
+                                    : `Admin memulihkan postingan #${post.id} ke beranda warga`,
+                                  currentUser?.email || PRIMARY_ADMIN_EMAIL
+                                );
                                 showToast(
-                                  post.isHidden
-                                    ? "Postingan dipulihkan ke beranda warga."
-                                    : "Postingan disembunyikan dari beranda."
+                                  nextHidden
+                                    ? "Postingan disembunyikan dari beranda warga."
+                                    : "Postingan dipulihkan ke beranda warga."
                                 );
                               }}
                               className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg transition cursor-pointer"
@@ -1173,16 +1208,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 setConfirmDialog({
                                   isOpen: true,
                                   title: "Hapus Postingan Permanen",
-                                  message: "Yakin ingin menghapus postingan ini secara permanen dari server?",
+                                  message: `Yakin ingin menghapus postingan milik @${post.user || post.name || "warga"} ini secara permanen dari server & beranda warga?`,
                                   onConfirm: async () => {
+                                    // 1. Langsung hapus dari tampilan dasbor seketika
+                                    setPostsList((prev) => prev.filter((p) => p.id !== post.id));
+                                    // 2. Beritahu App.tsx agar postingan di beranda warga langsung terhapus
+                                    if (onPostDeleted) onPostDeleted(post.id);
+                                    // 3. Hapus dari Firestore
                                     await deletePostFromFirestore(post.id);
+                                    // 4. Hapus media dari ImageKit jika ada
                                     if (post.fileId) await deleteFromImageKit(post.fileId);
+                                    // 5. Catat audit trail log
+                                    await logAdminActivity(
+                                      "DELETE_DATA",
+                                      `Admin menghapus permanen postingan #${post.id} milik @${post.user || post.name}`,
+                                      currentUser?.email || PRIMARY_ADMIN_EMAIL
+                                    );
                                     showToast("Postingan berhasil dihapus permanen.");
                                     setConfirmDialog(null);
                                   },
                                 });
                               }}
-                              className="p-1.5 bg-neutral-100 hover:bg-rose-50 text-rose-600 rounded-lg transition"
+                              className="p-1.5 bg-neutral-100 hover:bg-rose-50 text-rose-600 rounded-lg transition cursor-pointer"
                               aria-label="Hapus Postingan"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1228,10 +1275,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <button
                         type="button"
                         onClick={async () => {
+                          const cleanCaption = editPostCaption.trim();
+                          const cleanLocation = editPostLocation.trim();
+                          setPostsList((prev) =>
+                            prev.map((p) =>
+                              p.id === selectedPostForEdit.id
+                                ? { ...p, text: cleanCaption, location: cleanLocation }
+                                : p
+                            )
+                          );
                           await updatePostByAdmin(selectedPostForEdit.id, {
-                            text: editPostCaption.trim(),
-                            location: editPostLocation.trim(),
+                            text: cleanCaption,
+                            location: cleanLocation,
                           });
+                          await logAdminActivity(
+                            "EDIT_DATA",
+                            `Admin mengedit isi postingan #${selectedPostForEdit.id}`,
+                            currentUser?.email || PRIMARY_ADMIN_EMAIL
+                          );
                           showToast("Postingan berhasil diperbarui.");
                           setSelectedPostForEdit(null);
                         }}
@@ -1339,16 +1400,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   setConfirmDialog({
                                     isOpen: true,
                                     title: "Hapus Postingan Pelanggaran",
-                                    message: "Hapus postingan yang dilaporkan ini secara permanen?",
+                                    message: "Hapus postingan yang dilaporkan ini secara permanen dari server & beranda warga?",
                                     onConfirm: async () => {
+                                      setPostsList((prev) => prev.filter((p) => p.id !== report.postId));
+                                      if (onPostDeleted) onPostDeleted(report.postId);
                                       await deletePostFromFirestore(report.postId);
                                       await updateReportStatusInFirestore(report.id, "resolved");
-                                      showToast("Postingan pelanggar berhasil dihapus.");
+                                      await logAdminActivity(
+                                        "DELETE_DATA",
+                                        `Admin menghapus postingan pelanggar #${report.postId} via laporan`,
+                                        currentUser?.email || PRIMARY_ADMIN_EMAIL
+                                      );
+                                      showToast("Postingan pelanggar berhasil dihapus permanen.");
                                       setConfirmDialog(null);
                                     },
                                   });
                                 }}
-                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition"
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition cursor-pointer"
                               >
                                 Hapus Postingan
                               </button>
@@ -1951,104 +2019,105 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       {/* Pemilih Media Foto / Video Langsung dari Galeri HP (Tanpa Perlu Link) */}
                       <div>
-                        <label className="text-xs font-bold text-neutral-800 block mb-1.5">
-                          {adFormMediaType === "video" ? "Ambil Video Iklan (MP4) *" : "Ambil Foto / Poster Iklan *"}
-                        </label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-bold text-neutral-800">
+                            {adFormMediaType === "video" ? "Ambil Video Iklan (MP4) *" : "Ambil Foto / Poster Iklan *"}
+                          </label>
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            ✓ Langsung Galeri HP (Tanpa Link)
+                          </span>
+                        </div>
+
+                        {/* Input file tersembunyi yang diaktifkan secara programatis via ref */}
+                        <input
+                          ref={adFileInputRef}
+                          type="file"
+                          accept={adFormMediaType === "video" ? "video/*" : "image/*"}
+                          style={{ display: "none" }}
+                          disabled={isAdMediaUploading}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              setIsAdMediaUploading(true);
+                              showToast(`Mengambil ${adFormMediaType === "video" ? "video" : "foto"} dari galeri HP...`);
+                              const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
+                              if (res && res.url) {
+                                setAdFormImg(res.url);
+                                showToast("Berhasil diambil dari galeri!");
+                              }
+                            } catch {
+                              showToast("Gagal mengambil media dari galeri.");
+                            } finally {
+                              setIsAdMediaUploading(false);
+                              if (adFileInputRef.current) adFileInputRef.current.value = "";
+                            }
+                          }}
+                        />
 
                         {!adFormImg ? (
-                          /* KOTAK PILIH LANGSUNG DARI GALERI HP (TANPA LINK) */
-                          <label className="w-full h-36 rounded-2xl border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 flex flex-col items-center justify-center p-4 cursor-pointer transition group text-center shadow-2xs">
-                            <div className="w-11 h-11 rounded-full bg-amber-100 group-hover:bg-amber-200 text-amber-700 flex items-center justify-center mb-2 group-hover:scale-110 transition shadow-xs">
+                          /* KOTAK BESAR BUKA GALERI HP DENGAN TOMBOL KLIK LANGSUNG */
+                          <div
+                            onClick={() => adFileInputRef.current?.click()}
+                            className="w-full rounded-2xl border-2 border-dashed border-amber-400 hover:border-amber-500 bg-amber-50/60 hover:bg-amber-50 p-5 flex flex-col items-center justify-center cursor-pointer transition active:scale-[0.99] group text-center shadow-2xs select-none"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition">
                               {isAdMediaUploading ? (
-                                <RefreshCw className="w-5 h-5 animate-spin text-amber-600" />
+                                <RefreshCw className="w-6 h-6 animate-spin text-amber-700" />
                               ) : adFormMediaType === "video" ? (
-                                <VideoIcon className="w-5 h-5 text-emerald-600" />
+                                <VideoIcon className="w-6 h-6 text-emerald-700" />
                               ) : (
-                                <ImageIcon className="w-5 h-5 text-amber-700" />
+                                <ImageIcon className="w-6 h-6 text-amber-800" />
                               )}
                             </div>
-                            <p className="text-xs font-extrabold text-neutral-900">
+                            <p className="text-xs sm:text-sm font-extrabold text-neutral-900">
                               {isAdMediaUploading
                                 ? "Sedang Mengunggah dari Galeri..."
-                                : `Ketuk untuk Ambil ${adFormMediaType === "video" ? "Video" : "Foto"} dari Galeri HP`}
+                                : `Ketuk untuk Memilih ${adFormMediaType === "video" ? "Video (MP4)" : "Foto"} dari Galeri HP`}
                             </p>
-                            <p className="text-[11px] text-neutral-500 mt-0.5">
-                              {isAdMediaUploading
-                                ? "Mohon tunggu sejenak hingga selesai..."
-                                : "Buka galeri & dokumen HP Anda langsung"}
+                            <p className="text-[11px] text-neutral-500 mt-1 font-medium">
+                              Membuka album foto &amp; video di HP Anda secara otomatis (tidak perlu ketik link)
                             </p>
-                            <input
-                              type="file"
-                              accept={adFormMediaType === "video" ? "video/*" : "image/*"}
-                              className="hidden"
-                              disabled={isAdMediaUploading}
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                  setIsAdMediaUploading(true);
-                                  showToast(`Mengambil ${adFormMediaType === "video" ? "video" : "foto"} dari galeri HP...`);
-                                  const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
-                                  if (res && res.url) {
-                                    setAdFormImg(res.url);
-                                    showToast("Berhasil diambil dari galeri!");
-                                  }
-                                } catch (err) {
-                                  showToast("Gagal mengambil media dari galeri.");
-                                } finally {
-                                  setIsAdMediaUploading(false);
-                                }
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                adFileInputRef.current?.click();
                               }}
-                            />
-                          </label>
+                              className="mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{adFormMediaType === "video" ? "Buka Galeri Video" : "Buka Galeri Foto"}</span>
+                            </button>
+                          </div>
                         ) : (
                           /* PRATINJAU MEDIA DARI GALERI DENGAN TOMBOL GANTI & HAPUS */
                           <div className="space-y-2">
-                            <div className="relative rounded-2xl overflow-hidden bg-black h-40 flex items-center justify-center border border-neutral-200 shadow-xs">
+                            <div className="relative rounded-2xl overflow-hidden bg-black h-44 flex items-center justify-center border border-neutral-200 shadow-xs">
                               {adFormMediaType === "video" || adFormImg.includes(".mp4") || adFormImg.startsWith("data:video") ? (
                                 <video src={adFormImg} className="w-full h-full object-contain" controls autoPlay muted />
                               ) : (
                                 <img src={adFormImg} alt="Preview Iklan" className="w-full h-full object-cover" />
                               )}
-                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-xs">
-                                {adFormMediaType === "video" ? "Video dari Galeri" : "Foto dari Galeri"}
+                              <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/75 text-emerald-400 backdrop-blur-xs flex items-center gap-1 border border-emerald-500/30">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                <span>{adFormMediaType === "video" ? "Video dari Galeri HP" : "Foto dari Galeri HP"}</span>
                               </span>
                             </div>
 
-                            {/* Tombol Ganti / Hapus */}
                             <div className="flex items-center gap-2">
-                              <label className="flex-1 py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-300 cursor-pointer flex items-center justify-center gap-1.5 transition active:scale-95 text-center">
-                                <Upload className="w-3.5 h-3.5" />
+                              <button
+                                type="button"
+                                onClick={() => adFileInputRef.current?.click()}
+                                className="flex-1 py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-300 cursor-pointer flex items-center justify-center gap-1.5 transition active:scale-95 text-center"
+                              >
+                                <Upload className="w-3.5 h-3.5 text-emerald-700" />
                                 <span>{isAdMediaUploading ? "Sedang Mengunggah..." : "Ganti dari Galeri HP"}</span>
-                                <input
-                                  type="file"
-                                  accept={adFormMediaType === "video" ? "video/*" : "image/*"}
-                                  className="hidden"
-                                  disabled={isAdMediaUploading}
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    try {
-                                      setIsAdMediaUploading(true);
-                                      showToast(`Mengunggah ${adFormMediaType === "video" ? "video" : "foto"} baru dari galeri...`);
-                                      const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
-                                      if (res && res.url) {
-                                        setAdFormImg(res.url);
-                                        showToast("Media berhasil diganti!");
-                                      }
-                                    } catch (err) {
-                                      showToast("Gagal mengganti media.");
-                                    } finally {
-                                      setIsAdMediaUploading(false);
-                                    }
-                                  }}
-                                />
-                              </label>
-
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setAdFormImg("")}
-                                className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-200 cursor-pointer transition active:scale-95 shrink-0"
+                                className="py-2 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-200 cursor-pointer transition active:scale-95 shrink-0"
                               >
                                 Hapus
                               </button>
@@ -2057,27 +2126,77 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-neutral-600 block mb-1">Nomor WhatsApp *</label>
-                          <input
-                            type="text"
-                            required
-                            value={adFormTarget}
-                            onChange={(e) => setAdFormTarget(e.target.value)}
-                            placeholder="081234567890"
-                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                          />
+                      {/* Tujuan Klik Iklan Saat Warga Mengetuk Tombol */}
+                      <div className="space-y-2 pt-2 border-t border-neutral-200">
+                        <label className="text-xs font-bold text-neutral-800 block">
+                          Tindakan Tombol Saat Warga Mengetuk Iklan *
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdFormActionType("whatsapp");
+                              if (!adFormBtnText || adFormBtnText === "Kunjungi Website") {
+                                setAdFormBtnText("Pesan via WhatsApp");
+                              }
+                            }}
+                            className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                              adFormActionType === "whatsapp"
+                                ? "bg-[#25D366] text-white border-[#25D366] shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>Pesan via WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdFormActionType("link");
+                              if (!adFormBtnText || adFormBtnText === "Pesan via WhatsApp") {
+                                setAdFormBtnText("Kunjungi Website");
+                              }
+                            }}
+                            className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                              adFormActionType === "link"
+                                ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>Tautan Web / Medsos</span>
+                          </button>
                         </div>
-                        <div>
-                          <label className="text-xs text-neutral-600 block mb-1">Teks Tombol</label>
-                          <input
-                            type="text"
-                            value={adFormBtnText}
-                            onChange={(e) => setAdFormBtnText(e.target.value)}
-                            placeholder="Pesan via WhatsApp"
-                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                          />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <label className="text-xs text-neutral-600 block mb-1">
+                              {adFormActionType === "whatsapp" ? "Nomor WhatsApp Toko *" : "Tautan Website / Akun Medsos *"}
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={adFormTarget}
+                              onChange={(e) => setAdFormTarget(e.target.value)}
+                              placeholder={adFormActionType === "whatsapp" ? "Contoh: 081234567890" : "Contoh: https://instagram.com/toko"}
+                              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                            />
+                            <p className="text-[10px] text-neutral-400 mt-0.5">
+                              {adFormActionType === "whatsapp"
+                                ? "Nomor WhatsApp yang otomatis terbuka saat warga mengklik tombol iklan"
+                                : "Link halaman web atau medsos yang dituju warga"}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-xs text-neutral-600 block mb-1">Teks di Tombol Aksi</label>
+                            <input
+                              type="text"
+                              value={adFormBtnText}
+                              onChange={(e) => setAdFormBtnText(e.target.value)}
+                              placeholder={adFormActionType === "whatsapp" ? "Pesan via WhatsApp" : "Kunjungi Website"}
+                              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                            />
+                          </div>
                         </div>
                       </div>
 
