@@ -5,26 +5,34 @@
       <stop offset="50%" stop-color="#E5A000" />
       <stop offset="100%" stop-color="#D48B00" />
     </linearGradient>
-    <filter id="crispShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#D48B00" flood-opacity="0.36" />
-      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.10" />
+    <filter id="crispShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#D48B00" flood-opacity="0.30" />
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08" />
     </filter>
   </defs>
 
   <!-- Background Putih Bersih 100% -->
-  <rect width="512" height="512" fill="#ffffff" rx="0" />
+  <rect width="512" height="512" fill="#ffffff" />
 
-  <!-- Pin Ikon Kareba'Ta Berada di Tengah Sempurna (Center 256, 256) -->
-  <g transform="translate(131, 76) scale(2.5)" filter="url(#crispShadow)">
-    <!-- Pin Lokasi Keemasan -->
+  <!-- Pin Ikon KarebaTa Berada di Atas-Tengah -->
+  <g transform="translate(181, 65) scale(1.9)" filter="url(#crispShadow)">
     <path
-      d="M 50 118 C 47 108 10 70 10 46 A 40 40 0 1 1 90 46 C 90 70 53 108 50 118 Z"
+      d="M 40 95 C 37 87 8 56 8 37 A 32 32 0 1 1 72 37 C 72 56 43 87 40 95 Z"
       fill="url(#pinGradMaster)"
     />
-    <!-- Huruf K Putih Bersih Tebal Berpresisi Tinggi -->
     <path
-      d="M 30 25 H 41 V 44.5 L 59.5 25 H 73.5 L 50.5 47.5 L 74.5 71 H 60.5 L 41 51 V 71 H 30 V 25 Z"
+      d="M 24 20 H 33 V 35.6 L 47.8 20 H 59 L 40.6 38 L 59.8 57 H 48.6 L 33 40.8 V 57 H 24 V 20 Z"
       fill="#ffffff"
     />
   </g>
+
+  <!-- Teks Brand: Kareba'Ta (Kareba Hijau Tua, Ta Kuning Emas) -->
+  <text x="256" y="330" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="900" font-size="62" letter-spacing="-1">
+    <tspan fill="#00632B">Kareba&apos;</tspan><tspan fill="#E5A000">Ta</tspan>
+  </text>
+
+  <!-- Slogan Resmi: BERITAMU, SUARAMU -->
+  <text x="256" y="367" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="800" font-size="19" fill="#E5A000" letter-spacing="3.5">
+    BERITAMU, SUARAMU
+  </text>
 </svg>
