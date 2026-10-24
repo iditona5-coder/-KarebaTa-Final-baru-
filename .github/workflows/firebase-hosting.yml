@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting on merge
+name: Deploy ke Firebase Hosting saat penggabungan.
 on:
   push:
     branches:
@@ -8,9 +8,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dan Build
+        run: |
+          npm ci
+          npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KAREBA_TA_728D0 }}'
-          channelId: live
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KAREBA_TA_728D0 }}
           projectId: kareba-ta-728d0
+          channelId: live
