@@ -1301,7 +1301,7 @@ export default function KarebaFeedFinal() {
     });
   };
 
-  // Kunci scroll layar latar belakang saat modal/pencarian aktif agar halaman belakang tidak ikut tergulir (scroll-lock)
+  // Kunci scroll layar latar belakang saat modal/pencarian/pop-up aktif agar beranda belakang tidak ikut tergulir
   useEffect(() => {
     const isAnyModalOpen = Boolean(
       isSearchOpen ||
@@ -1310,17 +1310,23 @@ export default function KarebaFeedFinal() {
       reportPostData ||
       postToDelete ||
       activeCommentItem ||
-      activeDetailPost
+      activeDetailPost ||
+      activePopupAd ||
+      isLoginModalOpen ||
+      videoDurationAlert?.isOpen
     );
 
     if (isAnyModalOpen) {
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     }
 
     return () => {
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
   }, [
     isSearchOpen,
@@ -1330,6 +1336,9 @@ export default function KarebaFeedFinal() {
     postToDelete,
     activeCommentItem,
     activeDetailPost,
+    activePopupAd,
+    isLoginModalOpen,
+    videoDurationAlert,
   ]);
 
   // Efek penandaan postingan ketika kata pencarian cocok
@@ -2503,9 +2512,6 @@ export default function KarebaFeedFinal() {
                 type="button"
                 onClick={() => {
                   if (typeof window !== "undefined") {
-                    try {
-                      sessionStorage.removeItem("karebata_admin_passcode_verified");
-                    } catch {}
                     window.location.hash = "#admin";
                   }
                   setViewMode("admin");

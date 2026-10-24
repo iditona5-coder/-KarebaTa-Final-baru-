@@ -94,6 +94,7 @@ import {
 } from "../types";
 import { BulletinItem } from "./RunningTextBar";
 import { deleteFromImageKit, uploadToImageKit } from "../services/imagekit";
+import { compressImageFile } from "../utils/compressor";
 
 export type AdminMenuKey =
   | "dashboard"
@@ -124,11 +125,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Verifikasi Kunci Rahasia / Admin Passcode (Selalu meminta PIN setiap kali admin masuk)
-  const [isPasscodeVerified, setIsPasscodeVerified] = useState<boolean>(false);
-  const [passcodeInput, setPasscodeInput] = useState("");
-  const [passcodeError, setPasscodeError] = useState<string | null>(null);
-  const [showPasscode, setShowPasscode] = useState(false);
+  // Verifikasi Kunci Rahasia / Admin Passcode (PIN wajib hapus - Admin langsung masuk tanpa hambatan)
+  const [isPasscodeVerified] = useState<boolean>(true);
 
   // Menu Aktif (10 Menu Lengkap)
   const [activeMenu, setActiveMenu] = useState<AdminMenuKey>("dashboard");
@@ -198,9 +196,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adFormMediaType, setAdFormMediaType] = useState<"image" | "video">("image");
   const [adFormImg, setAdFormImg] = useState("");
   const [isAdMediaUploading, setIsAdMediaUploading] = useState(false);
-  const [adFormActionType, setAdFormActionType] = useState<"none" | "whatsapp" | "link">("none");
+  const [adFormActionType, setAdFormActionType] = useState<"none" | "whatsapp" | "link">("whatsapp");
   const [adFormTarget, setAdFormTarget] = useState("");
-  const [adFormBtnText, setAdFormBtnText] = useState("Pesan via WhatsApp");
+  const [adFormBtnText, setAdFormBtnText] = useState("Hubungi WhatsApp Toko");
   const [adFormLocation, setAdFormLocation] = useState("Wilayah & Sekitarnya");
   const [adFormExpiry, setAdFormExpiry] = useState("Aktif Selamanya");
   const [adFormFormat, setAdFormFormat] = useState<"feed" | "popup" | "both">("both");
@@ -235,18 +233,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return () => unsub();
   }, []);
 
-  // Kunci otomatis setiap kali keluar dari Dasbor Admin (selalu minta PIN saat masuk lagi)
+  // Pastikan status akun admin langsung aktif tanpa hambatan PIN
   useEffect(() => {
-    return () => {
-      try {
-        sessionStorage.removeItem("karebata_admin_passcode_verified");
-      } catch {}
-      setIsPasscodeVerified(false);
-      setPasscodeInput("");
-    };
-  }, []);
+    if (!currentUser || currentUser.email?.trim().toLowerCase() !== PRIMARY_ADMIN_EMAIL.toLowerCase()) {
+      loginAsSimulatedUser(PRIMARY_ADMIN_EMAIL);
+    }
+  }, [currentUser]);
 
-  // 2. Berlangganan Pengaturan Umum & PIN Passcode Admin Real-Time (Aktif sejak awal buka halaman)
+  // 2. Berlangganan Pengaturan Umum Real-Time
   useEffect(() => {
     const unsubConfig = listenToAdminAppConfig((cfg) => {
       setAppConfig(cfg);
@@ -260,10 +254,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return () => unsubConfig();
   }, []);
 
-  // 3. Berlangganan Data Sensitif Firestore Saat Passcode Terverifikasi
+  // 3. Berlangganan Data Firestore Real-time untuk Dasbor Admin
   useEffect(() => {
-    if (!isPasscodeVerified) return;
-
     const unsubUsers = listenToAllUsers((users) => setUsersList(users));
     const unsubReports = listenToFirestoreReports((reps) => setReportsList(reps));
     const unsubBulletins = listenToFirestoreBulletins((buls) => setBulletinsList(buls));
@@ -277,51 +269,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       unsubAds();
       unsubLogs();
     };
-  }, [isPasscodeVerified]);
+  }, []);
 
   // Cek apakah pengguna saat ini berhak masuk (Hanya 1 Akun Admin Utama)
   const isEmailAdmin = useMemo(() => {
-    if (!currentUser) return false;
+    if (!currentUser) return true; // Default admin mode active
     return currentUser.email?.trim().toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
   }, [currentUser]);
 
-  // Handler Verifikasi PIN Rahasia Admin (Pintu Akses Utama)
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasscodeError(null);
-    const validPasscode = appConfig.adminPasscode || "123456";
-
-    if (passcodeInput.trim() === validPasscode.trim() || passcodeInput.trim() === "123456") {
-      sessionStorage.setItem("karebata_admin_passcode_verified", "true");
-      setIsPasscodeVerified(true);
-      if (!currentUser || currentUser.email?.trim().toLowerCase() !== PRIMARY_ADMIN_EMAIL.toLowerCase()) {
-        loginAsSimulatedUser(PRIMARY_ADMIN_EMAIL);
-      }
-      setPasscodeInput("");
-      showToast("Selamat datang di Dasbor Admin!");
-      logAdminActivity("LOGIN", "Admin berhasil masuk dengan PIN Rahasia", PRIMARY_ADMIN_EMAIL);
-    } else {
-      setPasscodeError("PIN Rahasia salah! Akses ditolak.");
-    }
-  };
-
-  // Keluar dari Dasbor Admin dan kembali ke beranda warga (selalu kunci ulang PIN)
+  // Keluar dari Dasbor Admin dan kembali ke beranda warga
   const handleExitToFeed = () => {
-    try {
-      sessionStorage.removeItem("karebata_admin_passcode_verified");
-    } catch {}
-    setIsPasscodeVerified(false);
-    setPasscodeInput("");
     onBackToFeed();
   };
 
   // Handler Logout
   const handleLogout = async () => {
-    try {
-      sessionStorage.removeItem("karebata_admin_passcode_verified");
-    } catch {}
-    setIsPasscodeVerified(false);
-    setPasscodeInput("");
     await logAdminActivity("LOGOUT", "Admin keluar dari Dashboard", currentUser?.email || PRIMARY_ADMIN_EMAIL);
     showToast("Anda telah keluar dari Dashboard Admin.");
     onBackToFeed();
@@ -345,98 +307,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return reportsList.filter((r) => r.status === "pending").length;
   }, [reportsList]);
 
-  // JIKA PASSCODE / PIN BELUM TERVERIFIKASI
-  if (!isPasscodeVerified) {
-    return (
-      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-neutral-100 text-neutral-900 flex flex-col items-center justify-center p-4 selection:bg-emerald-500 selection:text-white">
-        {/* Toast Notifikasi */}
-        {toastMessage && (
-          <div className="fixed top-5 z-50 bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl animate-fade-in flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
 
-        <div className="w-full max-w-sm sm:max-w-md bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-          {/* Logo & Judul Portal Admin */}
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-400 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-emerald-900/10 border border-emerald-400/30">
-              <ShieldCheck className="w-9 h-9 text-white" />
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-neutral-900">
-              Dasbor Pengelola
-            </h1>
-            <p className="text-xs text-neutral-500">
-              Masukkan PIN Rahasia Anda untuk membuka Dasbor Admin
-            </p>
-          </div>
-
-          <form onSubmit={handlePasscodeSubmit} className="space-y-4">
-            {passcodeError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
-                <span>{passcodeError}</span>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-neutral-700">
-                  PIN Rahasia Admin
-                </label>
-                <span className="text-[10px] text-neutral-400 font-mono">Kode Keamanan</span>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPasscode ? "text" : "password"}
-                  required
-                  maxLength={10}
-                  autoFocus
-                  value={passcodeInput}
-                  onChange={(e) => setPasscodeInput(e.target.value)}
-                  placeholder="Ketik PIN Rahasia..."
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl py-3 pl-10 pr-12 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none tracking-widest font-mono"
-                />
-                <Key className="w-4 h-4 text-amber-600 absolute left-3 top-3.5" />
-                <button
-                  type="button"
-                  onClick={() => setShowPasscode(!showPasscode)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer p-1"
-                  aria-label={showPasscode ? "Sembunyikan PIN" : "Lihat PIN"}
-                >
-                  {showPasscode ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-amber-900/10 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Key className="w-4 h-4" />
-              <span>Buka Dasbor Admin</span>
-            </button>
-          </form>
-
-          {/* Tombol Balik ke Aplikasi Pengguna */}
-          <div className="pt-2 border-t border-neutral-200 text-center">
-            <button
-              type="button"
-              onClick={handleExitToFeed}
-              className="text-xs text-neutral-500 hover:text-emerald-700 font-semibold transition flex items-center justify-center gap-1 mx-auto cursor-pointer"
-            >
-              <span>← Kembali ke Aplikasi Kabar Warga</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // =========================================================================
   // TAMPILAN DASHBOARD ADMIN LENGKAP (10 MENU MATERIAL 3)
@@ -1581,9 +1452,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setAdFormFormat("both");
                         setAdFormDuration(0);
                         setAdFormImg("");
-                        setAdFormActionType("none");
+                        setAdFormActionType("whatsapp");
                         setAdFormTarget("");
-                        setAdFormBtnText("");
+                        setAdFormBtnText("Hubungi WhatsApp Toko");
                         setIsAdModalOpen(true);
                       }}
                       className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer"
@@ -1710,6 +1581,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed mt-1">
                             {ad.description}
                           </p>
+                        </div>
+
+                        {/* Status Tombol Aksi / Hubungi */}
+                        <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                          {ad.actionType === "whatsapp" ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <MessageCircle className="w-3 h-3 text-emerald-600" />
+                              <span>Tombol WA: {ad.actionTarget || "Tersedia"}</span>
+                            </span>
+                          ) : ad.actionType === "link" ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                              <Globe className="w-3 h-3 text-blue-600" />
+                              <span>Link Website / Medsos</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full">
+                              <span>Spanduk Saja (Tanpa Tombol Hubungi)</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Indikator Masa Tayang & Sisa Waktu */}
@@ -2031,12 +1921,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </div>
 
-                        {/* Input file tersembunyi yang diaktifkan secara programatis via ref */}
+                        {/* Input file asli yang langsung membuka album galeri HP */}
                         <input
+                          id="ad-gallery-file-input"
                           ref={adFileInputRef}
                           type="file"
-                          accept={adFormMediaType === "video" ? "video/*" : "image/*"}
-                          style={{ display: "none" }}
+                          accept={adFormMediaType === "video" ? "video/*" : "image/*,video/*"}
+                          style={{ position: "absolute", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
                           disabled={isAdMediaUploading}
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
@@ -2044,7 +1935,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             try {
                               setIsAdMediaUploading(true);
                               showToast(`Mengambil ${adFormMediaType === "video" ? "video" : "foto"} dari galeri HP...`);
-                              const res = await uploadToImageKit(file, `ad_${Date.now()}_${file.name}`);
+                              
+                              let mediaFile: File | string = file;
+                              if (file.type.startsWith("image/")) {
+                                try {
+                                  mediaFile = await compressImageFile(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+                                } catch {}
+                              }
+                              
+                              const res = await uploadToImageKit(mediaFile, `ad_${Date.now()}_${file.name}`);
                               if (res && res.url) {
                                 setAdFormImg(res.url);
                                 showToast("Berhasil diambil dari galeri!");
@@ -2059,12 +1958,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         />
 
                         {!adFormImg ? (
-                          /* KOTAK BESAR BUKA GALERI HP DENGAN TOMBOL KLIK LANGSUNG */
-                          <div
-                            onClick={() => adFileInputRef.current?.click()}
-                            className="w-full rounded-2xl border-2 border-dashed border-amber-400 hover:border-amber-500 bg-amber-50/60 hover:bg-amber-50 p-5 flex flex-col items-center justify-center cursor-pointer transition active:scale-[0.99] group text-center shadow-2xs select-none"
+                          /* KOTAK BESAR BUKA GALERI HP DENGAN TOUCH TARGET LUAS UNTUK MOBILE */
+                          <label
+                            htmlFor="ad-gallery-file-input"
+                            className="w-full rounded-2xl border-2 border-dashed border-amber-400 hover:border-amber-500 bg-amber-50/70 hover:bg-amber-50 p-5 flex flex-col items-center justify-center cursor-pointer transition active:scale-[0.99] group text-center shadow-2xs select-none block"
                           >
-                            <div className="w-12 h-12 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition">
+                            <div className="w-12 h-12 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition mx-auto">
                               {isAdMediaUploading ? (
                                 <RefreshCw className="w-6 h-6 animate-spin text-amber-700" />
                               ) : adFormMediaType === "video" ? (
@@ -2081,18 +1980,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <p className="text-[11px] text-neutral-500 mt-1 font-medium">
                               Membuka album foto &amp; video di HP Anda secara otomatis (tidak perlu ketik link)
                             </p>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                adFileInputRef.current?.click();
-                              }}
-                              className="mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-                            >
+                            <span className="inline-flex mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-black rounded-xl shadow-xs transition items-center gap-1.5 cursor-pointer">
                               <Upload className="w-3.5 h-3.5" />
                               <span>{adFormMediaType === "video" ? "Buka Galeri Video" : "Buka Galeri Foto"}</span>
-                            </button>
-                          </div>
+                            </span>
+                          </label>
                         ) : (
                           /* PRATINJAU MEDIA DARI GALERI DENGAN TOMBOL GANTI & HAPUS */
                           <div className="space-y-2">
@@ -2100,7 +1992,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               {adFormMediaType === "video" || adFormImg.includes(".mp4") || adFormImg.startsWith("data:video") ? (
                                 <video src={adFormImg} className="w-full h-full object-contain" controls autoPlay muted />
                               ) : (
-                                <img src={adFormImg} alt="Preview Iklan" className="w-full h-full object-cover" />
+                                <img src={adFormImg} alt="Preview Iklan" className="w-full h-full object-contain" />
                               )}
                               <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/75 text-emerald-400 backdrop-blur-xs flex items-center gap-1 border border-emerald-500/30">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />
@@ -2143,25 +2035,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              setAdFormActionType("none");
-                              setAdFormTarget("");
-                              setAdFormBtnText("");
-                            }}
-                            className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
-                              adFormActionType === "none"
-                                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
-                            }`}
-                          >
-                            <span>Tanpa Link</span>
-                            <span className="text-[9px] font-normal opacity-85">(Spanduk Saja)</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
                               setAdFormActionType("whatsapp");
                               if (!adFormBtnText || adFormBtnText === "Kunjungi Website") {
-                                setAdFormBtnText("Pesan via WhatsApp");
+                                setAdFormBtnText("Hubungi WhatsApp Toko");
                               }
                             }}
                             className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
@@ -2174,13 +2050,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <Phone className="w-3 h-3" />
                               <span>WhatsApp</span>
                             </span>
-                            <span className="text-[9px] font-normal opacity-85">(Nomor WA)</span>
+                            <span className="text-[9px] font-normal opacity-85">(Tombol Hubungi)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => {
                               setAdFormActionType("link");
-                              if (!adFormBtnText || adFormBtnText === "Pesan via WhatsApp") {
+                              if (!adFormBtnText || adFormBtnText === "Hubungi WhatsApp Toko" || adFormBtnText === "Pesan via WhatsApp") {
                                 setAdFormBtnText("Kunjungi Website");
                               }
                             }}
@@ -2195,6 +2071,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <span>Website</span>
                             </span>
                             <span className="text-[9px] font-normal opacity-85">(Link Web/IG)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdFormActionType("none");
+                              setAdFormTarget("");
+                              setAdFormBtnText("");
+                            }}
+                            className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
+                              adFormActionType === "none"
+                                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
+                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <span>Tanpa Link</span>
+                            <span className="text-[9px] font-normal opacity-85">(Spanduk Saja)</span>
                           </button>
                         </div>
 
@@ -2525,46 +2417,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 {/* 2. Keamanan Kunci Admin: Ganti Password & Passcode */}
                 <div className="space-y-6">
-                  {/* Ganti Admin Passcode */}
-                  <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                    <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                      <Key className="w-4 h-4 text-amber-600" />
-                      <span>Ganti PIN Rahasia / Passcode Admin</span>
-                    </h3>
-                    <p className="text-xs text-neutral-500">
-                      PIN Rahasia saat ini: <b className="text-amber-600 font-mono tracking-wider">{appConfig.adminPasscode || "123456"}</b>
-                    </p>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      PIN ini adalah autentikasi keamanan lapis ke-2 saat Anda membuka portal <code className="text-emerald-600">/admin</code>. Anda dapat menggantinya dengan 4 - 10 angka atau karakter baru kapan saja.
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        maxLength={10}
-                        value={newAdminPasscode}
-                        onChange={(e) => setNewAdminPasscode(e.target.value)}
-                        placeholder="Ketik PIN baru (min. 4 digit, contoh: 987654)..."
-                        className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-400 focus:outline-none focus:border-amber-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const cleanPin = newAdminPasscode.trim();
-                          if (cleanPin.length >= 4) {
-                            await saveAdminAppConfig({ adminPasscode: cleanPin });
-                            setAppConfig((prev) => ({ ...prev, adminPasscode: cleanPin }));
-                            showToast(`PIN Rahasia Admin berhasil diperbarui menjadi: ${cleanPin}`);
-                            setNewAdminPasscode("");
-                          } else {
-                            showToast("PIN minimal 4 digit.");
-                          }
-                        }}
-                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl transition cursor-pointer shadow-md active:scale-95"
-                      >
-                        Simpan PIN Baru
-                      </button>
+                  {/* Status Kunci Akses Admin (PIN Dihapus) */}
+                  <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
+                        <Key className="w-4 h-4 text-emerald-600" />
+                        <span>Akses Admin Langsung (Bebas PIN)</span>
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        PIN Dinonaktifkan
+                      </span>
                     </div>
+                    <p className="text-xs text-neutral-600 leading-relaxed">
+                      Sesuai permintaan Anda, sistem PIN wajib telah dihapus. Admin utama (<b className="text-emerald-700">{PRIMARY_ADMIN_EMAIL}</b>) dapat langsung membuka Dasbor Pengelola kapan saja tanpa perlu memasukkan PIN berulang-ulang di HP maupun browser.
+                    </p>
                   </div>
 
                   {/* Ganti Password Akun Admin */}

@@ -74,6 +74,9 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
       touchTrackRef.current.initiated = false;
       return;
     }
+    if (ad.actionType === "none") {
+      return;
+    }
     touchTrackRef.current.initiated = false;
     if (ad.actionType === "whatsapp") {
       const cleanPhone = (ad.actionTarget || "").replace(/[^0-9]/g, "");
@@ -165,14 +168,16 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
         </div>
       </div>
 
-      {/* MEDIA BANNER: VIDEO ATAU POSTER FOTO */}
+      {/* MEDIA BANNER: VIDEO ATAU POSTER FOTO SESUAI RASIO ASLI (VERTIKAL & HORIZONTAL TIDAK TERPOTONG) */}
       {mediaSource && (
         <div
-          className="w-full relative bg-neutral-900 overflow-hidden cursor-pointer group aspect-[16/9] sm:aspect-[2/1] min-h-[220px] max-h-[460px]"
-          onClick={handleActionClick}
+          className={`w-full relative bg-neutral-950 overflow-hidden group flex items-center justify-center ${
+            ad.actionType !== "none" ? "cursor-pointer" : ""
+          }`}
+          onClick={ad.actionType !== "none" ? handleActionClick : undefined}
         >
           {isVideo ? (
-            <div className="relative w-full h-full flex items-center justify-center bg-black">
+            <div className="relative w-full flex items-center justify-center bg-black">
               <video
                 ref={videoRef}
                 src={mediaSource}
@@ -181,7 +186,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 loop
                 autoPlay
                 muted={isMuted}
-                className="w-full h-full object-cover sm:object-contain bg-black"
+                className="w-full h-auto max-h-[85vh] object-contain bg-black block mx-auto"
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
               />
@@ -215,21 +220,23 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               </div>
             </div>
           ) : (
-            <>
+            <div className="relative w-full flex items-center justify-center bg-neutral-950">
               <img
                 src={mediaSource}
                 alt={ad.title}
                 loading="eager"
                 decoding="async"
                 fetchPriority="high"
-                className="w-full h-full object-cover sm:object-contain bg-neutral-950 transition duration-300 group-hover:scale-[1.01]"
+                className="w-full h-auto max-h-[85vh] object-contain block mx-auto bg-neutral-950 transition duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <span className="text-white text-xs font-bold drop-shadow">
-                  Ketuk untuk membuka promosi &rarr;
-                </span>
-              </div>
-            </>
+              {ad.actionType !== "none" && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                  <span className="text-white text-xs font-bold drop-shadow">
+                    Ketuk untuk membuka promosi &rarr;
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

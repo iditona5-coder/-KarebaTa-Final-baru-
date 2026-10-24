@@ -59,8 +59,9 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     src.includes("video") ||
     src.includes(".mp4");
 
-  // Orientasi media
+  // Orientasi & rasio aspek asli media
   const [orientation, setOrientation] = useState<"vertical" | "horizontal">("vertical");
+  const [mediaAspectRatio, setMediaAspectRatio] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -234,6 +235,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
       setFsDuration(duration);
     }
     if (videoWidth && videoHeight) {
+      setMediaAspectRatio(videoWidth / videoHeight);
       if (videoHeight >= videoWidth) {
         setOrientation("vertical");
       } else {
@@ -247,6 +249,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     setIsImageReady(true);
     const { naturalWidth, naturalHeight } = e.currentTarget;
     if (naturalWidth && naturalHeight) {
+      setMediaAspectRatio(naturalWidth / naturalHeight);
       if (naturalHeight >= naturalWidth) {
         setOrientation("vertical");
       } else {
@@ -581,10 +584,12 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     return (
       <>
         <div
-          className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${
-            orientation === "vertical" ? "aspect-[4/5] min-h-[320px] max-h-[560px]" : "aspect-[16/10] min-h-[260px] max-h-[560px]"
-          } ${className}`}
-          style={{ touchAction: "pan-y" }}
+          className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${className}`}
+          style={{
+            aspectRatio: mediaAspectRatio ? `${mediaAspectRatio}` : (orientation === "vertical" ? "4/5" : "16/10"),
+            maxHeight: "85vh",
+            touchAction: "pan-y",
+          }}
           onClick={toggleVideoPlay}
           onPointerDown={handleMediaPointerDown}
           onPointerMove={handleMediaPointerMove}
@@ -596,7 +601,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             src={activeVideoSrc || src}
             poster={posterUrl || thumbnail}
             preload="auto"
-            className="w-full h-full object-cover object-center cursor-pointer block pointer-events-none"
+            className="w-full h-full object-contain object-center cursor-pointer block pointer-events-none"
             style={{ touchAction: "pan-y" }}
             playsInline
             loop
@@ -720,10 +725,12 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   return (
     <>
       <div
-        className={`w-full relative overflow-hidden bg-neutral-900 select-none feed-media-wrapper ${
-          orientation === "vertical" ? "aspect-[4/5] min-h-[320px] max-h-[560px]" : "aspect-[16/10] min-h-[260px] max-h-[560px]"
-        } ${className}`}
-        style={{ touchAction: "pan-y" }}
+        className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${className}`}
+        style={{
+          aspectRatio: mediaAspectRatio ? `${mediaAspectRatio}` : (orientation === "vertical" ? "4/5" : "16/10"),
+          maxHeight: "85vh",
+          touchAction: "pan-y",
+        }}
         onPointerDown={handleMediaPointerDown}
         onPointerMove={handleMediaPointerMove}
         onPointerUp={handleMediaPointerUp}
@@ -744,7 +751,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           onLoad={handleImageLoad}
-          className={`w-full h-full object-cover object-center block select-none pointer-events-none transition-opacity duration-150 ${
+          className={`w-full h-full object-contain object-center block select-none pointer-events-none transition-opacity duration-150 ${
             isImageReady ? "opacity-100" : "opacity-0"
           }`}
           style={{ WebkitTouchCallout: "none", touchAction: "pan-y" }}

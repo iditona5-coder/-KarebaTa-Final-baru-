@@ -37,6 +37,16 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
       setIsPlaying(true);
       setIsMuted(true);
       setCountdown(3);
+
+      // Kunci scroll latar belakang beranda saat pop-up terbuka agar layar belakang tidak tergulir
+      const prevBodyOverflow = document.body.style.overflow;
+      const prevHtmlOverflow = document.documentElement.style.overflow;
+      const prevTouchAction = document.body.style.touchAction;
+
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -46,7 +56,13 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
           return prev - 1;
         });
       }, 1000);
-      return () => clearInterval(timer);
+
+      return () => {
+        clearInterval(timer);
+        document.body.style.overflow = prevBodyOverflow;
+        document.documentElement.style.overflow = prevHtmlOverflow;
+        document.body.style.touchAction = prevTouchAction;
+      };
     }
   }, [isOpen]);
 
@@ -107,12 +123,18 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
   return (
     <div
       id="sponsor-popup-modal-overlay"
-      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 max-w-md mx-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 max-w-md mx-auto animate-in fade-in duration-200 select-none touch-none overscroll-none"
       onClick={onClose}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
+      }}
     >
       <div
         className="w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {/* TOP BAR / HEADER MODAL POP-UP */}
         <div className="px-4 py-3 bg-gradient-to-r from-amber-500/10 via-amber-50 to-white border-b border-amber-100 flex items-center justify-between">
@@ -150,10 +172,10 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
           </button>
         </div>
 
-        {/* AREA MEDIA FOTO ATAU VIDEO DENGAN TAMPILAN MEWAH */}
-        <div className="relative w-full aspect-video sm:aspect-[4/3] bg-black overflow-hidden flex items-center justify-center group select-none">
+        {/* AREA MEDIA FOTO ATAU VIDEO DENGAN RASIO ASLI (TIDAK TERPOTONG) */}
+        <div className="relative w-full max-h-[50vh] bg-neutral-950 overflow-hidden flex items-center justify-center group select-none">
           {isVideo ? (
-            <div className="relative w-full h-full flex items-center justify-center bg-black">
+            <div className="relative w-full flex items-center justify-center bg-black">
               <video
                 ref={videoRef}
                 src={mediaSource}
@@ -162,7 +184,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 autoPlay
                 muted={isMuted}
                 loop
-                className="w-full h-full object-contain cursor-pointer"
+                className="w-full h-auto max-h-[50vh] object-contain cursor-pointer block mx-auto"
                 onClick={toggleVideoPlayback}
                 onError={() => {
                   if (onShowToast) onShowToast("Gagal memuat video iklan.");
@@ -216,7 +238,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
             <img
               src={ad.imageUrl}
               alt={ad.title}
-              className="w-full h-full object-cover"
+              className="w-full h-auto max-h-[50vh] object-contain block mx-auto bg-neutral-950"
               loading="eager"
             />
           )}

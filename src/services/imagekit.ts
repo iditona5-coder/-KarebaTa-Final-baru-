@@ -139,8 +139,19 @@ export async function uploadToImageKit(
     console.warn('[ImageKit Proxy] Gagal:', proxyErr);
   }
 
-  // 3. Fallback darurat lokal agar antarmuka tidak macet
-  const fallbackUrl = typeof fileData === 'string' ? fileData : '';
+  // 3. Fallback darurat lokal agar antarmuka tidak macet (ubah ke base64 jika File/Blob)
+  let fallbackUrl = typeof fileData === 'string' ? fileData : '';
+  if (!fallbackUrl && fileData instanceof Blob) {
+    try {
+      fallbackUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string) || '');
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(fileData);
+      });
+    } catch {}
+  }
+
   return {
     url: fallbackUrl,
     thumbnailUrl: fallbackUrl,
