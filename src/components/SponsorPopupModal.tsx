@@ -30,13 +30,17 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
   const [isMuted, setIsMuted] = useState(true);
   const [countdown, setCountdown] = useState<number>(3);
   const [canSkipImmediately, setCanSkipImmediately] = useState(true);
+  const [isVerticalMedia, setIsVerticalMedia] = useState(false);
+  const [mediaAspectRatio, setMediaAspectRatio] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && ad) {
       setIsPlaying(true);
       setIsMuted(true);
       setCountdown(3);
+      setIsVerticalMedia(false);
+      setMediaAspectRatio(null);
 
       // Kunci scroll latar belakang beranda saat pop-up terbuka agar layar belakang tidak tergulir
       const prevBodyOverflow = document.body.style.overflow;
@@ -123,7 +127,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
   return (
     <div
       id="sponsor-popup-modal-overlay"
-      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 max-w-md mx-auto animate-in fade-in duration-200 select-none touch-none overscroll-none"
+      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 select-none touch-none overscroll-none"
       onClick={onClose}
       onTouchMove={(e) => {
         if (e.target === e.currentTarget) {
@@ -132,7 +136,9 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
       }}
     >
       <div
-        className="w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+        className={`w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 transition-all ${
+          isVerticalMedia ? "max-w-[340px] sm:max-w-[360px]" : "max-w-md"
+        }`}
         onClick={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
@@ -172,10 +178,10 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
           </button>
         </div>
 
-        {/* AREA MEDIA FOTO ATAU VIDEO DENGAN RASIO ASLI (TIDAK TERPOTONG) */}
-        <div className="relative w-full max-h-[50vh] bg-neutral-950 overflow-hidden flex items-center justify-center group select-none">
+        {/* AREA MEDIA FOTO ATAU VIDEO DENGAN RASIO ASLI - TANPA HITAM & TANPA BLUR */}
+        <div className="relative w-full max-h-[55vh] bg-neutral-100/60 overflow-hidden flex items-center justify-center group select-none">
           {isVideo ? (
-            <div className="relative w-full flex items-center justify-center bg-black">
+            <div className="relative w-full flex items-center justify-center">
               <video
                 ref={videoRef}
                 src={mediaSource}
@@ -184,8 +190,16 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 autoPlay
                 muted={isMuted}
                 loop
-                className="w-full h-auto max-h-[50vh] object-contain cursor-pointer block mx-auto"
+                className="w-full h-auto max-h-[55vh] object-contain cursor-pointer block mx-auto"
                 onClick={toggleVideoPlayback}
+                onLoadedMetadata={(e) => {
+                  const vid = e.currentTarget;
+                  if (vid.videoWidth && vid.videoHeight) {
+                    const ratio = vid.videoWidth / vid.videoHeight;
+                    setMediaAspectRatio(ratio);
+                    setIsVerticalMedia(vid.videoHeight > vid.videoWidth * 1.05);
+                  }
+                }}
                 onError={() => {
                   if (onShowToast) onShowToast("Gagal memuat video iklan.");
                 }}
@@ -238,8 +252,16 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
             <img
               src={ad.imageUrl}
               alt={ad.title}
-              className="w-full h-auto max-h-[50vh] object-contain block mx-auto bg-neutral-950"
+              className="w-full h-auto max-h-[55vh] object-contain block mx-auto"
               loading="eager"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth && img.naturalHeight) {
+                  const ratio = img.naturalWidth / img.naturalHeight;
+                  setMediaAspectRatio(ratio);
+                  setIsVerticalMedia(img.naturalHeight > img.naturalWidth * 1.05);
+                }
+              }}
             />
           )}
         </div>

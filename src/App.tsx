@@ -442,6 +442,7 @@ export default function KarebaFeedFinal() {
   // Penanganan Iklan Pop-up Otomatis saat Pengguna Membuka Beranda
   useEffect(() => {
     if (!adSettings.isEnabled) return;
+    if (adSettings.popupEnabled === false) return;
     const now = Date.now();
     const activeAds = adSettings.ads.filter(
       (a) => a.isActive && (!a.expiresAt || a.expiresAt > now)

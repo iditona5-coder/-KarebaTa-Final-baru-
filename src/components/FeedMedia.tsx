@@ -584,8 +584,9 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     return (
       <>
         <div
-          className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${className}`}
+          className={`w-full relative overflow-hidden bg-black flex items-center justify-center select-none feed-media-wrapper ${className}`}
           style={{
+            width: "100%",
             aspectRatio: mediaAspectRatio ? `${mediaAspectRatio}` : (orientation === "vertical" ? "4/5" : "16/10"),
             maxHeight: "85vh",
             touchAction: "pan-y",
@@ -725,8 +726,9 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   return (
     <>
       <div
-        className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${className}`}
+        className={`w-full relative overflow-hidden bg-white flex items-center justify-center select-none feed-media-wrapper ${className}`}
         style={{
+          width: "100%",
           aspectRatio: mediaAspectRatio ? `${mediaAspectRatio}` : (orientation === "vertical" ? "4/5" : "16/10"),
           maxHeight: "85vh",
           touchAction: "pan-y",

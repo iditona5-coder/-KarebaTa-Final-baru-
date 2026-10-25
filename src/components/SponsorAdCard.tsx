@@ -177,7 +177,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
           onClick={ad.actionType !== "none" ? handleActionClick : undefined}
         >
           {isVideo ? (
-            <div className="relative w-full flex items-center justify-center bg-black">
+            <div className="relative w-full flex items-center justify-center bg-neutral-100/60">
               <video
                 ref={videoRef}
                 src={mediaSource}
@@ -186,7 +186,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 loop
                 autoPlay
                 muted={isMuted}
-                className="w-full h-auto max-h-[85vh] object-contain bg-black block mx-auto"
+                className="w-full h-auto max-h-[85vh] object-contain block mx-auto"
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
               />
@@ -220,14 +220,14 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="relative w-full flex items-center justify-center bg-neutral-950">
+            <div className="relative w-full flex items-center justify-center bg-neutral-100/60">
               <img
                 src={mediaSource}
                 alt={ad.title}
                 loading="eager"
                 decoding="async"
                 fetchPriority="high"
-                className="w-full h-auto max-h-[85vh] object-contain block mx-auto bg-neutral-950 transition duration-300"
+                className="w-full h-auto max-h-[85vh] object-contain block mx-auto transition duration-300"
               />
               {ad.actionType !== "none" && (
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">

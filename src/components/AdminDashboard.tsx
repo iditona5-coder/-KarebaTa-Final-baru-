@@ -95,6 +95,7 @@ import {
 import { BulletinItem } from "./RunningTextBar";
 import { deleteFromImageKit, uploadToImageKit } from "../services/imagekit";
 import { compressImageFile } from "../utils/compressor";
+import { SponsorPopupModal } from "./SponsorPopupModal";
 
 export type AdminMenuKey =
   | "dashboard"
@@ -203,6 +204,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adFormExpiry, setAdFormExpiry] = useState("Aktif Selamanya");
   const [adFormFormat, setAdFormFormat] = useState<"feed" | "popup" | "both">("both");
   const [adFormDuration, setAdFormDuration] = useState<number>(0); // 0 = Selamanya, 3, 7, 14, 30 hari
+  const [previewPopupAd, setPreviewPopupAd] = useState<SponsorAd | null>(null);
 
   // State Fitur Menu 8: Pengaturan & Ganti Password / Passcode
   const [settingsAppName, setSettingsAppName] = useState(appConfig.appName);
@@ -1430,15 +1432,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        if (typeof window !== "undefined" && (window as any).__KAREBATA_TRIGGER_POPUP_AD__) {
-                          (window as any).__KAREBATA_TRIGGER_POPUP_AD__();
+                        const activeAds = adSettings.ads.filter((a) => a.isActive);
+                        const popupAds = activeAds.filter(
+                          (a) => a.displayFormat === "popup" || a.displayFormat === "both" || !a.displayFormat
+                        );
+                        if (popupAds.length > 0) {
+                          setPreviewPopupAd(popupAds[0]);
+                        } else if (activeAds.length > 0) {
+                          setPreviewPopupAd(activeAds[0]);
                         } else {
-                          showToast("Buka beranda warga untuk melihat tampilan pop-up.");
+                          showToast("Belum ada iklan aktif yang dapat ditampilkan sebagai pop-up.");
                         }
                       }}
-                      className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs rounded-xl border border-neutral-300 transition cursor-pointer flex items-center gap-1.5"
+                      className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs rounded-xl border border-purple-200 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
                       <span>Uji Tampil Pop-up Sekarang</span>
                     </button>
                     <button
@@ -1517,27 +1525,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </button>
                   </div>
 
-                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex items-center justify-between">
+                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Frekuensi Tayang Feed</p>
-                      <p className="text-[11px] text-neutral-500">Tampil setiap berapa kabar?</p>
+                      <p className="text-xs font-bold text-neutral-900">Jarak / Frekuensi Iklan di Beranda</p>
+                      <p className="text-[11px] text-neutral-500">
+                        Diselingi setiap <b>{adSettings.frequency || 4} berita warga</b> (tidak menumpuk)
+                      </p>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 self-start sm:self-auto">
                       {[3, 4, 5, 7].map((num) => (
                         <button
                           key={num}
                           type="button"
                           onClick={async () => {
                             await saveAdSettingsToFirestore({ frequency: num });
-                            showToast(`Frekuensi diubah: 1 iklan tiap ${num} kabar`);
+                            showToast(`Jarak diubah: 1 iklan diselingi tiap ${num} kabar warga`);
                           }}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                            adSettings.frequency === num
-                              ? "bg-amber-500 text-slate-950"
-                              : "bg-neutral-100 text-neutral-600"
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            (adSettings.frequency || 4) === num
+                              ? "bg-amber-500 text-slate-950 shadow-xs"
+                              : "bg-neutral-200/70 text-neutral-700 hover:bg-neutral-200"
                           }`}
                         >
-                          {num}
+                          Tiap {num}
                         </button>
                       ))}
                     </div>
@@ -1671,6 +1681,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               + Perpanjang 7 Hari
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPopupAd(ad)}
+                            className="px-2 py-1 text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            title="Lihat Pratinjau Pop-up Iklan Ini"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Lihat Pop-up</span>
+                          </button>
 
                           <button
                             type="button"
@@ -1939,7 +1959,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               let mediaFile: File | string = file;
                               if (file.type.startsWith("image/")) {
                                 try {
-                                  mediaFile = await compressImageFile(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+                                  mediaFile = await compressImageFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.90 });
                                 } catch {}
                               }
                               
@@ -2573,6 +2593,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL PRATINJAU IKLAN POP-UP DI ADMIN */}
+      <SponsorPopupModal
+        ad={previewPopupAd}
+        isOpen={Boolean(previewPopupAd)}
+        onClose={() => setPreviewPopupAd(null)}
+        onShowToast={showToast}
+      />
     </div>
   );
 };
