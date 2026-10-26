@@ -587,8 +587,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           className={`w-full relative overflow-hidden bg-black flex items-center justify-center select-none feed-media-wrapper ${className}`}
           style={{
             width: "100%",
-            aspectRatio: mediaAspectRatio ? `${mediaAspectRatio}` : (orientation === "vertical" ? "4/5" : "16/10"),
-            maxHeight: "85vh",
+            minWidth: "100%",
+            aspectRatio: orientation === "vertical" ? "4/5" : (mediaAspectRatio ? `${mediaAspectRatio}` : "16/9"),
             touchAction: "pan-y",
           }}
           onClick={toggleVideoPlay}
@@ -602,8 +602,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             src={activeVideoSrc || src}
             poster={posterUrl || thumbnail}
             preload="auto"
-            className="w-full h-full object-contain object-center cursor-pointer block pointer-events-none"
-            style={{ touchAction: "pan-y" }}
+            className="w-full h-full object-cover object-center cursor-pointer block pointer-events-none"
+            style={{ width: "100%", height: "100%", touchAction: "pan-y" }}
             playsInline
             loop
             muted={isMuted}
@@ -726,11 +726,11 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   return (
     <>
       <div
-        className={`w-full relative overflow-hidden bg-white flex items-center justify-center select-none feed-media-wrapper ${className}`}
+        className={`w-full relative overflow-hidden bg-neutral-100/50 flex items-center justify-center select-none feed-media-wrapper ${className}`}
         style={{
           width: "100%",
-          aspectRatio: mediaAspectRatio ? `${mediaAspectRatio}` : (orientation === "vertical" ? "4/5" : "16/10"),
-          maxHeight: "85vh",
+          minWidth: "100%",
+          aspectRatio: orientation === "vertical" ? "4/5" : (mediaAspectRatio ? `${mediaAspectRatio}` : "16/9"),
           touchAction: "pan-y",
         }}
         onPointerDown={handleMediaPointerDown}
@@ -753,10 +753,10 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           onLoad={handleImageLoad}
-          className={`w-full h-full object-contain object-center block select-none pointer-events-none transition-opacity duration-150 ${
+          className={`w-full h-full object-cover object-center block select-none pointer-events-none transition-opacity duration-150 ${
             isImageReady ? "opacity-100" : "opacity-0"
           }`}
-          style={{ WebkitTouchCallout: "none", touchAction: "pan-y" }}
+          style={{ width: "100%", height: "100%", WebkitTouchCallout: "none", touchAction: "pan-y" }}
         />
 
         {/* Tombol Icon Layar Penuh di Atas Kiri */}

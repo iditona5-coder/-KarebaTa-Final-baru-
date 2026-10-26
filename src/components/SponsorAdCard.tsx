@@ -100,6 +100,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [adAspectRatio, setAdAspectRatio] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const initialLetter = ad.advertiserName ? ad.advertiserName.trim().charAt(0).toUpperCase() : "S";
@@ -133,6 +134,9 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
     videoRef.current.muted = !videoRef.current.muted;
     setIsMuted(videoRef.current.muted);
   };
+
+  const isVerticalAd = adAspectRatio !== null && adAspectRatio < 1;
+  const adDisplayRatio = isVerticalAd ? "4/5" : (adAspectRatio ? `${adAspectRatio}` : "16/9");
 
   return (
     <article
@@ -168,16 +172,21 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
         </div>
       </div>
 
-      {/* MEDIA BANNER: VIDEO ATAU POSTER FOTO SESUAI RASIO ASLI (VERTIKAL & HORIZONTAL TIDAK TERPOTONG) */}
+      {/* MEDIA BANNER: VIDEO ATAU POSTER FOTO SESUAI RASIO ASLI (100% RAPAT KANAN-KIRI) */}
       {mediaSource && (
         <div
-          className={`w-full relative bg-neutral-950 overflow-hidden group flex items-center justify-center ${
+          className={`w-full relative overflow-hidden group flex items-center justify-center bg-neutral-100/40 ${
             ad.actionType !== "none" ? "cursor-pointer" : ""
           }`}
+          style={{
+            width: "100%",
+            minWidth: "100%",
+            aspectRatio: adDisplayRatio,
+          }}
           onClick={ad.actionType !== "none" ? handleActionClick : undefined}
         >
           {isVideo ? (
-            <div className="relative w-full flex items-center justify-center bg-neutral-100/60">
+            <div className="relative w-full h-full flex items-center justify-center">
               <video
                 ref={videoRef}
                 src={mediaSource}
@@ -186,7 +195,14 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 loop
                 autoPlay
                 muted={isMuted}
-                className="w-full h-auto max-h-[85vh] object-contain block mx-auto"
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  if (v.videoWidth && v.videoHeight) {
+                    setAdAspectRatio(v.videoWidth / v.videoHeight);
+                  }
+                }}
+                className="w-full h-full object-cover block"
+                style={{ width: "100%", height: "100%" }}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
               />
@@ -220,14 +236,21 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="relative w-full flex items-center justify-center bg-neutral-100/60">
+            <div className="relative w-full h-full flex items-center justify-center">
               <img
                 src={mediaSource}
                 alt={ad.title}
                 loading="eager"
                 decoding="async"
                 fetchPriority="high"
-                className="w-full h-auto max-h-[85vh] object-contain block mx-auto transition duration-300"
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalWidth && img.naturalHeight) {
+                    setAdAspectRatio(img.naturalWidth / img.naturalHeight);
+                  }
+                }}
+                className="w-full h-full object-cover block transition duration-300"
+                style={{ width: "100%", height: "100%" }}
               />
               {ad.actionType !== "none" && (
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
