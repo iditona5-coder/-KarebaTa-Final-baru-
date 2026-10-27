@@ -33,6 +33,7 @@ import {
   MoreHorizontal,
   Link2,
   Clock,
+  Plus,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { FeedMedia } from "./components/FeedMedia";
@@ -524,6 +525,21 @@ export default function KarebaFeedFinal() {
   };
 
   // Handler klik galeri/media di header (harus login terlebih dahulu)
+    // Handler klik kartu Ebbu kareba (Buat reel / kabar warga)
+  const handleEbbuKarebaClick = () => {
+    if (currentBanStatus.isBanned) {
+      showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
+      return;
+    }
+    if (!currentUser) {
+      setLoginRedirectMessage("Masuk dengan Akun Google untuk membuat kabar atau video reel warga.");
+      setPendingUploadAction("gallery");
+      setIsLoginModalOpen(true);
+      return;
+    }
+    openCustomGallery();
+  };
+
   const handleGalleryClick = () => {
     if (currentBanStatus.isBanned) {
       showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
@@ -2728,7 +2744,7 @@ export default function KarebaFeedFinal() {
                 type="button"
                 onClick={() => setShowSavedSection(false)}
                 className="flex items-center gap-2 text-left cursor-pointer group"
-                aria-label="Lihat Kabar kamu"
+                aria-label="Lihat Kabar Saya"
               >
                 <h3
                   className={`font-bold text-sm transition ${
@@ -2737,7 +2753,7 @@ export default function KarebaFeedFinal() {
                       : "text-neutral-500 group-hover:text-neutral-800"
                   }`}
                 >
-                  Kabar kamu
+                  Kabar Saya
                 </h3>
                 <span
                   className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full transition ${
@@ -2797,7 +2813,7 @@ export default function KarebaFeedFinal() {
                     onClick={() => setShowSavedSection(false)}
                     className="inline-flex items-center gap-1 text-xs text-[#00632B] font-bold hover:underline cursor-pointer"
                   >
-                    <span>Kembali ke Kabar Kamu</span>
+                    <span>Kembali ke Kabar Saya</span>
                     <span>&rarr;</span>
                   </button>
                 </div>
@@ -2878,26 +2894,79 @@ export default function KarebaFeedFinal() {
             )
           ) : (
             /* KARTU KABAR KAMU (TAMPIL KETIKA KARTU TERSIMPAN TIDAK AKTIF) */
-            posts.length === 0 ? (
-              <div className="px-3">
-                <button
-                  type="button"
-                  onClick={openCamera}
-                  className="w-full flex flex-col items-center justify-center p-3.5 bg-neutral-50 hover:bg-neutral-100 rounded-2xl border border-dashed border-neutral-300 transition active:scale-[0.99] cursor-pointer text-center shadow-2xs group"
-                >
-                  <div className="w-full text-center">
-                    <p className="text-xs font-bold text-neutral-800 group-hover:text-neutral-900 transition">
-                      Belum ada kabar kamu
-                    </p>
-                    <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
-                      Bagikan kabar atau momen terbaru di sekitarmu
-                    </p>
+            <CardCarousel id="user-posts-carousel" className="animate-fade-in">
+              {/* KARTU BUAT REELS (EBBU KAREBA) - PERSIS SCREENSHOT INSTAGRAM REELS */}
+              <div
+                id="user-create-reel-card"
+                data-card-item="true"
+                onClick={() => {
+                  if (!(window as any).__KAREBATA_IS_DRAGGING_CARD__) {
+                    handleEbbuKarebaClick();
+                  }
+                }}
+                onContextMenu={(e) => e.preventDefault()}
+                className="relative w-[104px] min-w-[104px] max-w-[104px] h-[108px] rounded-xl p-1.5 cursor-pointer transition-all duration-150 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col items-center justify-center border border-white/20 overflow-hidden"
+                style={{
+                  WebkitTouchCallout: "none",
+                  touchAction: "pan-x pan-y",
+                  background:
+                    "linear-gradient(180deg, #833ab4 0%, #c13584 30%, #e1306c 60%, #fd1d1d 85%, #fcb045 100%)",
+                }}
+              >
+                {/* Lingkaran Putih Tengah */}
+                <div className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform duration-150">
+                  {/* Ikon Reel Gaya Instagram */}
+                  <svg
+                    className="w-5 h-5 drop-shadow-2xs"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <defs>
+                      <linearGradient id="reelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#833ab4" />
+                        <stop offset="50%" stopColor="#e1306c" />
+                        <stop offset="100%" stopColor="#fd1d1d" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="3" y="3" width="18" height="18" rx="5" fill="url(#reelGrad)" />
+                    <path d="M7 3L10.5 9H8.5L5 3H7Z" fill="white" />
+                    <path d="M12.5 3L16 9H14L10.5 3H12.5Z" fill="white" />
+                    <path d="M18 3L20.5 7.5V3H18Z" fill="white" />
+                    <path d="M3.5 9H20.5" stroke="white" strokeWidth="0.8" />
+                    <polygon points="10,12 10,17 15,14.5" fill="white" />
+                  </svg>
+                  {/* Badge Bulat Merah Tanda Tambah (+) */}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#ff3040] border-[1.5px] border-white flex items-center justify-center shadow-xs">
+                    <Plus className="w-2.5 h-2.5 text-white stroke-[3]" />
                   </div>
-                </button>
+                </div>
+
+                {/* Teks: Ebbu kareba */}
+                <span className="text-white font-bold text-[11px] leading-tight text-center drop-shadow-xs mt-2 tracking-tight">
+                  Ebbu kareba
+                </span>
               </div>
-            ) : (
-              <CardCarousel id="user-posts-carousel" className="animate-fade-in">
-                {posts.map((p) => {
+
+              {posts.length === 0 ? (
+                <div
+                  data-card-item="true"
+                  onClick={() => {
+                    if (!(window as any).__KAREBATA_IS_DRAGGING_CARD__) {
+                      handleEbbuKarebaClick();
+                    }
+                  }}
+                  className="relative w-[130px] min-w-[130px] max-w-[130px] h-[108px] bg-neutral-50 hover:bg-neutral-100 rounded-xl p-2 cursor-pointer transition-all duration-150 border border-dashed border-neutral-300 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center active:scale-[0.98]"
+                >
+                  <p className="text-[11px] font-bold text-neutral-800 leading-tight">
+                    Kabar Saya Masih Kosong
+                  </p>
+                  <p className="text-[9.5px] text-neutral-500 mt-1 leading-snug">
+                    Klik Ebbu kareba untuk bagikan momen
+                  </p>
+                </div>
+              ) : (
+                posts.map((p) => {
                   const isVid =
                     p.mediaType === "video" ||
                     p.img?.startsWith("data:video") ||
@@ -2970,9 +3039,9 @@ export default function KarebaFeedFinal() {
                       <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
                     </div>
                   );
-                })}
-              </CardCarousel>
-            )
+                })
+              )}
+            </CardCarousel>
           )}
         </section>
 
