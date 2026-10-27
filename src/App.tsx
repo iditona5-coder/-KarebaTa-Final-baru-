@@ -188,8 +188,22 @@ export default function KarebaFeedFinal() {
     }
   }, [likedPostIds]);
 
-  // Papan Teks Berjalan (Kabar Kilat & Warta Terkini)
+  // Papan Teks Berjalan (Kabar Kilat & Warta Terkini + Info Iklan)
   const [bulletins, setBulletins] = useState<BulletinItem[]>([
+    {
+      id: "b-promo-1",
+      category: "PASANG IKLAN",
+      text: "📢 Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
+      location: "Layanan Iklan",
+      time: "Aktif",
+    },
+    {
+      id: "b-promo-2",
+      category: "IKLAN VIDEO",
+      text: "🎬 Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
+      location: "Slot Terbatas",
+      time: "Aktif",
+    },
     {
       id: "b-1",
       category: "LALU LINTAS",
@@ -198,11 +212,11 @@ export default function KarebaFeedFinal() {
       time: "Terkini",
     },
     {
-      id: "b-2",
-      category: "IKON KOTA",
-      text: "Lampu hias jembatan utama aktif berkilau indah menghubungkan kawasan pesisir.",
-      location: "Jembatan Utama",
-      time: "15 mnt lalu",
+      id: "b-promo-3",
+      category: "PROMO UMKM",
+      text: "✨ Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
+      location: "Kemitraan Usaha",
+      time: "Terkini",
     },
     {
       id: "b-3",
@@ -210,20 +224,6 @@ export default function KarebaFeedFinal() {
       text: "BMKG Wilayah: Suhu 26°C - 31°C, hembusan angin sepoi-sepoi dan potensi gerimis ringan di lereng perbukitan.",
       location: "Kawasan Sekitar",
       time: "30 mnt lalu",
-    },
-    {
-      id: "b-4",
-      category: "KULINER",
-      text: "Semarak aneka kuliner tradisional dan jajanan hangat ramai dinikmati warga petang ini.",
-      location: "Sentra Kuliner",
-      time: "1 jam lalu",
-    },
-    {
-      id: "b-5",
-      category: "AGENDA WARGA",
-      text: "Aksi bersih pantai bersama Komunitas Relawan Minggu pagi pukul 06.30 WITA di pesisir pantai.",
-      location: "Pesisir Pantai",
-      time: "2 jam lalu",
     },
   ]);
 
@@ -2402,7 +2402,20 @@ export default function KarebaFeedFinal() {
             <RunningTextBar
               announcements={bulletins}
               onItemClick={(text) => {
-                showToast(text);
+                const lower = text.toLowerCase();
+                if (
+                  lower.includes("iklan") ||
+                  lower.includes("promo") ||
+                  lower.includes("umkm") ||
+                  lower.includes("tarif") ||
+                  lower.includes("whatsapp") ||
+                  lower.includes("pasang")
+                ) {
+                  // Langsung buka modal Bantuan / Hubungi WhatsApp Admin untuk pasang iklan
+                  setIsHelpOpen(true);
+                } else {
+                  showToast(text);
+                }
               }}
             />
           )}
@@ -2809,23 +2822,23 @@ export default function KarebaFeedFinal() {
                         }
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="relative w-[125px] min-w-[125px] max-w-[125px] bg-emerald-50/80 hover:bg-emerald-100/70 rounded-xl p-2 cursor-pointer transition-colors border border-emerald-200/80 shadow-xs shrink-0 select-none"
+                      className="relative w-[104px] min-w-[104px] max-w-[104px] bg-emerald-50/80 hover:bg-emerald-100/70 rounded-xl p-1.5 cursor-pointer transition-all duration-150 border border-emerald-200/80 shadow-2xs shrink-0 select-none active:scale-[0.98]"
                       style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
                     >
-                      <div className="relative overflow-hidden rounded-lg bg-neutral-100 h-20 w-full flex items-center justify-center select-none">
+                      <div className="relative overflow-hidden rounded-lg bg-neutral-100 h-[68px] w-full flex items-center justify-center select-none">
                         {isVid ? (
-                          <div className="relative h-20 w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-lg">
+                          <div className="relative h-[68px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-lg">
                             <img
                               src={p.thumbnail || p.img}
                               alt={p.title}
                               draggable={false}
                               onContextMenu={(e) => e.preventDefault()}
-                              className="h-20 w-full object-cover rounded-lg pointer-events-none select-none"
+                              className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
                               style={{ WebkitTouchCallout: "none" }}
                             />
                             <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none">
-                              <div className="w-6 h-6 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-sm border border-white/20">
-                                <Play className="w-3 h-3 fill-white translate-x-0.5" />
+                              <div className="w-5 h-5 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xs border border-white/20">
+                                <Play className="w-2.5 h-2.5 fill-white translate-x-0.5" />
                               </div>
                             </div>
                           </div>
@@ -2835,29 +2848,29 @@ export default function KarebaFeedFinal() {
                             alt={p.title}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
-                            className="h-20 w-full object-cover rounded-lg pointer-events-none select-none"
+                            className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
                             style={{ WebkitTouchCallout: "none" }}
                             onError={(e) => {
                               e.currentTarget.style.display = "none";
                             }}
                           />
                         )}
-                        <span className="absolute bottom-1 right-1 text-[9px] bg-black/75 px-1.5 py-0.5 rounded text-white backdrop-blur-xs flex items-center gap-1 z-10 font-medium">
+                        <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
                           {isVid ? (
                             <>
-                              <Video className="w-2.5 h-2.5 text-emerald-400" />
+                              <Video className="w-2 h-2 text-emerald-400" />
                               <span>Video</span>
                             </>
                           ) : (
                             <>
-                              <ImageIcon className="w-2.5 h-2.5 text-amber-400" />
+                              <ImageIcon className="w-2 h-2 text-amber-400" />
                               <span>Foto</span>
                             </>
                           )}
                         </span>
                       </div>
-                      <p className="text-xs mt-1.5 font-bold text-neutral-900 truncate">{p.title}</p>
-                      <p className="text-[10px] text-neutral-500 truncate">{p.loc}</p>
+                      <p className="text-[11.5px] mt-1 font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
+                      <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
                     </div>
                   );
                 })}
@@ -2902,12 +2915,12 @@ export default function KarebaFeedFinal() {
                         }
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="relative w-[125px] min-w-[125px] max-w-[125px] bg-neutral-50 hover:bg-neutral-100 rounded-xl p-2 cursor-pointer transition-colors border border-neutral-200 shadow-xs shrink-0 select-none group"
+                      className="relative w-[104px] min-w-[104px] max-w-[104px] bg-neutral-50 hover:bg-neutral-100 rounded-xl p-1.5 cursor-pointer transition-all duration-150 border border-neutral-200 shadow-2xs shrink-0 select-none group active:scale-[0.98]"
                       style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
                     >
-                      <div className="relative overflow-hidden rounded-lg bg-neutral-100 h-20 w-full flex items-center justify-center select-none">
+                      <div className="relative overflow-hidden rounded-lg bg-neutral-100 h-[68px] w-full flex items-center justify-center select-none">
                         {isVid ? (
-                          <div className="relative h-20 w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-lg">
+                          <div className="relative h-[68px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-lg">
                             <img
                               src={p.thumbnail || p.img}
                               alt={p.title}
@@ -2915,12 +2928,12 @@ export default function KarebaFeedFinal() {
                               decoding="async"
                               draggable={false}
                               onContextMenu={(e) => e.preventDefault()}
-                              className="h-20 w-full object-cover rounded-lg pointer-events-none select-none"
+                              className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
                               style={{ WebkitTouchCallout: "none" }}
                             />
                             <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none">
-                              <div className="w-6 h-6 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-sm border border-white/20">
-                                <Play className="w-3 h-3 fill-white translate-x-0.5" />
+                              <div className="w-5 h-5 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xs border border-white/20">
+                                <Play className="w-2.5 h-2.5 fill-white translate-x-0.5" />
                               </div>
                             </div>
                           </div>
@@ -2932,29 +2945,29 @@ export default function KarebaFeedFinal() {
                             decoding="async"
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
-                            className="h-20 w-full object-cover rounded-lg pointer-events-none select-none"
+                            className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
                             style={{ WebkitTouchCallout: "none" }}
                             onError={(e) => {
                               e.currentTarget.style.display = "none";
                             }}
                           />
                         )}
-                        <span className="absolute bottom-1 right-1 text-[9px] bg-black/75 px-1.5 py-0.5 rounded text-white backdrop-blur-xs flex items-center gap-1 z-10 font-medium">
+                        <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
                           {isVid ? (
                             <>
-                              <Video className="w-2.5 h-2.5 text-emerald-400" />
+                              <Video className="w-2 h-2 text-emerald-400" />
                               <span>Video</span>
                             </>
                           ) : (
                             <>
-                              <ImageIcon className="w-2.5 h-2.5 text-amber-400" />
+                              <ImageIcon className="w-2 h-2 text-amber-400" />
                               <span>Foto</span>
                             </>
                           )}
                         </span>
                       </div>
-                      <p className="text-xs mt-1.5 font-bold text-neutral-900 truncate">{p.title}</p>
-                      <p className="text-[10px] text-neutral-500 truncate">{p.loc}</p>
+                      <p className="text-[11.5px] mt-1 font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
+                      <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
                     </div>
                   );
                 })}

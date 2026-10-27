@@ -16,18 +16,32 @@ interface RunningTextBarProps {
 
 const DEFAULT_ANNOUNCEMENTS: BulletinItem[] = [
   {
+    id: "b-promo-1",
+    category: "PASANG IKLAN",
+    text: "📢 Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
+    location: "Layanan Iklan",
+    time: "Aktif",
+  },
+  {
+    id: "b-promo-2",
+    category: "IKLAN VIDEO",
+    text: "🎬 Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
+    location: "Slot Terbatas",
+    time: "Aktif",
+  },
+  {
     id: "b-1",
     category: "LALU LINTAS",
-    text: "Arus lalu lintas pesisir dan jalur protokol terpantau lancar dan ramai lancar petang ini.",
+    text: "Arus lalu lintas pesisir dan jalur protokol terpantau lancar dan nyaman dilalui sore ini.",
     location: "Kawasan Pesisir",
     time: "Terkini",
   },
   {
-    id: "b-2",
-    category: "IKON KOTA",
-    text: "Penerangan dan lampu hias jembatan utama aktif normal mempercantik panorama pesisir pantai.",
-    location: "Jembatan Utama",
-    time: "15 mnt lalu",
+    id: "b-promo-3",
+    category: "PROMO UMKM",
+    text: "✨ Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
+    location: "Kemitraan Usaha",
+    time: "Terkini",
   },
   {
     id: "b-3",
@@ -35,20 +49,6 @@ const DEFAULT_ANNOUNCEMENTS: BulletinItem[] = [
     text: "BMKG Wilayah: Suhu 26°C - 31°C, hembusan angin laut sepoi-sepoi dan potensi gerimis ringan di lereng perbukitan.",
     location: "Kawasan Sekitar",
     time: "30 mnt lalu",
-  },
-  {
-    id: "b-4",
-    category: "KULINER",
-    text: "Festival aneka olahan tradisional dan kuliner hangat diserbu pengunjung di area sentra kuliner.",
-    location: "Sentra Kuliner",
-    time: "1 jam lalu",
-  },
-  {
-    id: "b-5",
-    category: "AGENDA WARGA",
-    text: "Aksi gotong royong peduli pesisir bersama komunitas relawan Minggu pagi 06.30 WITA.",
-    location: "Area Pesisir",
-    time: "2 jam lalu",
   },
 ];
 

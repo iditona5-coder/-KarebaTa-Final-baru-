@@ -55,7 +55,7 @@ export function CardCarousel({
   const scrollStep = (direction: "left" | "right") => {
     const el = containerRef.current;
     if (!el) return;
-    const step = 150;
+    const step = 120;
     el.scrollBy({
       left: direction === "left" ? -step : step,
       behavior: "smooth",
@@ -197,7 +197,7 @@ export function CardCarousel({
       <div
         id={id}
         ref={containerRef}
-        className={`flex gap-2.5 overflow-x-auto no-scrollbar pl-2.5 pr-4 pb-1 select-none ${
+        className={`flex gap-2 overflow-x-auto no-scrollbar pl-2.5 pr-4 pb-1 select-none ${
           isPointerDown ? "cursor-grabbing" : "cursor-grab"
         } ${className}`}
         style={{

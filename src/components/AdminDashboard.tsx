@@ -1572,11 +1572,105 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {activeMenu === "bulletins" && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                    <Megaphone className="w-4 h-4 text-emerald-600" />
-                    <span>Kelola Teks Pengumuman Berjalan</span>
-                  </h3>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-neutral-200 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-emerald-600" />
+                      <span>Kelola Teks Pengumuman & Promo Iklan Berjalan</span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Teks berjalan di bawah bar aplikasi untuk warta warga serta penawaran tarif iklan & promo UMKM.
+                    </p>
+                  </div>
+
+                  {/* Tombol Terbitkan Paket Iklan Sekaligus */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const promoItems = [
+                        {
+                          id: `bulletin-promo-${Date.now()}-1`,
+                          category: "PASANG IKLAN",
+                          text: "📢 Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
+                          location: "Layanan Iklan",
+                        },
+                        {
+                          id: `bulletin-promo-${Date.now()}-2`,
+                          category: "IKLAN VIDEO",
+                          text: "🎬 Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
+                          location: "Slot Terbatas",
+                        },
+                        {
+                          id: `bulletin-promo-${Date.now()}-3`,
+                          category: "PROMO UMKM",
+                          text: "✨ Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
+                          location: "Kemitraan UMKM",
+                        },
+                      ];
+
+                      for (const item of promoItems) {
+                        await addBulletinToFirestore(item);
+                      }
+                      showToast("3 Paket Teks Promo Iklan berhasil diterbitkan ke Papan Berjalan!");
+                    }}
+                    className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-slate-900" />
+                    <span>+ Terbitkan 3 Info Iklan Sekaligus</span>
+                  </button>
+                </div>
+
+                {/* Tombol Templat Cepat 1-Klik Isi Form */}
+                <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl space-y-2">
+                  <p className="text-[11px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
+                    <span>⚡ Templat Cepat Teks Iklan (Klik untuk Otomatis Mengisi Form):</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewBulletinCategory("PASANG IKLAN");
+                        setNewBulletinLocation("Layanan Iklan");
+                        setNewBulletinText(
+                          "📢 Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!"
+                        );
+                        showToast("Templat Tarif Iklan diterapkan ke formulir.");
+                      }}
+                      className="px-2.5 py-1.5 bg-white hover:bg-amber-100 text-amber-950 text-[11px] font-bold rounded-lg border border-amber-300 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                    >
+                      <span>📢 Templat Tarif (Rp 25rb / 3 Hari)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewBulletinCategory("IKLAN VIDEO");
+                        setNewBulletinLocation("Slot Terbatas");
+                        setNewBulletinText(
+                          "🎬 Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179."
+                        );
+                        showToast("Templat Iklan Video & Pop-up diterapkan ke formulir.");
+                      }}
+                      className="px-2.5 py-1.5 bg-white hover:bg-purple-100 text-purple-950 text-[11px] font-bold rounded-lg border border-purple-300 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                    >
+                      <span>🎬 Templat Iklan Video & Pop-up</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewBulletinCategory("PROMO UMKM");
+                        setNewBulletinLocation("Kemitraan UMKM");
+                        setNewBulletinText(
+                          "✨ Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!"
+                        );
+                        showToast("Templat Promo UMKM diterapkan ke formulir.");
+                      }}
+                      className="px-2.5 py-1.5 bg-white hover:bg-emerald-100 text-emerald-950 text-[11px] font-bold rounded-lg border border-emerald-300 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                    >
+                      <span>✨ Templat Promo UMKM Warga</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Form Tambah Pengumuman */}
@@ -1597,14 +1691,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 >
                   <div>
                     <label className="text-xs font-bold text-neutral-600 block mb-1">
-                      Isi Teks Pengumuman *
+                      Isi Teks Pengumuman / Promosi Iklan *
                     </label>
                     <input
                       type="text"
                       required
                       value={newBulletinText}
                       onChange={(e) => setNewBulletinText(e.target.value)}
-                      placeholder="Contoh: Info Pemadaman Bergilir PLN..."
+                      placeholder="Contoh: 📢 Pasang iklan mulai Rp 25.000 (3 hari), hubungi WA Admin..."
                       className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -1617,6 +1711,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={(e) => setNewBulletinCategory(e.target.value)}
                         className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
                       >
+                        <option value="PASANG IKLAN">📢 PASANG IKLAN (PROMO TARIF)</option>
+                        <option value="IKLAN VIDEO">🎬 IKLAN VIDEO & POP-UP</option>
+                        <option value="PROMO UMKM">✨ PROMO UMKM & BISNIS</option>
                         <option value="INFO RESMI">INFO RESMI</option>
                         <option value="PERINGATAN">PERINGATAN</option>
                         <option value="LALU LINTAS">LALU LINTAS</option>
@@ -1625,11 +1722,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-neutral-600 block mb-1">Lokasi</label>
+                      <label className="text-xs font-bold text-neutral-600 block mb-1">Lokasi / Keterangan Tag</label>
                       <input
                         type="text"
                         value={newBulletinLocation}
                         onChange={(e) => setNewBulletinLocation(e.target.value)}
+                        placeholder="Contoh: Layanan Iklan / Pesisir Pantai"
                         className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
                       />
                     </div>
@@ -1637,9 +1735,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
                   >
-                    + Terbitkan Pengumuman Realtime
+                    + Terbitkan Pengumuman / Iklan Realtime
                   </button>
                 </form>
 
@@ -1651,9 +1749,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="bg-neutral-50 border border-neutral-200 p-3.5 rounded-2xl flex items-center justify-between gap-3"
                     >
                       <div className="min-w-0 flex-1">
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700">
-                          {item.category}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                              item.category === "PASANG IKLAN"
+                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                : item.category === "IKLAN VIDEO"
+                                ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                : item.category === "PROMO UMKM"
+                                ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                                : "bg-neutral-200 text-neutral-800"
+                            }`}
+                          >
+                            {item.category}
+                          </span>
+                          {item.location && (
+                            <span className="text-[10px] text-neutral-400 font-medium flex items-center gap-0.5">
+                              📍 {item.location}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs font-semibold text-neutral-900 mt-1 leading-snug">
                           {item.text}
                         </p>
