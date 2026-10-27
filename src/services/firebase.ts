@@ -1295,6 +1295,8 @@ export function listenToAdSettings(
           const data = docSnap.data();
           const merged: AdSettings = {
             isEnabled: typeof data.isEnabled === 'boolean' ? data.isEnabled : DEFAULT_AD_SETTINGS.isEnabled,
+            popupEnabled: typeof data.popupEnabled === 'boolean' ? data.popupEnabled : DEFAULT_AD_SETTINGS.popupEnabled,
+            popupDelaySeconds: typeof data.popupDelaySeconds === 'number' ? data.popupDelaySeconds : (DEFAULT_AD_SETTINGS.popupDelaySeconds || 2),
             frequency: typeof data.frequency === 'number' ? data.frequency : DEFAULT_AD_SETTINGS.frequency,
             ads: Array.isArray(data.ads) ? data.ads : DEFAULT_AD_SETTINGS.ads,
             updatedAt: data.updatedAtServer?.toMillis?.() || data.updatedAt || Date.now(),

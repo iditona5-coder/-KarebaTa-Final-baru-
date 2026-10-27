@@ -2399,15 +2399,6 @@ export default function KarebaFeedFinal() {
                   >
                     <CameraIcon className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
                   </button>
-                  <button
-                    id="header-gallery-btn"
-                    type="button"
-                    onClick={handleGalleryClick}
-                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
-                    aria-label="Pilih Foto atau Video dari Galeri"
-                  >
-                    <ImageIcon className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
-                  </button>
                 </div>
               </>
             )}
@@ -2913,9 +2904,27 @@ export default function KarebaFeedFinal() {
                     "linear-gradient(180deg, #004d21 0%, #00632B 40%, #059669 75%, #10b981 100%)",
                 }}
               >
-                {/* Lingkaran Putih Tengah dengan Ikon Play ▶️ */}
+                {/* Lingkaran Putih Tengah dengan Ikon Media & Badge Play ▶️ */}
                 <div className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform duration-150">
-                  <Play className="w-5 h-5 text-[#00632B] fill-[#00632B] ml-0.5" />
+                  {/* Ikon Media (Galeri Foto & Video) */}
+                  <svg className="w-5 h-5 drop-shadow-2xs" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="mediaGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#00632B" />
+                        <stop offset="100%" stopColor="#059669" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="2.5" y="3.5" width="19" height="17" rx="3.5" fill="url(#mediaGreenGrad)" />
+                    <circle cx="8" cy="8.5" r="1.5" fill="white" />
+                    <path d="M4.5 17.5L9.5 12L13 16L15.5 13.5L19.5 17.5H4.5Z" fill="white" />
+                  </svg>
+
+                  {/* Badge Ikon Play Menghadap Kanan ▶️ */}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00632B] border-[1.5px] border-white flex items-center justify-center shadow-xs">
+                    <svg className="w-2 h-2 fill-white ml-[1px]" viewBox="0 0 10 10">
+                      <polygon points="2.5,2 8,5 2.5,8" fill="white" />
+                    </svg>
+                  </div>
                 </div>
 
                 {/* Teks: Ebbu kareba */}

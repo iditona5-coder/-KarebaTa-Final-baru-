@@ -48,6 +48,7 @@ import {
   Image as ImageIcon,
   Play,
   Upload,
+  MapPin,
 } from "lucide-react";
 import {
   loginAdminWithEmailPassword,
@@ -1841,6 +1842,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setAdFormActionType("whatsapp");
                         setAdFormTarget("");
                         setAdFormBtnText("Hubungi WhatsApp Toko");
+                        setAdFormLocation("");
                         setIsAdModalOpen(true);
                       }}
                       className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer"
@@ -1862,9 +1864,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <button
                       type="button"
                       onClick={async () => {
-                        await saveAdSettingsToFirestore({ isEnabled: !adSettings.isEnabled });
+                        const newEnabled = !adSettings.isEnabled;
+                        setAdSettings((prev) => ({ ...prev, isEnabled: newEnabled }));
+                        await saveAdSettingsToFirestore({ isEnabled: newEnabled });
                         showToast(
-                          !adSettings.isEnabled
+                          newEnabled
                             ? "Iklan di beranda warga diaktifkan."
                             : "Iklan di beranda warga dinonaktifkan."
                         );
@@ -1879,28 +1883,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </button>
                   </div>
 
-                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-neutral-900">Iklan Pop-up Otomatis</p>
-                      <p className="text-[11px] text-neutral-500">
-                        {adSettings.popupEnabled !== false ? "Aktif saat buka beranda" : "Nonaktifkan pop-up"}
-                      </p>
+                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-bold text-neutral-900">Iklan Pop-up Otomatis</p>
+                        <p className="text-[11px] text-neutral-500">
+                          {adSettings.popupEnabled !== false ? "Aktif saat buka beranda" : "Nonaktif (pop-up mati)"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const newPopup = adSettings.popupEnabled === false ? true : false;
+                          if (newPopup) {
+                            try {
+                              sessionStorage.removeItem("karebata_popup_ad_shown");
+                            } catch {}
+                          }
+                          setAdSettings((prev) => ({ ...prev, popupEnabled: newPopup }));
+                          await saveAdSettingsToFirestore({ popupEnabled: newPopup });
+                          showToast(newPopup ? "Pop-up iklan otomatis diaktifkan." : "Pop-up iklan otomatis dimatikan.");
+                        }}
+                        className="cursor-pointer"
+                        title={adSettings.popupEnabled !== false ? "Ketuk untuk Mematikan Pop-up" : "Ketuk untuk Mengaktifkan Pop-up"}
+                      >
+                        {adSettings.popupEnabled !== false ? (
+                          <ToggleRight className="w-10 h-10 text-emerald-600" />
+                        ) : (
+                          <ToggleLeft className="w-10 h-10 text-slate-600" />
+                        )}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const newPopup = adSettings.popupEnabled === false ? true : false;
-                        await saveAdSettingsToFirestore({ popupEnabled: newPopup });
-                        showToast(newPopup ? "Pop-up iklan otomatis diaktifkan." : "Pop-up iklan otomatis dimatikan.");
-                      }}
-                      className="cursor-pointer"
-                    >
-                      {adSettings.popupEnabled !== false ? (
-                        <ToggleRight className="w-10 h-10 text-emerald-600" />
-                      ) : (
-                        <ToggleLeft className="w-10 h-10 text-slate-600" />
-                      )}
-                    </button>
+
+                    {/* Pengatur Waktu Jeda Pop-up saat aktif */}
+                    {adSettings.popupEnabled !== false && (
+                      <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px]">
+                        <span className="text-neutral-500 font-medium">Jeda Pop-up:</span>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 5].map((sec) => (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={async () => {
+                                setAdSettings((prev) => ({ ...prev, popupDelaySeconds: sec }));
+                                await saveAdSettingsToFirestore({ popupDelaySeconds: sec });
+                                showToast(`Jeda pop-up diatur ${sec} detik setelah beranda terbuka`);
+                              }}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                                (adSettings.popupDelaySeconds || 2) === sec
+                                  ? "bg-purple-600 text-white shadow-xs"
+                                  : "bg-neutral-200/70 text-neutral-700 hover:bg-neutral-200"
+                              }`}
+                            >
+                              {sec}s
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1966,6 +2006,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div>
                           <h4 className="text-xs font-bold text-neutral-900">{ad.title}</h4>
                           <p className="text-xs text-amber-600 font-semibold">{ad.advertiserName}</p>
+                          {ad.location && (
+                            <p className="text-[11px] text-neutral-500 flex items-center gap-1 mt-0.5">
+                              <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
+                              <span>{ad.location}</span>
+                            </p>
+                          )}
                           <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed mt-1">
                             {ad.description}
                           </p>
@@ -2084,7 +2130,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setAdFormActionType(ad.actionType || "none");
                               setAdFormTarget(ad.actionTarget || "");
                               setAdFormBtnText(ad.actionButtonText || (ad.actionType === "whatsapp" ? "Pesan via WhatsApp" : ""));
-                              setAdFormLocation(ad.location || "Wilayah & Sekitarnya");
+                              setAdFormLocation(ad.location || "");
                               setIsAdModalOpen(true);
                             }}
                             className="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg hover:bg-neutral-100 transition cursor-pointer"
@@ -2295,6 +2341,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           placeholder="Warkop Sudirman & Roastery"
                           className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
                         />
+                      </div>
+
+                      {/* Input Lokasi / Wilayah Toko (Opsional / Fleksibel) */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-neutral-800 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Lokasi / Wilayah Toko</span>
+                          </label>
+                          <span className="text-[10px] text-neutral-400 font-medium">Opsional (bisa dikosongkan)</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={adFormLocation}
+                          onChange={(e) => setAdFormLocation(e.target.value)}
+                          placeholder="Contoh: Palu Timur, Kota Palu / Sekitar Sulteng"
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-emerald-600"
+                        />
+                        <p className="text-[10px] text-neutral-400 mt-1">
+                          Jika diisi, akan tampil pin lokasi 📍 di kartu iklan beranda dan pop-up.
+                        </p>
                       </div>
 
                       <div>
