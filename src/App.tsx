@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { FeedMedia } from "./components/FeedMedia";
-import { FeedItem, PostItem, ReportItem, HelpSettings, DEFAULT_HELP_SETTINGS, SponsorAd, AdSettings, DEFAULT_AD_SETTINGS } from "./types";
+import { FeedItem, PostItem, ReportItem, HelpSettings, DEFAULT_HELP_SETTINGS, SponsorAd, AdSettings, DEFAULT_AD_SETTINGS, ReactionType } from "./types";
 import { KarebaTaLogo, KarebaPinIcon } from "./components/KarebaTaLogo";
 import { SearchModal, SearchFilterCategory } from "./components/SearchModal";
 import { CommentActions } from "./components/CommentActions";
@@ -45,6 +45,7 @@ import { ShareBar } from "./components/ShareBar";
 import { HelpContactModal } from "./components/HelpContactModal";
 import { SponsorAdCard } from "./components/SponsorAdCard";
 import { SponsorPopupModal } from "./components/SponsorPopupModal";
+import { ReactionButton } from "./components/ReactionButton";
 import {
   extractVideoThumbnail,
   getVideoDuration,
@@ -188,6 +189,26 @@ export default function KarebaFeedFinal() {
       console.warn("Gagal menyimpan liked posts:", e);
     }
   }, [likedPostIds]);
+
+  // Reaksi emoji warga (❤️, 😆, 🥲, 😱, 😡) tersimpan di perangkat lokal
+  const [userReactions, setUserReactions] = useState<Record<string, ReactionType>>(() => {
+    try {
+      const stored = localStorage.getItem("karebata_user_reactions");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const userReactionsRef = useRef(userReactions);
+  useEffect(() => {
+    userReactionsRef.current = userReactions;
+    try {
+      localStorage.setItem("karebata_user_reactions", JSON.stringify(userReactions));
+    } catch (e) {
+      console.warn("Gagal menyimpan user reactions:", e);
+    }
+  }, [userReactions]);
 
   // Papan Teks Berjalan (Kabar Kilat & Warta Terkini + Info Iklan)
   const [bulletins, setBulletins] = useState<BulletinItem[]>([
@@ -743,9 +764,14 @@ export default function KarebaFeedFinal() {
               likedPostIdsRef.current.includes(r.id) ||
               (currentUid && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === currentUid)) ||
               Boolean(prev?.isLiked);
+            const userReaction =
+              userReactionsRef.current[r.id] ||
+              prev?.userReaction ||
+              (isLiked ? "❤️" : undefined);
             return {
               ...r,
               isLiked: Boolean(isLiked),
+              userReaction: userReaction,
             };
           });
           const localOnly = prevFeed.filter((p) => {
@@ -1232,9 +1258,14 @@ export default function KarebaFeedFinal() {
             likedPostIdsRef.current.includes(r.id) ||
             (currentUid && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === currentUid)) ||
             Boolean(prev?.isLiked);
+          const userReaction =
+            userReactionsRef.current[r.id] ||
+            prev?.userReaction ||
+            (isLiked ? "❤️" : undefined);
           return {
             ...r,
             isLiked: Boolean(isLiked),
+            userReaction: userReaction,
           };
         });
 
@@ -1554,14 +1585,27 @@ export default function KarebaFeedFinal() {
     }
   };
 
-  // Toggle Like pada feed (sinkron dengan counter like di atas)
-  const handleToggleLike = (id: string) => {
+  // Menangani Reaksi Emoji Warga (❤️, 😆, 🥲, 😱, 😡)
+  const handlePostReaction = (id: string, reaction: ReactionType | null) => {
     const targetItem = feed.find((item) => item.id === id);
     if (!targetItem) return;
 
-    const newLiked = !targetItem.isLiked;
+    const previousReaction = userReactions[id] || (targetItem.isLiked ? "❤️" : null);
+    const newLiked = Boolean(reaction);
 
-    // Perbarui daftar ID postingan yang disukai (tersimpan di localStorage)
+    // Update map reaksi lokal perangkat pengguna
+    const nextUserReactions = { ...userReactions };
+    if (reaction) {
+      nextUserReactions[id] = reaction;
+    } else {
+      delete nextUserReactions[id];
+    }
+    setUserReactions(nextUserReactions);
+    try {
+      localStorage.setItem("karebata_user_reactions", JSON.stringify(nextUserReactions));
+    } catch {}
+
+    // Perbarui daftar ID postingan yang disukai (sinkron dengan likedPostIds)
     setLikedPostIds((prev) => {
       if (newLiked) {
         return prev.includes(id) ? prev : [...prev, id];
@@ -1570,13 +1614,35 @@ export default function KarebaFeedFinal() {
       }
     });
 
+    // Hitung perubahan counter per emoji reaksi
+    const currentReactions: Record<string, number> = { ...(targetItem.reactions || {}) };
+
+    if (previousReaction && currentReactions[previousReaction]) {
+      currentReactions[previousReaction] = Math.max(0, currentReactions[previousReaction] - 1);
+      if (currentReactions[previousReaction] === 0) delete currentReactions[previousReaction];
+    }
+
+    if (reaction) {
+      currentReactions[reaction] = (currentReactions[reaction] || 0) + 1;
+    }
+
+    // Hitung total suka / reaksi
+    let newLikeCount = targetItem.like;
+    if (!previousReaction && reaction) {
+      newLikeCount = targetItem.like + 1;
+    } else if (previousReaction && !reaction) {
+      newLikeCount = Math.max(0, targetItem.like - 1);
+    }
+
     setFeed((prevFeed) =>
       prevFeed.map((item) => {
         if (item.id === id) {
           return {
             ...item,
             isLiked: newLiked,
-            like: newLiked ? item.like + 1 : Math.max(0, item.like - 1),
+            userReaction: reaction || undefined,
+            like: newLikeCount,
+            reactions: currentReactions,
           };
         }
         return item;
@@ -1584,9 +1650,16 @@ export default function KarebaFeedFinal() {
     );
 
     // Sinkronkan ke database Firestore proyek pribadi
-    const updatedCount = newLiked ? targetItem.like + 1 : Math.max(0, targetItem.like - 1);
     const userIdentifier = currentUser?.email || currentUser?.uid || userName || "warga_kareba";
-    togglePostLikeInFirestore(id, updatedCount, userIdentifier, newLiked);
+    togglePostLikeInFirestore(id, newLikeCount, userIdentifier, newLiked, reaction, currentReactions);
+  };
+
+  // Toggle Like standar pada feed (default ❤️ Suka untuk tap biasa)
+  const handleToggleLike = (id: string) => {
+    const targetItem = feed.find((item) => item.id === id);
+    if (!targetItem) return;
+    const isCurrentlyLiked = targetItem.isLiked || Boolean(userReactions[id]);
+    handlePostReaction(id, isCurrentlyLiked ? null : "❤️");
   };
 
   // State untuk menampilkan baris kartu kecil postingan tersimpan saat icon tersimpan diklik
@@ -2219,6 +2292,22 @@ export default function KarebaFeedFinal() {
             isSaved={Boolean(activeDetailPost && savedPostIds.includes(activeDetailPost.id))}
             onToggleSave={handleToggleSave}
             onShare={handlePostShared}
+            isLiked={Boolean(
+              feed.find((f) => f.id === activeDetailPost.id)?.isLiked ||
+              likedPostIds.includes(activeDetailPost.id)
+            )}
+            likeCount={
+              feed.find((f) => f.id === activeDetailPost.id)?.like || 0
+            }
+            userReaction={
+              userReactions[activeDetailPost.id] ||
+              feed.find((f) => f.id === activeDetailPost.id)?.userReaction
+            }
+            reactions={
+              feed.find((f) => f.id === activeDetailPost.id)?.reactions
+            }
+            onReact={handlePostReaction}
+            onToggleLike={(id) => handleToggleLike(id)}
             onDelete={(id) => {
               setPostToDelete({ id, title: activeDetailPost?.title, img: activeDetailPost?.img });
               setActiveDetailPost(null);
@@ -3583,24 +3672,44 @@ export default function KarebaFeedFinal() {
                   })()}
                 </div>
 
-                {/* Post Actions: Suka, Komentar, Bagikan, Laporkan/Hapus, Dilihat (Ukuran Ramping & Profesional) */}
+                {/* Baris Ringkasan Reaksi (Emoji & Total) */}
+                {f.like > 0 && (
+                  <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500 select-none">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center -space-x-1 shrink-0">
+                        {(() => {
+                          const recObj = f.reactions || {};
+                          const sorted = Object.entries(recObj)
+                            .filter(([_, cnt]) => cnt > 0)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([em]) => em);
+                          const displayEmojis = sorted.length > 0 ? sorted.slice(0, 3) : ["❤️"];
+                          return displayEmojis.map((em) => (
+                            <span
+                              key={em}
+                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white border border-neutral-200 text-[11px] shadow-2xs leading-none"
+                            >
+                              {em}
+                            </span>
+                          ));
+                        })()}
+                      </div>
+                      <span className="font-semibold text-neutral-600 text-[11.5px] leading-none">
+                        {f.like.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Post Actions: Suka / Reaksi, Komentar, Bagikan, Laporkan/Hapus, Dilihat (Ukuran Ramping & Profesional) */}
                 <div className="px-4 flex items-center gap-4 sm:gap-6 text-[clamp(12.5px,3.4vw,14px)] font-bold text-neutral-700">
-                  <button
-                    id={`like-btn-${f.id}`}
-                    type="button"
-                    onClick={() => handleToggleLike(f.id)}
-                    className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition ${
-                      f.isLiked ? "text-red-500 font-bold" : "hover:text-red-500 text-neutral-600"
-                    }`}
-                    aria-label="Suka"
-                  >
-                    <Heart
-                      className={`w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] transition-transform active:scale-125 ${
-                        f.isLiked ? "fill-red-500 text-red-500" : "text-neutral-500"
-                      }`}
-                    />
-                    <span className="whitespace-nowrap font-bold">Suka</span>
-                  </button>
+                  <ReactionButton
+                    postId={f.id}
+                    userReaction={userReactions[f.id] || f.userReaction}
+                    isLiked={f.isLiked || likedPostIds.includes(f.id)}
+                    onReact={handlePostReaction}
+                    variant="feed"
+                  />
 
                   <button
                     id={`share-btn-${f.id}`}
@@ -4369,7 +4478,6 @@ export default function KarebaFeedFinal() {
             onToggleSave={handleToggleSave}
             onShare={handlePostShared}
             userName={userName}
-            initial={initial}
             isLiked={Boolean(
               feed.find((f) => f.id === activeDetailPost.id)?.isLiked ||
               likedPostIds.includes(activeDetailPost.id)
@@ -4377,6 +4485,14 @@ export default function KarebaFeedFinal() {
             likeCount={
               feed.find((f) => f.id === activeDetailPost.id)?.like || 0
             }
+            userReaction={
+              userReactions[activeDetailPost.id] ||
+              feed.find((f) => f.id === activeDetailPost.id)?.userReaction
+            }
+            reactions={
+              feed.find((f) => f.id === activeDetailPost.id)?.reactions
+            }
+            onReact={handlePostReaction}
             onToggleLike={(id) => handleToggleLike(id)}
             commentsCount={
               feed.find((f) => f.id === activeDetailPost.id)?.comments?.length || 0

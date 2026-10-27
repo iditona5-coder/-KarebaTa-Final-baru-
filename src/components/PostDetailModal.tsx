@@ -11,9 +11,10 @@ import {
   MoreHorizontal,
   Link2,
 } from "lucide-react";
-import { PostItem, FeedItem } from "../types";
+import { PostItem, FeedItem, ReactionType } from "../types";
 import { FeedMedia } from "./FeedMedia";
 import { ShareBar } from "./ShareBar";
+import { ReactionButton } from "./ReactionButton";
 
 interface PostDetailModalProps {
   post: PostItem | null;
@@ -28,6 +29,9 @@ interface PostDetailModalProps {
   onToggleSave?: (postId: string) => void;
   isLiked?: boolean;
   likeCount?: number;
+  userReaction?: ReactionType | null;
+  reactions?: Record<string, number>;
+  onReact?: (postId: string, reaction: ReactionType | null) => void;
   onToggleLike?: (id: string) => void;
   views?: number;
   userName?: string;
@@ -49,6 +53,9 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onToggleSave,
   isLiked = false,
   likeCount = 0,
+  userReaction,
+  reactions,
+  onReact,
   onToggleLike,
   views,
   userName = "Kamu",
@@ -320,26 +327,54 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             })()}
           </div>
 
-          {/* Post Actions: Suka, Bagikan, Laporkan / Hapus (Persis seperti di feed, bersih tanpa icon X) */}
+          {/* Baris Ringkasan Reaksi (Emoji & Total) */}
+          {likeCount > 0 && (
+            <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500 select-none">
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center -space-x-1 shrink-0">
+                  {(() => {
+                    const recObj = reactions || {};
+                    const sorted = Object.entries(recObj)
+                      .filter(([_, cnt]) => cnt > 0)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([em]) => em);
+                    const displayEmojis = sorted.length > 0 ? sorted.slice(0, 3) : ["❤️"];
+                    return displayEmojis.map((em) => (
+                      <span
+                        key={em}
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white border border-neutral-200 text-[11px] shadow-2xs leading-none"
+                      >
+                        {em}
+                      </span>
+                    ));
+                  })()}
+                </div>
+                <span className="font-semibold text-neutral-600 text-[11.5px] leading-none">
+                  {likeCount.toLocaleString("id-ID")}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Post Actions: Suka / Reaksi, Bagikan, Laporkan / Hapus (Persis seperti di feed, bersih tanpa icon X) */}
           <div className="px-4 flex items-center gap-6 text-xs font-semibold text-neutral-600">
-            {onToggleLike && (
-              <button
-                id={`like-detail-btn-${post.id}`}
-                type="button"
-                onClick={() => onToggleLike(post.id)}
-                className={`flex items-center gap-1.5 py-1 transition cursor-pointer ${
-                  isLiked ? "text-red-500 font-bold" : "hover:text-red-500 text-neutral-600"
-                }`}
-                aria-label="Suka"
-              >
-                <Heart
-                  className={`w-4 h-4 transition-transform active:scale-125 ${
-                    isLiked ? "fill-red-500 text-red-500" : "text-neutral-500"
-                  }`}
-                />
-                <span>Suka</span>
-              </button>
-            )}
+            {onReact ? (
+              <ReactionButton
+                postId={post.id}
+                userReaction={userReaction}
+                isLiked={isLiked}
+                onReact={onReact}
+                variant="detail"
+              />
+            ) : onToggleLike ? (
+              <ReactionButton
+                postId={post.id}
+                userReaction={userReaction}
+                isLiked={isLiked}
+                onReact={(pid) => onToggleLike(pid)}
+                variant="detail"
+              />
+            ) : null}
 
             <button
               id={`share-detail-btn-${post.id}`}

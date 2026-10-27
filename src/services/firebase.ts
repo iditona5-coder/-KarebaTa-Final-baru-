@@ -182,6 +182,8 @@ export const parsePostDoc = (docSnap: any): FeedItem => {
     views: Number(data.views) || 0,
     shares: Number(data.shares) || 0,
     saves: Number(data.saves) || 0,
+    reactions: data.reactions && typeof data.reactions === 'object' ? data.reactions : {},
+    userReactions: data.userReactions && typeof data.userReactions === 'object' ? data.userReactions : {},
     likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
     isLiked: false, // Ditentukan oleh client lokal
     comments: Array.isArray(data.comments) ? data.comments : [],
@@ -254,29 +256,40 @@ export async function fetchLatestFirestorePosts(): Promise<FeedItem[]> {
 }
 
 /**
- * Memperbarui status Like di Firestore beserta daftar pengguna yang menyukai
+ * Memperbarui status Like & Reaksi Emoji di Firestore beserta daftar pengguna yang bereaksi
  */
 export async function togglePostLikeInFirestore(
   postId: string,
   newLikeCount: number,
   userIdentifier?: string,
-  isLiking: boolean = true
+  isLiking: boolean = true,
+  reaction?: string | null,
+  reactionsMap?: Record<string, number>
 ): Promise<boolean> {
   if (!db) return false;
   try {
     const postRef = doc(db, 'posts', postId);
     const updatePayload: Record<string, any> = {
-      like: newLikeCount,
+      like: Math.max(0, newLikeCount),
     };
+    if (reactionsMap) {
+      updatePayload.reactions = reactionsMap;
+    }
     if (userIdentifier && userIdentifier.trim() !== '') {
       updatePayload.likedBy = isLiking
         ? arrayUnion(userIdentifier.trim())
         : arrayRemove(userIdentifier.trim());
+      const safeKey = userIdentifier.trim().replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
+      if (reaction) {
+        updatePayload[`userReactions.${safeKey}`] = reaction;
+      } else {
+        updatePayload[`userReactions.${safeKey}`] = null;
+      }
     }
     await updateDoc(postRef, updatePayload);
     return true;
   } catch (error) {
-    console.warn('[Firebase] Gagal memperbarui like di Firestore:', error);
+    console.warn('[Firebase] Gagal memperbarui like/reaksi di Firestore:', error);
     return false;
   }
 }

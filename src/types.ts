@@ -1,3 +1,20 @@
+export type ReactionType = "❤️" | "😆" | "🥲" | "😱" | "😡";
+
+export interface EmojiReactionOption {
+  type: ReactionType;
+  label: string;
+  color: string;
+  activeBg: string;
+}
+
+export const EMOJI_REACTIONS: EmojiReactionOption[] = [
+  { type: "❤️", label: "Suka", color: "text-red-500", activeBg: "bg-red-50" },
+  { type: "😆", label: "Lucu", color: "text-amber-500", activeBg: "bg-amber-50" },
+  { type: "🥲", label: "Sedih", color: "text-blue-500", activeBg: "bg-blue-50" },
+  { type: "😱", label: "Kaget", color: "text-orange-500", activeBg: "bg-orange-50" },
+  { type: "😡", label: "Geram", color: "text-rose-600", activeBg: "bg-rose-50" },
+];
+
 export interface PostItem {
   id: string;
   title: string;
@@ -19,6 +36,10 @@ export interface PostItem {
   shares?: number;
   saves?: number;
   views?: number;
+  like?: number;
+  isLiked?: boolean;
+  userReaction?: ReactionType;
+  reactions?: Record<string, number>;
   createdAtTimestamp?: number;
 }
 
@@ -48,6 +69,9 @@ export interface FeedItem {
   like: number;
   likedBy?: string[];
   isLiked?: boolean;
+  userReaction?: ReactionType;
+  reactions?: Record<string, number>;
+  userReactions?: Record<string, string>;
   comments?: CommentItem[];
   location?: string;
   authorUid?: string;
