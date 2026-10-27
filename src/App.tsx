@@ -294,6 +294,7 @@ export default function KarebaFeedFinal() {
         return;
       }
       try {
+        sessionStorage.removeItem("karebata_admin_pin_verified");
         sessionStorage.removeItem("karebata_admin_passcode_verified");
       } catch {}
       if (window.location.hash === "#feed") {
@@ -707,9 +708,16 @@ export default function KarebaFeedFinal() {
     try {
       // 1. Tarik postingan paling mutakhir langsung dari server Firestore
       const freshRemote = await fetchLatestFirestorePosts();
+      const deletedIds = new Set<string>();
+      try {
+        const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+        if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
+      } catch {}
+
       if (freshRemote && freshRemote.length > 0) {
-        const cleanRemote = freshRemote.filter((p) => !isDummyMedia(p));
+        const cleanRemote = freshRemote.filter((p) => !isDummyMedia(p) && !deletedIds.has(p.id));
         const remoteIds = new Set(cleanRemote.map((p) => p.id));
+        const now = Date.now();
         setFeed((prevFeed) => {
           const prevMap = new Map(prevFeed.map((p) => [p.id, p]));
           const currentUid = (currentUser?.email || currentUser?.uid || userName || "").toLowerCase();
@@ -724,7 +732,11 @@ export default function KarebaFeedFinal() {
               isLiked: Boolean(isLiked),
             };
           });
-          const localOnly = prevFeed.filter((p) => !remoteIds.has(p.id) && !isDummyMedia(p));
+          const localOnly = prevFeed.filter((p) => {
+            if (remoteIds.has(p.id) || isDummyMedia(p) || deletedIds.has(p.id)) return false;
+            const ts = Number(p.createdAtTimestamp) || 0;
+            return ts > 0 && now - ts < 60000;
+          });
           const combined = [...updated, ...localOnly];
           combined.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
           return combined;
@@ -934,10 +946,12 @@ export default function KarebaFeedFinal() {
   // State untuk "Postingan Kamu" (Carousel Kabar Kamu - tersimpan permanen di memori lokal, bersih tanpa dummy)
   const [posts, setPosts] = useState<PostItem[]>(() => {
     try {
+      const storedDeleted: string[] = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      const deletedSet = new Set(storedDeleted);
       const stored = localStorage.getItem("karebata_user_posts");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed.filter((p) => !isDummyMedia(p));
+        if (Array.isArray(parsed)) return parsed.filter((p) => !isDummyMedia(p) && !deletedSet.has(p.id));
       }
     } catch {}
     return [];
@@ -946,10 +960,12 @@ export default function KarebaFeedFinal() {
   // State untuk Feed Vertikal (tersimpan permanen di memori lokal & Firestore, bersih tanpa postingan dummy)
   const [feed, setFeed] = useState<FeedItem[]>(() => {
     try {
+      const storedDeleted: string[] = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      const deletedSet = new Set(storedDeleted);
       const stored = localStorage.getItem("karebata_local_feed");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed.filter((f) => !isDummyMedia(f));
+        if (Array.isArray(parsed)) return parsed.filter((f) => !isDummyMedia(f) && !deletedSet.has(f.id));
       }
     } catch {}
     return [];
@@ -970,10 +986,17 @@ export default function KarebaFeedFinal() {
 
   // Sinkronkan postingan milik pengguna dari feed ke dalam daftar 'Kabar Kamu' agar tidak pernah hilang
   useEffect(() => {
+    let deletedIds = new Set<string>();
+    try {
+      const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
+    } catch {}
+
     if (feed.length > 0) {
       setPosts((prev) => {
+        const cleanPrev = prev.filter((p) => !deletedIds.has(p.id) && !isDummyMedia(p));
         const myFeedPosts: PostItem[] = feed
-          .filter((f) => isMyPost(f) && !isDummyMedia(f))
+          .filter((f) => isMyPost(f) && !isDummyMedia(f) && !deletedIds.has(f.id))
           .map((f) => ({
             id: f.id,
             title: f.text || "Kabar Kamu",
@@ -989,12 +1012,14 @@ export default function KarebaFeedFinal() {
             init: f.init || initial,
             isMyPost: true,
           }));
-        if (myFeedPosts.length === 0) return prev;
-        const prevIds = new Set(prev.map((p) => p.id));
+        if (myFeedPosts.length === 0) return cleanPrev;
+        const prevIds = new Set(cleanPrev.map((p) => p.id));
         const missing = myFeedPosts.filter((p) => !prevIds.has(p.id));
-        if (missing.length === 0) return prev;
-        return [...missing, ...prev];
+        if (missing.length === 0) return cleanPrev;
+        return [...missing, ...cleanPrev];
       });
+    } else {
+      setPosts((prev) => prev.filter((p) => !deletedIds.has(p.id) && !isDummyMedia(p)));
     }
   }, [feed, currentUser, userName, userEmail]);
 
@@ -1171,8 +1196,15 @@ export default function KarebaFeedFinal() {
   // Sinkronisasi postingan real-time dari Firestore proyek pribadi
   useEffect(() => {
     const unsubscribe = listenToFirestorePosts((remotePosts) => {
-      const remoteList = (remotePosts || []).filter((p) => !isDummyMedia(p));
+      const deletedIds = new Set<string>();
+      try {
+        const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+        if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
+      } catch {}
+
+      const remoteList = (remotePosts || []).filter((p) => !isDummyMedia(p) && !deletedIds.has(p.id));
       const remoteIds = new Set(remoteList.map((p) => p.id));
+      const now = Date.now();
 
       setFeed((prevFeed) => {
         const prevMap = new Map(prevFeed.map((p) => [p.id, p]));
@@ -1190,10 +1222,16 @@ export default function KarebaFeedFinal() {
           };
         });
 
-        // Pertahankan semua postingan lokal yang baru dibuat dan belum tersinkron di remote (JANGAN DIHAPUS!)
-        const localOnly = prevFeed.filter((p) => !remoteIds.has(p.id) && !isDummyMedia(p));
+        // Pertahankan HANYA postingan lokal baru yang dibuat kurang dari 60 detik lalu dan belum tersinkron (JANGAN BANGKITKAN POSTINGAN LAMA YANG DIHAPUS)
+        const localOnly = prevFeed.filter((p) => {
+          if (remoteIds.has(p.id)) return false;
+          if (isDummyMedia(p)) return false;
+          if (deletedIds.has(p.id)) return false;
+          const ts = Number(p.createdAtTimestamp) || 0;
+          return ts > 0 && now - ts < 60000;
+        });
 
-        // Otomatis sinkronkan postingan lokal warga ke Firestore cloud agar muncul di semua HP warga lainnya
+        // Otomatis sinkronkan postingan lokal baru warga ke Firestore cloud
         if (localOnly.length > 0) {
           localOnly.forEach((localItem) => {
             const matchingPost: PostItem = {
@@ -1224,7 +1262,7 @@ export default function KarebaFeedFinal() {
       // Sinkronkan juga daftar "Kabar Kamu" (carousel atas)
       setPosts((prevPosts) => {
         const remoteUserPosts: PostItem[] = remoteList
-          .filter((p) => isMyPost(p))
+          .filter((p) => isMyPost(p) && !deletedIds.has(p.id))
           .map((p) => ({
             id: p.id,
             title: p.text || "Kabar Kamu",
@@ -1243,7 +1281,14 @@ export default function KarebaFeedFinal() {
           }));
 
         const remoteUserIds = new Set(remoteUserPosts.map((p) => p.id));
-        const localUserPosts = prevPosts.filter((p) => !remoteUserIds.has(p.id) && isMyPost(p) && !isDummyMedia(p));
+        const localUserPosts = prevPosts.filter((p) => {
+          if (remoteUserIds.has(p.id)) return false;
+          if (!isMyPost(p)) return false;
+          if (isDummyMedia(p)) return false;
+          if (deletedIds.has(p.id)) return false;
+          const ts = Number(p.createdAtTimestamp) || 0;
+          return ts > 0 && now - ts < 60000;
+        });
 
         const combinedPosts = [...remoteUserPosts, ...localUserPosts];
         combinedPosts.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
@@ -1531,33 +1576,42 @@ export default function KarebaFeedFinal() {
   // State untuk menampilkan baris kartu kecil postingan tersimpan saat icon tersimpan diklik
   const [showSavedSection, setShowSavedSection] = useState(false);
 
-  // Kompilasi kartu tersimpan dari koleksi postingan horizontal dan feed
-  const savedItems: PostItem[] = savedPostIds
-    .map((id) => {
-      const foundPost = posts.find((p) => p.id === id);
-      if (foundPost) return foundPost;
-      const foundFeed = feed.find((f) => f.id === id);
-      if (foundFeed) {
-        return {
-          id: foundFeed.id,
-          title: foundFeed.text,
-          loc: foundFeed.location || "Kawasan Sekitar",
-          img: foundFeed.img || "",
-          thumbnail: foundFeed.thumbnail,
-          mediaType: foundFeed.mediaType,
-          caption: foundFeed.text,
-          createdAt: foundFeed.time,
-          name: foundFeed.name,
-          user: foundFeed.user,
-          email: foundFeed.email,
-          init: foundFeed.init,
-          avatar: foundFeed.avatar,
-          isMyPost: isMyPost(foundFeed),
-        };
-      }
-      return null;
-    })
-    .filter((item): item is PostItem => item !== null);
+  // Kompilasi kartu tersimpan dari koleksi postingan horizontal dan feed (otomatis hilang jika postingan dihapus oleh admin)
+  const savedItems: PostItem[] = useMemo(() => {
+    let deletedIds = new Set<string>();
+    try {
+      const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
+    } catch {}
+
+    return savedPostIds
+      .filter((id) => !deletedIds.has(id))
+      .map((id) => {
+        const foundFeed = feed.find((f) => f.id === id && !deletedIds.has(f.id));
+        if (foundFeed) {
+          return {
+            id: foundFeed.id,
+            title: foundFeed.text,
+            loc: foundFeed.location || "Kawasan Sekitar",
+            img: foundFeed.img || "",
+            thumbnail: foundFeed.thumbnail,
+            mediaType: foundFeed.mediaType,
+            caption: foundFeed.text,
+            createdAt: foundFeed.time,
+            name: foundFeed.name,
+            user: foundFeed.user,
+            email: foundFeed.email,
+            init: foundFeed.init,
+            avatar: foundFeed.avatar,
+            isMyPost: isMyPost(foundFeed),
+          };
+        }
+        const foundPost = posts.find((p) => p.id === id && !deletedIds.has(p.id));
+        if (foundPost) return foundPost;
+        return null;
+      })
+      .filter((item): item is PostItem => item !== null);
+  }, [savedPostIds, feed, posts]);
 
   // Handler Like pada Komentar
   const handleLikeComment = (commentId: string) => {
@@ -2022,7 +2076,12 @@ export default function KarebaFeedFinal() {
   };
 
   // FUNGSI PENGHAPUSAN SINKRON: Menghapus berita dari Feed DAN Kartu Kabar Kamu sekaligus
-  const handleExecuteDeletePost = (targetId: string, mediaUrl?: string) => {
+  const handleExecuteDeletePost = (
+    targetId: string,
+    mediaUrl?: string,
+    fileId?: string,
+    thumbFileId?: string
+  ) => {
     // 1. Temukan postingan target untuk menyinkronkan ID dan URL medianya
     const feedMatch = feed.find((f) => f.id === targetId || (mediaUrl && f.img === mediaUrl));
     const postMatch = posts.find((p) => p.id === targetId || (mediaUrl && p.img === mediaUrl));
@@ -2031,20 +2090,41 @@ export default function KarebaFeedFinal() {
     if (feedMatch) allMatchingIds.add(feedMatch.id);
     if (postMatch) allMatchingIds.add(postMatch.id);
 
-    // 2. Hapus dari daftar Feed Beranda
-    setFeed((prev) =>
-      prev.filter((item) => !allMatchingIds.has(item.id) && (!targetMedia || item.img !== targetMedia))
-    );
+    // Tandai permanen di daftar deleted posts agar tidak pernah muncul lagi dari sinkronisasi apapun
+    try {
+      const storedDeleted: string[] = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      allMatchingIds.forEach((id) => {
+        if (!storedDeleted.includes(id)) storedDeleted.push(id);
+      });
+      localStorage.setItem("karebata_deleted_posts", JSON.stringify(storedDeleted));
+    } catch {}
 
-    // 3. Hapus dari deretan Kartu Kabar Kamu
-    setPosts((prev) =>
-      prev.filter((item) => !allMatchingIds.has(item.id) && (!targetMedia || item.img !== targetMedia))
-    );
+    // 2. Hapus seketika dari daftar Feed Beranda & sync langsung ke memori lokal
+    setFeed((prev) => {
+      const updated = prev.filter((item) => !allMatchingIds.has(item.id) && (!targetMedia || item.img !== targetMedia));
+      try {
+        localStorage.setItem("karebata_local_feed", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
 
-    // 4. Hapus dari daftar postingan tersimpan
-    setSavedPostIds((prev) =>
-      prev.filter((id) => !allMatchingIds.has(id))
-    );
+    // 3. Hapus seketika dari deretan Kartu Kabar Kamu & sync langsung ke memori lokal
+    setPosts((prev) => {
+      const updated = prev.filter((item) => !allMatchingIds.has(item.id) && (!targetMedia || item.img !== targetMedia));
+      try {
+        localStorage.setItem("karebata_user_posts", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    // 4. Hapus seketika dari daftar postingan tersimpan (Bookmarks) & sync langsung ke memori lokal
+    setSavedPostIds((prev) => {
+      const updated = prev.filter((id) => !allMatchingIds.has(id));
+      try {
+        localStorage.setItem("karebata_saved_posts", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
 
     // 5. Tutup modal detail layar penuh jika postingan yang dihapus sedang terbuka
     if (
@@ -2054,23 +2134,23 @@ export default function KarebaFeedFinal() {
       setActiveDetailPost(null);
     }
 
-    // 6. Hapus dari Firestore
+    // 6. Hapus dari Firestore permanen
     allMatchingIds.forEach((id) => {
       deletePostFromFirestore(id);
     });
 
     // 7. Hapus file gambar/video dari penyimpanan ImageKit CDN
-    const targetFileId = feedMatch?.fileId || postMatch?.fileId;
+    const targetFileId = fileId || feedMatch?.fileId || postMatch?.fileId;
     if (targetFileId) {
       deleteFromImageKit(targetFileId);
     }
-    const targetThumbFileId = feedMatch?.thumbFileId || postMatch?.thumbFileId;
+    const targetThumbFileId = thumbFileId || feedMatch?.thumbFileId || postMatch?.thumbFileId;
     if (targetThumbFileId) {
       deleteFromImageKit(targetThumbFileId);
     }
 
     setPostToDelete(null);
-    showToast("Berita Anda berhasil dihapus");
+    showToast("Postingan berhasil dihapus permanen dari semua penyimpanan");
   };
 
   // JIKA SEDANG MEMBUKA HALAMAN DASBOR ADMIN TERPISAH
@@ -2083,6 +2163,7 @@ export default function KarebaFeedFinal() {
           onBackToFeed={() => {
             if (typeof window !== "undefined") {
               try {
+                sessionStorage.removeItem("karebata_admin_pin_verified");
                 sessionStorage.removeItem("karebata_admin_passcode_verified");
                 window.history.pushState(null, "", "/");
               } catch {}
@@ -2090,8 +2171,8 @@ export default function KarebaFeedFinal() {
             }
             setViewMode("feed");
           }}
-          onPostDeleted={(postId) => {
-            handleExecuteDeletePost(postId);
+          onPostDeleted={(postId, mediaUrl, fileId, thumbFileId) => {
+            handleExecuteDeletePost(postId, mediaUrl, fileId, thumbFileId);
           }}
           onPreviewPost={(post) => {
             setActiveDetailPost({

@@ -112,7 +112,7 @@ export type AdminMenuKey =
 interface AdminDashboardProps {
   feedPosts: FeedItem[];
   onBackToFeed: () => void;
-  onPostDeleted?: (postId: string) => void;
+  onPostDeleted?: (postId: string, mediaUrl?: string, fileId?: string, thumbFileId?: string) => void;
   onPreviewPost?: (post: FeedItem) => void;
 }
 
@@ -126,8 +126,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Verifikasi Kunci Rahasia / Admin Passcode (PIN wajib hapus - Admin langsung masuk tanpa hambatan)
-  const [isPasscodeVerified] = useState<boolean>(true);
+  // Verifikasi Kunci PIN Pengelola (Wajib dimasukkan setiap kali admin keluar dan masuk lagi)
+  const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        return sessionStorage.getItem("karebata_admin_pin_verified") === "true";
+      }
+    } catch {}
+    return false;
+  });
+  const [pinInput, setPinInput] = useState<string>("");
+  const [pinError, setPinError] = useState<string>("");
 
   // Menu Aktif (10 Menu Lengkap)
   const [activeMenu, setActiveMenu] = useState<AdminMenuKey>("dashboard");
@@ -279,15 +288,89 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return currentUser.email?.trim().toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
   }, [currentUser]);
 
-  // Keluar dari Dasbor Admin dan kembali ke beranda warga
+  // Verifikasi Kunci PIN Pengelola
+  const handleVerifyPin = (submittedPin?: string) => {
+    const pin = (submittedPin !== undefined ? submittedPin : pinInput).trim();
+    if (!pin) {
+      setPinError("Silakan masukkan 6 digit PIN pengelola.");
+      return;
+    }
+    const correctPin = (appConfig.adminPasscode || "123456").trim();
+    if (pin === correctPin) {
+      try {
+        sessionStorage.setItem("karebata_admin_pin_verified", "true");
+      } catch {}
+      setIsPinVerified(true);
+      setPinError("");
+      setPinInput("");
+      logAdminActivity("LOGIN", "Admin berhasil membuka Dasbor dengan PIN", currentUser?.email || PRIMARY_ADMIN_EMAIL);
+      showToast("PIN Berhasil Diverifikasi! Selamat Datang.");
+    } else {
+      setPinError("PIN yang Anda masukkan salah. Coba lagi.");
+      setPinInput("");
+    }
+  };
+
+  // Hapus Postingan Permanen dari Dasbor, Feed, Kabar Kamu, dan Semua Penyimpanan
+  const handleDeletePostPermanently = async (post: FeedItem) => {
+    const postId = post.id;
+    const mediaUrl = post.img;
+    const fileId = post.fileId;
+    const thumbFileId = post.thumbFileId;
+
+    // 1. Seketika hapus dari postsList di tampilan Dasbor Admin
+    setPostsList((prev) => prev.filter((p) => p.id !== postId && (!mediaUrl || p.img !== mediaUrl)));
+
+    // 2. Simpan ke blacklist deleted posts di penyimpanan lokal perangkat
+    try {
+      const deletedList: string[] = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      if (!deletedList.includes(postId)) {
+        deletedList.push(postId);
+        localStorage.setItem("karebata_deleted_posts", JSON.stringify(deletedList));
+      }
+    } catch {}
+
+    // 3. Kabari App.tsx agar postingan di feed, kartu kabar kamu, dan bookmarks langsung hilang seketika
+    if (onPostDeleted) {
+      onPostDeleted(postId, mediaUrl, fileId, thumbFileId);
+    }
+
+    // 4. Hapus dari Firestore permanen
+    await deletePostFromFirestore(postId);
+
+    // 5. Hapus file media utama & thumbnail dari ImageKit CDN
+    if (fileId) await deleteFromImageKit(fileId);
+    if (thumbFileId) await deleteFromImageKit(thumbFileId);
+
+    // 6. Catat log audit pengelola
+    await logAdminActivity(
+      "DELETE_DATA",
+      `Admin menghapus permanen postingan #${postId} milik @${post.user || post.name}`,
+      currentUser?.email || PRIMARY_ADMIN_EMAIL
+    );
+
+    showToast("Postingan berhasil dihapus permanen dari semua penyimpanan & beranda.");
+  };
+
+  // Keluar dari Dasbor Admin dan kunci kembali dengan PIN
   const handleExitToFeed = () => {
+    try {
+      sessionStorage.removeItem("karebata_admin_pin_verified");
+      sessionStorage.removeItem("karebata_admin_passcode_verified");
+    } catch {}
+    setIsPinVerified(false);
     onBackToFeed();
   };
 
-  // Handler Logout
+  // Handler Logout & Kunci PIN
   const handleLogout = async () => {
-    await logAdminActivity("LOGOUT", "Admin keluar dari Dashboard", currentUser?.email || PRIMARY_ADMIN_EMAIL);
-    showToast("Anda telah keluar dari Dashboard Admin.");
+    try {
+      sessionStorage.removeItem("karebata_admin_pin_verified");
+      sessionStorage.removeItem("karebata_admin_passcode_verified");
+    } catch {}
+    setIsPinVerified(false);
+    await logAdminActivity("LOGOUT", "Admin keluar dari Dashboard dan mengunci PIN", currentUser?.email || PRIMARY_ADMIN_EMAIL);
+    showToast("Anda telah keluar dan Dasbor Admin terkunci kembali dengan PIN.");
     onBackToFeed();
   };
 
@@ -310,6 +393,179 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [reportsList]);
 
 
+
+  // =========================================================================
+  // TAMPILAN KUNCI PIN KEAMANAN ADMIN (Wajib Masuk Setiap Kali Membuka Dasbor)
+  // =========================================================================
+  if (!isPinVerified) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950 text-white flex flex-col items-center justify-center p-4 sm:p-6 antialiased select-none">
+        {/* Toast Notifikasi */}
+        {toastMessage && (
+          <div className="fixed top-5 z-50 bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl animate-fade-in flex items-center gap-2 border border-emerald-400">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        <div className="w-full max-w-sm bg-neutral-900/90 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+          {/* Logo & Shield Icon */}
+          <div className="flex flex-col items-center">
+            <div className="relative mb-3">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-neutral-900 border-2 border-emerald-500 flex items-center justify-center text-xs">
+                🔒
+              </span>
+            </div>
+            <h2 className="text-xl font-black tracking-tight text-white">
+              Dasbor Pengelola
+            </h2>
+            <p className="text-xs text-neutral-400 mt-1 max-w-[260px] leading-relaxed">
+              Masukkan 6 digit PIN pengelola untuk membuka dan mengelola aplikasi Kareba'Ta.
+            </p>
+          </div>
+
+          {/* 6 Digit Display Indicators */}
+          <div className="flex justify-center items-center gap-2.5 py-1">
+            {[0, 1, 2, 3, 4, 5].map((idx) => {
+              const isFilled = pinInput.length > idx;
+              return (
+                <div
+                  key={idx}
+                  className={`w-9 h-11 sm:w-10 sm:h-12 rounded-xl border flex items-center justify-center text-lg font-black transition-all duration-200 ${
+                    isFilled
+                      ? "border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-sm shadow-emerald-500/20 scale-105"
+                      : "border-neutral-700 bg-neutral-800/60 text-neutral-500"
+                  }`}
+                >
+                  {isFilled ? "●" : ""}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pesan Kesalahan jika PIN salah */}
+          {pinError && (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2 flex items-center justify-center gap-2 text-rose-400 text-xs font-semibold animate-pulse">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{pinError}</span>
+            </div>
+          )}
+
+          {/* Hidden input untuk mendukung pengetikan langsung lewat keyboard fisik / HP */}
+          <input
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={6}
+            autoFocus
+            value={pinInput}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+              setPinInput(val);
+              setPinError("");
+              if (val.length === 6) {
+                handleVerifyPin(val);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && pinInput.length > 0) {
+                handleVerifyPin(pinInput);
+              }
+            }}
+            className="opacity-0 absolute -z-10 w-0 h-0"
+            id="admin-pin-hidden-input"
+          />
+
+          {/* Virtual Keypad (0-9, Hapus, ⌫) */}
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => {
+                  if (pinInput.length < 6) {
+                    const next = pinInput + String(num);
+                    setPinInput(next);
+                    setPinError("");
+                    if (next.length === 6) {
+                      handleVerifyPin(next);
+                    }
+                  }
+                }}
+                className="h-11 rounded-2xl bg-neutral-800/80 hover:bg-neutral-700/80 active:scale-95 text-base font-bold text-white transition cursor-pointer border border-neutral-700/50 shadow-xs"
+              >
+                {num}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                setPinInput("");
+                setPinError("");
+              }}
+              className="h-11 rounded-2xl bg-neutral-800/40 hover:bg-neutral-700/60 active:scale-95 text-xs font-bold text-neutral-400 hover:text-white transition cursor-pointer border border-neutral-800"
+            >
+              Hapus
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (pinInput.length < 6) {
+                  const next = pinInput + "0";
+                  setPinInput(next);
+                  setPinError("");
+                  if (next.length === 6) {
+                    handleVerifyPin(next);
+                  }
+                }
+              }}
+              className="h-11 rounded-2xl bg-neutral-800/80 hover:bg-neutral-700/80 active:scale-95 text-base font-bold text-white transition cursor-pointer border border-neutral-700/50 shadow-xs"
+            >
+              0
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPinInput((prev) => prev.slice(0, -1));
+                setPinError("");
+              }}
+              className="h-11 rounded-2xl bg-neutral-800/40 hover:bg-neutral-700/60 active:scale-95 text-xs font-bold text-neutral-400 hover:text-white transition cursor-pointer border border-neutral-800 flex items-center justify-center"
+            >
+              ⌫
+            </button>
+          </div>
+
+          {/* Tombol Konfirmasi jika sudah 6 digit */}
+          <button
+            type="button"
+            disabled={pinInput.length === 0}
+            onClick={() => handleVerifyPin(pinInput)}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-900/30 transition cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Key className="w-4 h-4" />
+            <span>Buka Dasbor Admin</span>
+          </button>
+
+          {/* Tombol Kembali ke Beranda Warga */}
+          <div className="pt-2 border-t border-neutral-800">
+            <button
+              type="button"
+              onClick={handleExitToFeed}
+              className="w-full py-2 text-xs font-semibold text-neutral-400 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              &larr; <span>Kembali ke Beranda Warga</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // =========================================================================
   // TAMPILAN DASHBOARD ADMIN LENGKAP (10 MENU MATERIAL 3)
@@ -749,8 +1005,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </p>
 
                       <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px] text-neutral-500">
-                        <span>👁️ {post.views || 0} tayang</span>
-                        <span>❤️ {post.like || 0} suka</span>
+                        <div className="flex items-center gap-2">
+                          <span>👁️ {post.views || 0} tayang</span>
+                          <span>❤️ {post.like || 0} suka</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: "Hapus Postingan Permanen",
+                              message: `Yakin ingin menghapus postingan milik @${post.user || post.name || "warga"} ini secara permanen dari server & beranda warga?`,
+                              onConfirm: async () => {
+                                await handleDeletePostPermanently(post);
+                                setConfirmDialog(null);
+                              },
+                            });
+                          }}
+                          className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded-lg transition flex items-center gap-1 cursor-pointer"
+                          title="Hapus permanen"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Hapus</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1083,21 +1360,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   title: "Hapus Postingan Permanen",
                                   message: `Yakin ingin menghapus postingan milik @${post.user || post.name || "warga"} ini secara permanen dari server & beranda warga?`,
                                   onConfirm: async () => {
-                                    // 1. Langsung hapus dari tampilan dasbor seketika
-                                    setPostsList((prev) => prev.filter((p) => p.id !== post.id));
-                                    // 2. Beritahu App.tsx agar postingan di beranda warga langsung terhapus
-                                    if (onPostDeleted) onPostDeleted(post.id);
-                                    // 3. Hapus dari Firestore
-                                    await deletePostFromFirestore(post.id);
-                                    // 4. Hapus media dari ImageKit jika ada
-                                    if (post.fileId) await deleteFromImageKit(post.fileId);
-                                    // 5. Catat audit trail log
-                                    await logAdminActivity(
-                                      "DELETE_DATA",
-                                      `Admin menghapus permanen postingan #${post.id} milik @${post.user || post.name}`,
-                                      currentUser?.email || PRIMARY_ADMIN_EMAIL
-                                    );
-                                    showToast("Postingan berhasil dihapus permanen.");
+                                    await handleDeletePostPermanently(post);
                                     setConfirmDialog(null);
                                   },
                                 });
@@ -2437,20 +2700,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 {/* 2. Keamanan Kunci Admin: Ganti Password & Passcode */}
                 <div className="space-y-6">
-                  {/* Status Kunci Akses Admin (PIN Dihapus) */}
-                  <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-3">
+                  {/* Status & Ganti Kunci PIN Pengelola Admin */}
+                  <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
                         <Key className="w-4 h-4 text-emerald-600" />
-                        <span>Akses Admin Langsung (Bebas PIN)</span>
+                        <span>Kunci PIN Keamanan Dasbor Admin</span>
                       </h3>
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        PIN Dinonaktifkan
+                        PIN Wajib Aktif
                       </span>
                     </div>
                     <p className="text-xs text-neutral-600 leading-relaxed">
-                      Sesuai permintaan Anda, sistem PIN wajib telah dihapus. Admin utama (<b className="text-emerald-700">{PRIMARY_ADMIN_EMAIL}</b>) dapat langsung membuka Dasbor Pengelola kapan saja tanpa perlu memasukkan PIN berulang-ulang di HP maupun browser.
+                      Sesuai protokol keamanan, setiap kali admin keluar dan masuk kembali ke Dasbor Pengelola, admin wajib memasukkan 6 digit PIN ini demi mengamankan data warga.
                     </p>
+
+                    <div className="pt-1 space-y-3">
+                      <div>
+                        <label className="text-xs text-neutral-600 font-bold block mb-1">
+                          Ganti PIN Baru (6 Digit Angka)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            maxLength={6}
+                            value={newAdminPasscode}
+                            onChange={(e) => setNewAdminPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                            placeholder={`PIN saat ini: ${appConfig.adminPasscode || "123456"}`}
+                            className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 font-mono tracking-widest"
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (newAdminPasscode.length !== 6) {
+                                showToast("PIN baru harus terdiri dari 6 angka.");
+                                return;
+                              }
+                              await saveAdminAppConfig({ adminPasscode: newAdminPasscode.trim() });
+                              setAppConfig((prev) => ({ ...prev, adminPasscode: newAdminPasscode.trim() }));
+                              await logAdminActivity(
+                                "SETTINGS_CHANGE",
+                                "Admin memperbarui 6-digit PIN pengelola dasbor",
+                                currentUser?.email || PRIMARY_ADMIN_EMAIL
+                              );
+                              showToast("PIN Dasbor Pengelola berhasil diperbarui!");
+                              setNewAdminPasscode("");
+                            }}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition whitespace-nowrap cursor-pointer"
+                          >
+                            Simpan PIN
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-neutral-500 mt-1">
+                          Default bawaan sistem: <span className="font-mono font-bold text-neutral-700">123456</span>
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Ganti Password Akun Admin */}

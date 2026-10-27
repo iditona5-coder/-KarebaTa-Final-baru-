@@ -127,7 +127,11 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
   return (
     <div
       id="sponsor-popup-modal-overlay"
-      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 select-none touch-none overscroll-none"
+      className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3.5 sm:p-6 animate-in fade-in duration-200 select-none touch-none overscroll-none"
+      style={{
+        paddingTop: "max(1.5rem, env(safe-area-inset-top, 24px))",
+        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 24px))",
+      }}
       onClick={onClose}
       onTouchMove={(e) => {
         if (e.target === e.currentTarget) {
@@ -136,8 +140,8 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
       }}
     >
       <div
-        className={`w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 transition-all ${
-          isVerticalMedia ? "max-w-[340px] sm:max-w-[360px]" : "max-w-md"
+        className={`w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[78vh] sm:max-h-[82vh] my-auto animate-in zoom-in-95 duration-200 transition-all ${
+          isVerticalMedia ? "max-w-[320px] sm:max-w-[350px]" : "max-w-[360px] sm:max-w-md"
         }`}
         onClick={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
@@ -179,7 +183,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
         </div>
 
         {/* AREA MEDIA FOTO ATAU VIDEO DENGAN RASIO ASLI - TANPA HITAM & TANPA BLUR */}
-        <div className="relative w-full max-h-[55vh] bg-neutral-100/60 overflow-hidden flex items-center justify-center group select-none">
+        <div className="relative w-full max-h-[32vh] sm:max-h-[36vh] bg-neutral-100/60 overflow-hidden flex items-center justify-center group select-none">
           {isVideo ? (
             <div className="relative w-full flex items-center justify-center">
               <video
@@ -190,7 +194,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 autoPlay
                 muted={isMuted}
                 loop
-                className="w-full h-auto max-h-[55vh] object-contain cursor-pointer block mx-auto"
+                className="w-full h-auto max-h-[32vh] sm:max-h-[36vh] object-contain cursor-pointer block mx-auto"
                 onClick={toggleVideoPlayback}
                 onLoadedMetadata={(e) => {
                   const vid = e.currentTarget;
@@ -206,7 +210,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
               />
 
               {/* OVERLAY KONTROL VIDEO (PLAY/PAUSE & SUARA) */}
-              <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 bg-gradient-to-t from-black/60 via-transparent to-black/30">
+              <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 bg-gradient-to-t from-black/60 via-transparent to-black/30">
                 <div className="flex items-center justify-between w-full pointer-events-auto">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-xs text-white border border-white/20">
                     <VideoIcon className="w-3 h-3 text-emerald-400" />
@@ -252,7 +256,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
             <img
               src={ad.imageUrl}
               alt={ad.title}
-              className="w-full h-auto max-h-[55vh] object-contain block mx-auto"
+              className="w-full h-auto max-h-[32vh] sm:max-h-[36vh] object-contain block mx-auto"
               loading="eager"
               onLoad={(e) => {
                 const img = e.currentTarget;
@@ -267,24 +271,24 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
         </div>
 
         {/* KONTEN KETERANGAN & TOMBOL AKSI */}
-        <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-white">
+        <div className="p-3.5 sm:p-4 overflow-y-auto space-y-2.5 flex-1 min-h-0 bg-white">
           <div>
-            <h3 className="font-extrabold text-base text-neutral-900 leading-snug">
+            <h3 className="font-extrabold text-sm sm:text-base text-neutral-900 leading-snug">
               {ad.title}
             </h3>
-            <p className="text-xs text-neutral-600 mt-1.5 leading-relaxed whitespace-pre-line">
+            <p className="text-xs text-neutral-600 mt-1 leading-relaxed whitespace-pre-line">
               {ad.description}
             </p>
           </div>
 
           {/* TOMBOL AKSI UTAMA (WHATSAPP ATAU LINK WEBSITE JIKA DIPILIH) */}
-          <div className="pt-1 space-y-2">
+          <div className="pt-1 space-y-1.5">
             {ad.actionType !== "none" && (
               <button
                 id="popup-ad-cta-btn"
                 type="button"
                 onClick={handleActionClick}
-                className={`w-full py-3 px-4 rounded-2xl font-extrabold text-sm text-white flex items-center justify-center gap-2 shadow-lg transition active:scale-98 cursor-pointer ${
+                className={`w-full py-2.5 px-4 rounded-xl font-extrabold text-xs sm:text-sm text-white flex items-center justify-center gap-2 shadow-md transition active:scale-98 cursor-pointer ${
                   ad.actionType === "whatsapp"
                     ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-600/25"
                     : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-600/25"
