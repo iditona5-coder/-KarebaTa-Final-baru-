@@ -2910,12 +2910,12 @@ export default function KarebaFeedFinal() {
                   WebkitTouchCallout: "none",
                   touchAction: "pan-x pan-y",
                   background:
-                    "linear-gradient(180deg, #833ab4 0%, #c13584 30%, #e1306c 60%, #fd1d1d 85%, #fcb045 100%)",
+                    "linear-gradient(180deg, #004d21 0%, #00632B 40%, #059669 75%, #10b981 100%)",
                 }}
               >
                 {/* Lingkaran Putih Tengah */}
                 <div className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform duration-150">
-                  {/* Ikon Reel Gaya Instagram */}
+                  {/* Ikon Media (Galeri Foto & Video) */}
                   <svg
                     className="w-5 h-5 drop-shadow-2xs"
                     viewBox="0 0 24 24"
@@ -2923,22 +2923,21 @@ export default function KarebaFeedFinal() {
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <defs>
-                      <linearGradient id="reelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#833ab4" />
-                        <stop offset="50%" stopColor="#e1306c" />
-                        <stop offset="100%" stopColor="#fd1d1d" />
+                      <linearGradient id="mediaGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#00632B" />
+                        <stop offset="100%" stopColor="#059669" />
                       </linearGradient>
                     </defs>
-                    <rect x="3" y="3" width="18" height="18" rx="5" fill="url(#reelGrad)" />
-                    <path d="M7 3L10.5 9H8.5L5 3H7Z" fill="white" />
-                    <path d="M12.5 3L16 9H14L10.5 3H12.5Z" fill="white" />
-                    <path d="M18 3L20.5 7.5V3H18Z" fill="white" />
-                    <path d="M3.5 9H20.5" stroke="white" strokeWidth="0.8" />
-                    <polygon points="10,12 10,17 15,14.5" fill="white" />
+                    <rect x="2.5" y="3.5" width="19" height="17" rx="3.5" fill="url(#mediaGreenGrad)" />
+                    {/* Media: Image elements (sun and mountains) */}
+                    <circle cx="8" cy="8.5" r="1.5" fill="white" />
+                    <path d="M4.5 17.5L9.5 12L13 16L15.5 13.5L19.5 17.5H4.5Z" fill="white" />
                   </svg>
-                  {/* Badge Bulat Merah Tanda Tambah (+) */}
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#ff3040] border-[1.5px] border-white flex items-center justify-center shadow-xs">
-                    <Plus className="w-2.5 h-2.5 text-white stroke-[3]" />
+                  {/* Badge Bulat Hijau Tanda ◀️ */}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00632B] border-[1.5px] border-white flex items-center justify-center shadow-xs">
+                    <svg className="w-2 h-2 fill-white mr-[0.5px]" viewBox="0 0 10 10">
+                      <polygon points="7.5,2 2,5 7.5,8" fill="white" />
+                    </svg>
                   </div>
                 </div>
 
