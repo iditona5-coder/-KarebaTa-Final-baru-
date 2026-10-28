@@ -46,6 +46,8 @@ import { HelpContactModal } from "./components/HelpContactModal";
 import { SponsorAdCard } from "./components/SponsorAdCard";
 import { SponsorPopupModal } from "./components/SponsorPopupModal";
 import { ReactionButton } from "./components/ReactionButton";
+import { ReactionBadge } from "./components/ReactionBadge";
+import { ProfileReactionStatsButton } from "./components/ProfileReactionStatsButton";
 import {
   extractVideoThumbnail,
   getVideoDuration,
@@ -1085,6 +1087,31 @@ export default function KarebaFeedFinal() {
       .filter((item) => isMyPost(item))
       .reduce((sum, item) => sum + (item.like || 0), 0);
   }, [feed, userName, userEmail, currentUser]);
+
+  // Akumulasi rincian reaksi emoji (❤️, 😆, 🥲, 😱, 😡) dari seluruh postingan milik pengguna sendiri
+  const myTotalReactions = useMemo(() => {
+    const acc: Record<string, number> = {};
+    let totalExplicit = 0;
+    const myPosts = feed.filter((item) => isMyPost(item));
+
+    myPosts.forEach((post) => {
+      const rec = post.reactions || {};
+      Object.entries(rec).forEach(([em, count]) => {
+        if (count > 0) {
+          acc[em] = (acc[em] || 0) + count;
+          totalExplicit += count;
+        }
+      });
+    });
+
+    if (myTotalLikes > totalExplicit) {
+      acc["❤️"] = (acc["❤️"] || 0) + (myTotalLikes - totalExplicit);
+    }
+
+    return acc;
+  }, [feed, myTotalLikes, userName, userEmail, currentUser]);
+
+  const [showMyReactionsBreakdown, setShowMyReactionsBreakdown] = useState(false);
 
   // Total berapa kali postingan kabar milik pengguna sendiri dibagikan
   // (Jika pengguna membagikan kabar orang lain, angka bagikan di profil sendiri TIDAK akan bertambah)
@@ -2701,25 +2728,15 @@ export default function KarebaFeedFinal() {
 
         {/* STATS - RAPAT KANAN KIRI: ICON DI ATAS, ANGKA DI BAWAH, SEMUA ICON MONOKROM / TIDAK BERWARNA */}
         <section id="stats-section" className="w-full flex items-center justify-around py-3 border-b border-neutral-200 bg-neutral-50/70">
-          <button
-            type="button"
-            onClick={() => {
+          <ProfileReactionStatsButton
+            totalLikes={myTotalLikes}
+            reactions={myTotalReactions}
+            onScrollToMyPosts={() => {
               setShowSavedSection(false);
               const el = document.getElementById("my-posts-carousel");
               if (el) el.scrollIntoView({ behavior: "smooth" });
             }}
-            className="flex-1 flex flex-col items-center justify-center py-1 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer min-h-[44px]"
-            aria-label="Suka kabar kamu (klik untuk melihat Kabar Kamu)"
-          >
-            <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Suka">
-              <Heart className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] text-neutral-700" />
-            </div>
-            <p className="font-bold text-[clamp(15px,4.2vw,17.5px)] text-neutral-900 leading-tight">
-              {myTotalLikes > 0
-                ? (myTotalLikes >= 1000 ? `${(myTotalLikes / 1000).toFixed(1)}k` : myTotalLikes)
-                : 0}
-            </p>
-          </button>
+          />
           <div className="w-px h-8 bg-neutral-200" />
           <div className="flex-1 flex flex-col items-center justify-center py-1 min-h-[44px]" aria-label="Total kabar kamu dibagikan">
             <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Bagikan">
@@ -3602,32 +3619,14 @@ export default function KarebaFeedFinal() {
                   })()}
                 </div>
 
-                {/* Baris Ringkasan Reaksi (Emoji & Total) */}
+                {/* Baris Ringkasan Reaksi (Emoji & Total) - Dapat Diketuk untuk Melihat Rincian Angka per Emoji */}
                 {f.like > 0 && (
-                  <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500 select-none">
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex items-center -space-x-1 shrink-0">
-                        {(() => {
-                          const recObj = f.reactions || {};
-                          const sorted = Object.entries(recObj)
-                            .filter(([_, cnt]) => cnt > 0)
-                            .sort((a, b) => b[1] - a[1])
-                            .map(([em]) => em);
-                          const displayEmojis = sorted.length > 0 ? sorted.slice(0, 3) : ["❤️"];
-                          return displayEmojis.map((em) => (
-                            <span
-                              key={em}
-                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white border border-neutral-200 text-[11px] shadow-2xs leading-none"
-                            >
-                              {em}
-                            </span>
-                          ));
-                        })()}
-                      </div>
-                      <span className="font-semibold text-neutral-600 text-[11.5px] leading-none">
-                        {f.like.toLocaleString("id-ID")}
-                      </span>
-                    </div>
+                  <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500">
+                    <ReactionBadge
+                      postId={f.id}
+                      totalLikes={f.like}
+                      reactions={f.reactions}
+                    />
                   </div>
                 )}
 

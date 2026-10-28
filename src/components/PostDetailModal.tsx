@@ -15,6 +15,7 @@ import { PostItem, FeedItem, ReactionType } from "../types";
 import { FeedMedia } from "./FeedMedia";
 import { ShareBar } from "./ShareBar";
 import { ReactionButton } from "./ReactionButton";
+import { ReactionBadge } from "./ReactionBadge";
 
 interface PostDetailModalProps {
   post: PostItem | null;
@@ -317,32 +318,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             })()}
           </div>
 
-          {/* Baris Ringkasan Reaksi (Emoji & Total) */}
+          {/* Baris Ringkasan Reaksi (Emoji & Total) - Dapat Diketuk untuk Melihat Rincian Angka per Emoji */}
           {likeCount > 0 && (
-            <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500 select-none">
-              <div className="flex items-center gap-1.5">
-                <div className="flex items-center -space-x-1 shrink-0">
-                  {(() => {
-                    const recObj = reactions || {};
-                    const sorted = Object.entries(recObj)
-                      .filter(([_, cnt]) => cnt > 0)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([em]) => em);
-                    const displayEmojis = sorted.length > 0 ? sorted.slice(0, 3) : ["❤️"];
-                    return displayEmojis.map((em) => (
-                      <span
-                        key={em}
-                        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white border border-neutral-200 text-[11px] shadow-2xs leading-none"
-                      >
-                        {em}
-                      </span>
-                    ));
-                  })()}
-                </div>
-                <span className="font-semibold text-neutral-600 text-[11.5px] leading-none">
-                  {likeCount.toLocaleString("id-ID")}
-                </span>
-              </div>
+            <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500">
+              <ReactionBadge
+                postId={post.id}
+                totalLikes={likeCount}
+                reactions={reactions}
+              />
             </div>
           )}
 
