@@ -418,17 +418,10 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
         {/* Header Layar Penuh: Info Penulis, Lokasi & Waktu Bersih */}
         <header className="px-4 py-3.5 bg-gradient-to-b from-black/85 via-black/50 to-transparent flex items-center justify-between z-20 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 pr-3">
-            {author?.avatar ? (
-              <img
-                src={author.avatar}
-                alt={authorDisplayName}
-                className="w-9 h-9 rounded-full object-cover shrink-0 border border-white/20 shadow-xs"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-emerald-700/90 flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/20 shadow-xs">
-                {author?.initials || authorDisplayName[0]?.toUpperCase() || "K"}
-              </div>
-            )}
+            {/* Ikon Profil Penulis: Selalu Huruf Pertama Nama Pengguna */}
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/20 shadow-xs select-none">
+              {(authorDisplayName.replace(/^@/, "").trim()[0] || author?.initials || "K").toUpperCase()}
+            </div>
             <div className="min-w-0">
               {/* Baris Atas: Nama Pengguna & Waktu di Sebelah Kanannya */}
               <div className="flex items-center gap-1.5 flex-nowrap">

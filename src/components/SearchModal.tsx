@@ -564,21 +564,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                                     <Eye className="w-3 h-3 text-neutral-400" />
                                     <span>{(post.views || 0).toLocaleString("id-ID")}</span>
                                   </span>
-                                  {isMyPost && isMyPost(post) && onDeletePost && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeletePost(post.id, post.text, post.img);
-                                      }}
-                                      className="p-1 px-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition cursor-pointer flex items-center gap-1 border border-rose-200/60 active:scale-95"
-                                      title="Hapus kabar ini"
-                                      aria-label="Hapus postingan"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      <span className="text-[10px] font-bold">Hapus</span>
-                                    </button>
-                                  )}
                                 </div>
                               </div>
                             </div>

@@ -139,7 +139,7 @@ export default function KarebaFeedFinal() {
   const userEmail = currentUser?.email || "";
   // Nama pengguna selalu bersumber dari ketikan user (maks 13 huruf), BUKAN alamat email
   const userDisplayName = userName;
-  const initial = (userName.trim()[0] || currentUser?.displayName?.[0] || "W").toUpperCase();
+  const initial = (userName.replace(/^@/, "").trim()[0] || currentUser?.displayName?.replace(/^@/, "").trim()[0] || "W").toUpperCase();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -1269,45 +1269,12 @@ export default function KarebaFeedFinal() {
           };
         });
 
-        // Pertahankan HANYA postingan lokal baru yang dibuat kurang dari 60 detik lalu dan belum tersinkron (JANGAN BANGKITKAN POSTINGAN LAMA YANG DIHAPUS)
-        const localOnly = prevFeed.filter((p) => {
-          if (remoteIds.has(p.id)) return false;
-          if (isDummyMedia(p)) return false;
-          if (deletedIds.has(p.id)) return false;
-          const ts = Number(p.createdAtTimestamp) || 0;
-          return ts > 0 && now - ts < 60000;
-        });
-
-        // Otomatis sinkronkan postingan lokal baru warga ke Firestore cloud
-        if (localOnly.length > 0) {
-          localOnly.forEach((localItem) => {
-            const matchingPost: PostItem = {
-              id: localItem.id,
-              title: localItem.text || "Kabar Warga",
-              loc: localItem.location || "Wilayah Sekitar",
-              img: localItem.img,
-              thumbnail: localItem.thumbnail,
-              mediaType: localItem.mediaType || "image",
-              caption: localItem.text || "",
-              createdAt: localItem.time || "Baru saja",
-              name: localItem.name || localItem.user || "Warga",
-              email: localItem.email || "",
-              user: localItem.user || "warga",
-              init: localItem.init || "W",
-              isMyPost: true,
-              createdAtTimestamp: Number(localItem.createdAtTimestamp) || Date.now(),
-            };
-            savePostToFirestore(localItem, matchingPost).catch(() => {});
-          });
-        }
-
-        const combined = [...updatedRemote, ...localOnly];
-        combined.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
-        return combined;
+        // Sinkronisasi otoritatif dari Firestore cloud: postingan yang dihapus oleh admin langsung hilang seketika di semua perangkat
+        return updatedRemote;
       });
 
       // Sinkronkan juga daftar "Kabar Kamu" (carousel atas)
-      setPosts((prevPosts) => {
+      setPosts(() => {
         const remoteUserPosts: PostItem[] = remoteList
           .filter((p) => isMyPost(p) && !deletedIds.has(p.id))
           .map((p) => ({
@@ -1322,24 +1289,12 @@ export default function KarebaFeedFinal() {
             name: p.name || p.user || "Warga",
             email: p.email || "",
             user: p.user || "warga",
-            init: p.init || (p.user ? p.user[0].toUpperCase() : "W"),
+            init: (p.user.replace(/^@/, "").trim()[0] || p.init || "W").toUpperCase(),
             isMyPost: true,
             createdAtTimestamp: Number(p.createdAtTimestamp) || Date.now(),
           }));
 
-        const remoteUserIds = new Set(remoteUserPosts.map((p) => p.id));
-        const localUserPosts = prevPosts.filter((p) => {
-          if (remoteUserIds.has(p.id)) return false;
-          if (!isMyPost(p)) return false;
-          if (isDummyMedia(p)) return false;
-          if (deletedIds.has(p.id)) return false;
-          const ts = Number(p.createdAtTimestamp) || 0;
-          return ts > 0 && now - ts < 60000;
-        });
-
-        const combinedPosts = [...remoteUserPosts, ...localUserPosts];
-        combinedPosts.sort((a: any, b: any) => (Number(b.createdAtTimestamp) || 0) - (Number(a.createdAtTimestamp) || 0));
-        return combinedPosts;
+        return remoteUserPosts;
       });
     });
 
@@ -2417,7 +2372,7 @@ export default function KarebaFeedFinal() {
             {isSearchOpen ? (
               /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL BAR PENCARIAN BERSIH */
               <div className="w-full flex items-center gap-2 py-0.5 animate-fade-in">
-                <div className="flex-1 flex items-center gap-2 bg-neutral-100 rounded-full px-3.5 py-1.5 border border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#00632B]/20 transition">
+                <div className="flex-1 flex items-center gap-2 bg-neutral-100 rounded-full px-3.5 py-1.5 border border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition">
                   <Search className="w-4 h-4 text-neutral-400 shrink-0" />
                   <input
                     id="header-search-input"
@@ -2457,7 +2412,7 @@ export default function KarebaFeedFinal() {
                 </button>
               </div>
             ) : (
-              /* SAAT PENCARIAN TIDAK AKTIF: LOGO DI KIRI, ICON PENCARIAN, KAMERA, DAN MEDIA DI KANAN DENGAN RUANG LEGA */
+              /* SAAT PENCARIAN TIDAK AKTIF: LOGO DI KIRI, ICON PENCARIAN DI KANAN DENGAN RUANG LEGA */
               <>
                 <button
                   type="button"
@@ -2478,15 +2433,6 @@ export default function KarebaFeedFinal() {
                     aria-label="Cari"
                   >
                     <Search className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
-                  </button>
-                  <button
-                    id="header-camera-btn"
-                    type="button"
-                    onClick={handleCameraClick}
-                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
-                    aria-label="Buka Kamera"
-                  >
-                    <CameraIcon className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
                   </button>
                 </div>
               </>
@@ -2657,19 +2603,11 @@ export default function KarebaFeedFinal() {
           {/* PROFIL WARGA - Jarak atas lebih lega agar icon profil tidak terlalu mepet ke papan teks berjalan */}
           <section id="profile-section" className="w-full pt-6 pb-4 px-4 flex items-center justify-between bg-white border-b border-neutral-100">
           <div className="flex items-center gap-3.5 min-w-0">
-            {/* Foto Profil: Menampilkan foto asli akun Google atau inisial modern dengan gradien berkelas */}
+            {/* Ikon Profil: Selalu menampilkan huruf pertama nama pengguna */}
             <div className="relative shrink-0">
-              {currentUser?.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt={userName}
-                  className="w-[clamp(48px,13vw,56px)] h-[clamp(48px,13vw,56px)] rounded-full object-cover ring-2 ring-emerald-600/20 ring-offset-2 ring-offset-white shadow-xs select-none"
-                />
-              ) : (
-                <div className="w-[clamp(48px,13vw,56px)] h-[clamp(48px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-[clamp(20px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
-                  {initial}
-                </div>
-              )}
+              <div className="w-[clamp(48px,13vw,56px)] h-[clamp(48px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-[clamp(20px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
+                {initial}
+              </div>
               <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 ring-2 ring-white rounded-full shadow-2xs" aria-label="Sedang Aktif" />
             </div>
             <div className="min-w-0">
@@ -3449,18 +3387,10 @@ export default function KarebaFeedFinal() {
                 {/* Post Header: Nama & Waktu tetap satu baris, tidak turun ke bawah */}
                 <div className="px-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    {/* Foto Profil Penulis Kabar */}
-                    {f.avatar ? (
-                      <img
-                        src={f.avatar}
-                        alt={f.user}
-                        className="w-[clamp(44px,12vw,52px)] h-[clamp(44px,12vw,52px)] min-w-[clamp(44px,12vw,52px)] min-h-[clamp(44px,12vw,52px)] rounded-full object-cover shrink-0 ring-2 ring-emerald-600/25 ring-offset-1 ring-offset-white shadow-xs select-none"
-                      />
-                    ) : (
-                      <div className="w-[clamp(44px,12vw,52px)] h-[clamp(44px,12vw,52px)] min-w-[clamp(44px,12vw,52px)] min-h-[clamp(44px,12vw,52px)] rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-1 ring-offset-white flex items-center justify-center text-[clamp(18px,5vw,22px)] font-bold text-white shadow-xs shrink-0 select-none">
-                        {(f.user.trim().replace(/^@/, "")[0] || f.init || "W").toUpperCase()}
-                      </div>
-                    )}
+                    {/* Ikon Profil Penulis Kabar: Selalu Huruf Pertama Nama Pengguna */}
+                    <div className="w-[clamp(44px,12vw,52px)] h-[clamp(44px,12vw,52px)] min-w-[clamp(44px,12vw,52px)] min-h-[clamp(44px,12vw,52px)] rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-1 ring-offset-white flex items-center justify-center text-[clamp(18px,5vw,22px)] font-bold text-white shadow-xs shrink-0 select-none">
+                      {(f.user.replace(/^@/, "").trim()[0] || f.init || "W").toUpperCase()}
+                    </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
                         <button

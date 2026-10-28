@@ -120,22 +120,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           {/* Post Header: Nama & Waktu tetap satu baris, tidak turun ke bawah */}
           <div className="px-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              {/* Foto Profil dengan Cincin Lingkar Kuning Emas */}
-              {isOwner ? (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
-                  {initial}
-                </div>
-              ) : post.avatar ? (
-                <img
-                  src={post.avatar}
-                  alt={post.user}
-                  className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white shadow-xs select-none"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
-                  {authorInit}
-                </div>
-              )}
+              {/* Ikon Profil: Selalu Huruf Pertama Nama Pengguna */}
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
+                {isOwner
+                  ? initial
+                  : ((post.user || "").replace(/^@/, "").trim()[0] || authorInit || "K").toUpperCase()}
+              </div>
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
