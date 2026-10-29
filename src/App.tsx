@@ -118,21 +118,19 @@ export default function KarebaFeedFinal() {
   const [userName, setUserName] = useState<string>(() => {
     try {
       if (typeof window !== "undefined") {
-        const directCached =
-          localStorage.getItem("karebata_username") ||
-          localStorage.getItem("karebata_last_registered_username");
-        if (directCached && directCached.trim() && directCached !== "warga_kareba") {
-          return directCached.trim().slice(0, 13);
-        }
-        const activeUid = localStorage.getItem("karebata_active_uid");
         const activeEmail = (localStorage.getItem("karebata_active_email") || "").toLowerCase();
+        const activeUid = localStorage.getItem("karebata_active_uid");
+        if (activeEmail) {
+          const cached = localStorage.getItem(`karebata_registered_${activeEmail}`);
+          if (cached && cached.trim() && cached !== "warga_kareba") return cached.trim().slice(0, 13);
+        }
         if (activeUid) {
           const cached = localStorage.getItem(`karebata_custom_username_${activeUid}`);
           if (cached && cached.trim() && cached !== "warga_kareba") return cached.trim().slice(0, 13);
         }
-        if (activeEmail) {
-          const cached = localStorage.getItem(`karebata_registered_${activeEmail}`);
-          if (cached && cached.trim() && cached !== "warga_kareba") return cached.trim().slice(0, 13);
+        const directCached = localStorage.getItem("karebata_username");
+        if (directCached && directCached.trim() && directCached !== "warga_kareba") {
+          return directCached.trim().slice(0, 13);
         }
       }
     } catch {}
@@ -383,19 +381,20 @@ export default function KarebaFeedFinal() {
           // Cari nama pengguna dari Firestore & cache lokal secara komprehensif
           const res = await checkRegisteredUser(user.email, user.uid);
           
-          const localCached =
-            localStorage.getItem("karebata_username") ||
-            localStorage.getItem("karebata_last_registered_username") ||
+          // Hanya cari cache yang terikat khusus ke akun Google ini (email atau UID)
+          const accountSpecificCache =
             (user.email ? localStorage.getItem(`karebata_registered_${user.email.toLowerCase()}`) : null) ||
             localStorage.getItem(`karebata_custom_username_${user.uid}`);
 
           let resolvedUsername = "";
+          let isKnownAccount = false;
+
           if (res.isRegistered && res.username && res.username.trim() && res.username.trim() !== "warga_kareba") {
             resolvedUsername = res.username.trim().slice(0, 13);
-          } else if (localCached && localCached.trim() && localCached !== "warga_kareba") {
-            resolvedUsername = localCached.trim().slice(0, 13);
-          } else if (userName && userName.trim() && userName !== "warga_kareba") {
-            resolvedUsername = userName.trim().slice(0, 13);
+            isKnownAccount = true;
+          } else if (accountSpecificCache && accountSpecificCache.trim() && accountSpecificCache !== "warga_kareba") {
+            resolvedUsername = accountSpecificCache.trim().slice(0, 13);
+            isKnownAccount = true;
           } else if (user.displayName && user.displayName.trim()) {
             resolvedUsername = user.displayName.trim().replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13);
           } else if (user.email) {
@@ -414,20 +413,23 @@ export default function KarebaFeedFinal() {
               sessionStorage.setItem("karebata_session_active", "true");
               sessionStorage.setItem("karebata_active_session", "true");
             } catch {}
-            // Tetap di feed dan jangan pernah terlempar ke halaman edit nama saat penyegaran
-            setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
+
+            // Jika akun baru (belum terdaftar di Firestore dan belum punya nama): bawa ke set_name agar akun baru bisa mengetik namanya sendiri
+            if (!isKnownAccount) {
+              setViewMode("set_name");
+            } else {
+              setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
+            }
           } else {
-            // Hanya jika benar-benar akun baru tanpa nama sama sekali dan bukan sedang di feed
-            setViewMode((prev) => (prev === "admin" ? "admin" : prev === "feed" ? "feed" : "set_name"));
+            setViewMode("set_name");
           }
         } catch {
-          // Fallback aman saat jaringan Firestore sibuk: gunakan nama yang ada di memori/storage lokal
-          const fallbackCached = 
-            localStorage.getItem("karebata_username") ||
-            localStorage.getItem("karebata_last_registered_username") ||
-            userName ||
+          // Fallback saat koneksi offline: gunakan data akun ini saja
+          const accountFallback =
+            (user.email ? localStorage.getItem(`karebata_registered_${user.email.toLowerCase()}`) : null) ||
+            localStorage.getItem(`karebata_custom_username_${user.uid}`) ||
             (user.displayName ? user.displayName.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13) : "Warga");
-          const clean = String(fallbackCached).trim().slice(0, 13);
+          const clean = String(accountFallback).trim().slice(0, 13);
           setUserName(clean);
           setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
         }
@@ -732,11 +734,15 @@ export default function KarebaFeedFinal() {
       setCurrentUser(null);
       setUserName("");
       setPosts([]);
-      sessionStorage.removeItem("kareba_guest_mode");
-      sessionStorage.removeItem("karebata_active_session");
-      sessionStorage.removeItem("karebata_session_active");
-      localStorage.removeItem("kareba_guest_mode");
-      localStorage.removeItem("karebata_is_logged_in");
+      try {
+        sessionStorage.clear();
+        localStorage.removeItem("kareba_guest_mode");
+        localStorage.removeItem("karebata_is_logged_in");
+        localStorage.removeItem("karebata_username");
+        localStorage.removeItem("karebata_last_registered_username");
+        localStorage.removeItem("karebata_active_uid");
+        localStorage.removeItem("karebata_active_email");
+      } catch {}
       setViewMode("login");
       showToast("Berhasil keluar dari akun. Sesi diamankan.");
     }

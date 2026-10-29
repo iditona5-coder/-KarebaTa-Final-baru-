@@ -518,6 +518,11 @@ export async function logoutUser(): Promise<boolean> {
     try {
       sessionStorage.removeItem("karebata_simulated_user");
       localStorage.removeItem("karebata_simulated_user");
+      localStorage.removeItem("karebata_username");
+      localStorage.removeItem("karebata_last_registered_username");
+      localStorage.removeItem("karebata_active_uid");
+      localStorage.removeItem("karebata_active_email");
+      localStorage.removeItem("karebata_is_logged_in");
     } catch {}
     notifyAuthSubscribers(null);
     await signOut(auth);
@@ -781,15 +786,6 @@ export async function checkRegisteredUser(
       localStorage.setItem('karebata_last_registered_username', clean);
       return { isRegistered: true, username: clean };
     }
-  }
-
-  // Cek cache global username umum
-  const globalCached = localStorage.getItem('karebata_username') || localStorage.getItem('karebata_last_registered_username');
-  if (globalCached && globalCached.trim() && globalCached !== 'warga_kareba') {
-    const clean = globalCached.trim().slice(0, 13);
-    if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, clean);
-    if (cleanUid) localStorage.setItem(`karebata_custom_username_${cleanUid}`, clean);
-    return { isRegistered: true, username: clean };
   }
 
   if (!db) {
