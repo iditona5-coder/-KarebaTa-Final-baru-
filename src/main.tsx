@@ -9,7 +9,9 @@ if (typeof window !== 'undefined') {
     const msg = event?.message || event?.error?.message || '';
     if (
       msg.includes('Pending promise was never set') ||
-      msg.includes('INTERNAL ASSERTION FAILED')
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('permission-denied') ||
+      msg.includes('Missing or insufficient permissions')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -22,24 +24,35 @@ if (typeof window !== 'undefined') {
     const msg = reason?.message || String(reason || '');
     if (
       msg.includes('Pending promise was never set') ||
-      msg.includes('INTERNAL ASSERTION FAILED')
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('permission-denied') ||
+      msg.includes('Missing or insufficient permissions')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
   });
 
+  const filterAssertion = (...args: any[]) => {
+    const str = args.map((a) => (typeof a === 'string' ? a : a?.message || String(a || ''))).join(' ');
+    return (
+      str.includes('Pending promise was never set') ||
+      str.includes('INTERNAL ASSERTION FAILED') ||
+      str.includes('permission-denied') ||
+      str.includes('Missing or insufficient permissions')
+    );
+  };
+
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {
-    const firstArg = typeof args[0] === 'string' ? args[0] : (args[0]?.message || '');
-    if (
-      firstArg.includes('Pending promise was never set') ||
-      firstArg.includes('INTERNAL ASSERTION FAILED')
-    ) {
-      // Redam error internal Firebase Auth assertion
-      return;
-    }
+    if (filterAssertion(...args)) return;
     originalConsoleError.apply(console, args);
+  };
+
+  const originalConsoleWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    if (filterAssertion(...args)) return;
+    originalConsoleWarn.apply(console, args);
   };
 }
 

@@ -49,6 +49,11 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   className = "",
   author,
 }) => {
+  // Jika src kosong atau tidak valid, jangan render elemen img/video sama sekali
+  if (!src || !src.trim()) {
+    return null;
+  }
+
   // Tentukan apakah tipe media adalah video
   const isVideo =
     mediaType === "video" ||
@@ -341,6 +346,15 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     setFsIsMuted(false);
     setFsIsPlaying(true);
     setIsFullscreen(true);
+  };
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    // Jika terdeteksi geseran jari atau scroll, jangan buka fullscreen
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
   };
 
   const closeFullscreen = () => {
@@ -730,7 +744,14 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
         onPointerMove={handleMediaPointerMove}
         onPointerUp={handleMediaPointerUp}
         onPointerCancel={handleMediaPointerCancel}
-        onClick={openFullscreen}
+        onClick={(e) => {
+          if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          openFullscreen();
+        }}
       >
         {/* Placeholder skeleton halus jika sedang decode perdana di jaringan lambat */}
         {!isImageReady && (

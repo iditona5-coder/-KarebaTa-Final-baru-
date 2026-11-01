@@ -266,29 +266,40 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Media Foto/Video: Vertikal rasio 4:5 dipotong atas bawah, Horizontal rasio asli */}
-          <div id={`detail-post-media-${post.id}`} className="w-full">
-            <FeedMedia
-              src={post.img}
-              thumbnail={post.thumbnail}
-              alt={postText}
-              description={postText}
-              mediaType={isVid ? "video" : "image"}
-              author={{
-                name: isOwner ? userName : (post.name || post.user || "Kawan Warga Kareba"),
-                username: isOwner ? userName : (post.user || "kamu"),
-                email: post.email || "iditona5@gmail.com",
-                location: postLocation || "Kawasan Sekitar",
-                time: postTime,
-                initials: authorInit,
-                avatar: post.avatar,
-                description: postText,
-              }}
-            />
-          </div>
+          {/* Media Foto/Video ATAU Kartu Teks jika kabar teks saja */}
+          {post.img ? (
+            <div id={`detail-post-media-${post.id}`} className="w-full">
+              <FeedMedia
+                src={post.img}
+                thumbnail={post.thumbnail}
+                alt={postText}
+                description={postText}
+                mediaType={isVid ? "video" : "image"}
+                author={{
+                  name: isOwner ? userName : (post.name || post.user || "Kawan Warga Kareba"),
+                  username: isOwner ? userName : (post.user || "kamu"),
+                  email: post.email || "iditona5@gmail.com",
+                  location: postLocation || "Kawasan Sekitar",
+                  time: postTime,
+                  initials: authorInit,
+                  avatar: post.avatar,
+                  description: postText,
+                }}
+              />
+            </div>
+          ) : (
+            <div className="w-full px-4 pt-1 pb-2">
+              <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs">
+                <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text">
+                  {postText}
+                </p>
+              </div>
+            </div>
+          )}
 
-          {/* Post Content / Deskripsi di bawah media - Hanya menampilkan selengkapnya jika teks benar-benar panjang/terpotong */}
-          <div className="px-4">
+          {/* Post Content / Deskripsi di bawah media (Hanya jika memiliki foto/video) */}
+          {post.img && (
+            <div className="px-4">
             {(() => {
               const isLong = postText.length > 110 || postText.split("\n").length > 2;
               return (
@@ -317,6 +328,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               );
             })()}
           </div>
+          )}
 
           {/* Baris Ringkasan Reaksi (Emoji & Total) - Dapat Diketuk untuk Melihat Rincian Angka per Emoji */}
           {likeCount > 0 && (

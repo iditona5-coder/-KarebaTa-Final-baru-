@@ -85,7 +85,7 @@ export const ProfileReactionStatsButton: React.FC<ProfileReactionStatsButtonProp
       {/* POP-UP GELEMBUNG RINCIAN REAKSI DARI WARGA */}
       {showBreakdown && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white/95 backdrop-blur-md border border-neutral-200/90 shadow-2xl rounded-2xl p-3 min-w-[210px] sm:min-w-[240px] animate-in fade-in zoom-in-95 duration-150 select-none text-left"
+          className="absolute top-full left-2 sm:left-4 mt-2 z-50 bg-white/95 backdrop-blur-md border border-neutral-200/90 shadow-2xl rounded-2xl p-3.5 w-[240px] max-w-[calc(100vw-32px)] animate-in fade-in zoom-in-95 duration-150 select-none text-left"
           style={{ boxShadow: "0 10px 25px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
           onClick={(e) => e.stopPropagation()}
         >

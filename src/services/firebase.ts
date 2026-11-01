@@ -27,6 +27,8 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  runTransaction,
+  Transaction,
   Firestore
 } from 'firebase/firestore';
 import { 
@@ -260,33 +262,71 @@ export async function fetchLatestFirestorePosts(): Promise<FeedItem[]> {
  */
 export async function togglePostLikeInFirestore(
   postId: string,
-  newLikeCount: number,
+  _fallbackCount: number,
   userIdentifier?: string,
   isLiking: boolean = true,
   reaction?: string | null,
-  reactionsMap?: Record<string, number>
+  _reactionsMap?: Record<string, number>
 ): Promise<boolean> {
   if (!db) return false;
   try {
     const postRef = doc(db, 'posts', postId);
-    const updatePayload: Record<string, any> = {
-      like: Math.max(0, newLikeCount),
-    };
-    if (reactionsMap) {
-      updatePayload.reactions = reactionsMap;
-    }
-    if (userIdentifier && userIdentifier.trim() !== '') {
-      updatePayload.likedBy = isLiking
-        ? arrayUnion(userIdentifier.trim())
-        : arrayRemove(userIdentifier.trim());
-      const safeKey = userIdentifier.trim().replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
-      if (reaction) {
-        updatePayload[`userReactions.${safeKey}`] = reaction;
-      } else {
-        updatePayload[`userReactions.${safeKey}`] = null;
+    const safeUser = (userIdentifier || '').trim();
+    const safeKey = safeUser.replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
+
+    await runTransaction(db, async (transaction: Transaction) => {
+      const sfDoc = await transaction.get(postRef);
+      if (!sfDoc.exists()) return;
+
+      const data = sfDoc.data();
+      const currentLikedBy: string[] = Array.isArray(data.likedBy) ? [...data.likedBy] : [];
+      const currentReactions: Record<string, number> =
+        data.reactions && typeof data.reactions === 'object' ? { ...data.reactions } : {};
+      const currentUserReactions: Record<string, string> =
+        data.userReactions && typeof data.userReactions === 'object' ? { ...data.userReactions } : {};
+
+      const previousUserReaction = safeKey ? currentUserReactions[safeKey] : null;
+      const alreadyInLikedBy = safeUser ? currentLikedBy.some((u) => u.toLowerCase() === safeUser.toLowerCase()) : false;
+
+      // 1. Perbarui daftar likedBy
+      if (isLiking && safeUser && !alreadyInLikedBy) {
+        currentLikedBy.push(safeUser);
+      } else if (!isLiking && safeUser && alreadyInLikedBy) {
+        const idx = currentLikedBy.findIndex((u) => u.toLowerCase() === safeUser.toLowerCase());
+        if (idx !== -1) currentLikedBy.splice(idx, 1);
       }
-    }
-    await updateDoc(postRef, updatePayload);
+
+      // 2. Perbarui userReactions
+      if (safeKey) {
+        if (reaction) {
+          currentUserReactions[safeKey] = reaction;
+        } else {
+          delete currentUserReactions[safeKey];
+        }
+      }
+
+      // 3. Perbarui counter reactions per emoji
+      if (previousUserReaction && currentReactions[previousUserReaction]) {
+        currentReactions[previousUserReaction] = Math.max(0, currentReactions[previousUserReaction] - 1);
+        if (currentReactions[previousUserReaction] === 0) {
+          delete currentReactions[previousUserReaction];
+        }
+      }
+      if (reaction) {
+        currentReactions[reaction] = (currentReactions[reaction] || 0) + 1;
+      }
+
+      // 4. Hitung total like secara tepat dari jumlah orang yang menyukai
+      const finalLikeCount = Math.max(currentLikedBy.length, Object.values(currentReactions).reduce((a, b) => a + b, 0));
+
+      transaction.update(postRef, {
+        like: finalLikeCount,
+        likedBy: currentLikedBy,
+        reactions: currentReactions,
+        userReactions: currentUserReactions,
+      });
+    });
+
     return true;
   } catch (error) {
     console.warn('[Firebase] Gagal memperbarui like/reaksi di Firestore:', error);
@@ -471,10 +511,16 @@ export async function loginWithGoogle(): Promise<{ user: User | null; error?: st
 
   isLoginInProgress = true;
   try {
-    await setPersistence(auth, browserSessionPersistence);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
+    
+    // Panggil signInWithPopup secara langsung dari gesture user tanpa menunggu await setPersistence
+    // untuk mencegah timeout internal SDK dan browser popup blocking
     const result = await signInWithPopup(auth, provider);
+    
+    // Set persistence secara background setelah popup berhasil
+    setPersistence(auth, browserSessionPersistence).catch(() => {});
+
     currentSimulatedUser = null;
     try {
       sessionStorage.removeItem("karebata_simulated_user");
@@ -1528,35 +1574,41 @@ export function listenToAdminAppConfig(
 
   try {
     const docRef = doc(db, "system_settings", "app_config");
-    return onSnapshot(docRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        let currentWa = data.adminWhatsapp || DEFAULT_ADMIN_APP_CONFIG.adminWhatsapp;
-        if (currentWa === "082299887766") currentWa = "085351037179";
-        const merged: AdminAppConfig = {
-          appName: data.appName || DEFAULT_ADMIN_APP_CONFIG.appName,
-          appLogoUrl: data.appLogoUrl || DEFAULT_ADMIN_APP_CONFIG.appLogoUrl,
-          adminEmail: data.adminEmail || DEFAULT_ADMIN_APP_CONFIG.adminEmail,
-          adminWhatsapp: currentWa,
-          adminWorkingHours: data.adminWorkingHours || DEFAULT_ADMIN_APP_CONFIG.adminWorkingHours || "Setiap Hari: 08.00 - 21.00 WITA",
-          privacyPolicyText: data.privacyPolicyText || DEFAULT_ADMIN_APP_CONFIG.privacyPolicyText,
-          termsOfServiceText: data.termsOfServiceText || DEFAULT_ADMIN_APP_CONFIG.termsOfServiceText,
-          adminPasscode: data.adminPasscode || DEFAULT_ADMIN_APP_CONFIG.adminPasscode,
-          updatedAt: data.updatedAtServer?.toMillis?.() || Date.now(),
-        };
-        try {
-          localStorage.setItem("karebata_admin_app_config", JSON.stringify(merged));
-        } catch {}
-        onUpdate(merged);
-      } else {
-        // Tulis nilai awal jika belum ada
-        setDoc(docRef, {
-          ...DEFAULT_ADMIN_APP_CONFIG,
-          createdAtServer: serverTimestamp(),
-          updatedAtServer: serverTimestamp(),
-        }, { merge: true }).catch(() => {});
+    return onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          let currentWa = data.adminWhatsapp || DEFAULT_ADMIN_APP_CONFIG.adminWhatsapp;
+          if (currentWa === "082299887766") currentWa = "085351037179";
+          const merged: AdminAppConfig = {
+            appName: data.appName || DEFAULT_ADMIN_APP_CONFIG.appName,
+            appLogoUrl: data.appLogoUrl || DEFAULT_ADMIN_APP_CONFIG.appLogoUrl,
+            adminEmail: data.adminEmail || DEFAULT_ADMIN_APP_CONFIG.adminEmail,
+            adminWhatsapp: currentWa,
+            adminWorkingHours: data.adminWorkingHours || DEFAULT_ADMIN_APP_CONFIG.adminWorkingHours || "Setiap Hari: 08.00 - 21.00 WITA",
+            privacyPolicyText: data.privacyPolicyText || DEFAULT_ADMIN_APP_CONFIG.privacyPolicyText,
+            termsOfServiceText: data.termsOfServiceText || DEFAULT_ADMIN_APP_CONFIG.termsOfServiceText,
+            adminPasscode: data.adminPasscode || DEFAULT_ADMIN_APP_CONFIG.adminPasscode,
+            updatedAt: data.updatedAtServer?.toMillis?.() || Date.now(),
+          };
+          try {
+            localStorage.setItem("karebata_admin_app_config", JSON.stringify(merged));
+          } catch {}
+          onUpdate(merged);
+        } else {
+          // Tulis nilai awal jika belum ada
+          setDoc(docRef, {
+            ...DEFAULT_ADMIN_APP_CONFIG,
+            createdAtServer: serverTimestamp(),
+            updatedAtServer: serverTimestamp(),
+          }, { merge: true }).catch(() => {});
+        }
+      },
+      (error) => {
+        console.warn("[Firebase] Catatan: Pengaturan sistem aplikasi menggunakan cache lokal:", error);
       }
-    });
+    );
   } catch (err) {
     console.warn("[Firebase] Error listen app config:", err);
     return () => {};
@@ -1748,6 +1800,8 @@ export function listenToAllUsers(
         } catch {}
         onUpdate(list);
       }
+    }, (error) => {
+      console.warn("[Firebase] Catatan: Pengguna menggunakan cache lokal:", error);
     });
   } catch {
     return () => {};

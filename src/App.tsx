@@ -112,6 +112,7 @@ export default function KarebaFeedFinal() {
   });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
   const [pendingUploadAction, setPendingUploadAction] = useState<"camera" | "gallery" | null>(null);
   const [loginRedirectMessage, setLoginRedirectMessage] = useState<string | null>(null);
 
@@ -159,6 +160,12 @@ export default function KarebaFeedFinal() {
   const [description, setDescription] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
+
+  // State untuk Papan Unggah Teks Kabar Warga (maks. 500 huruf)
+  const [isTextPostModalOpen, setIsTextPostModalOpen] = useState(false);
+  const [textPostContent, setTextPostContent] = useState("");
+  const [textPostLocation, setTextPostLocation] = useState("");
+  const [isPublishingTextPost, setIsPublishingTextPost] = useState(false);
 
   // Status suka (Like) tersimpan di perangkat agar tidak berkedip / hilang saat Firestore menyinkronkan
   const [likedPostIds, setLikedPostIds] = useState<string[]>(() => {
@@ -549,8 +556,7 @@ export default function KarebaFeedFinal() {
     openCamera();
   };
 
-  // Handler klik galeri/media di header (harus login terlebih dahulu)
-    // Handler klik kartu Ebbu kareba (Buat reel / kabar warga)
+  // Handler klik kartu Ebbu kareba (Buat reel / kabar warga)
   const handleEbbuKarebaClick = () => {
     if (currentBanStatus.isBanned) {
       showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
@@ -562,7 +568,8 @@ export default function KarebaFeedFinal() {
       setIsLoginModalOpen(true);
       return;
     }
-    openCustomGallery();
+    // Buka menu pilihan kustom bersih (hanya Kamera & Galeri, hilangkan pilihan jelajah file yang membingungkan)
+    setIsMediaChoiceModalOpen(true);
   };
 
   const handleGalleryClick = () => {
@@ -767,15 +774,28 @@ export default function KarebaFeedFinal() {
           const prevMap = new Map(prevFeed.map((p) => [p.id, p]));
           const currentUid = (currentUser?.email || currentUser?.uid || userName || "").toLowerCase();
           const updated = cleanRemote.map((r) => {
-            const prev = prevMap.get(r.id);
-            const isLiked =
-              likedPostIdsRef.current.includes(r.id) ||
-              (currentUid && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === currentUid)) ||
-              Boolean(prev?.isLiked);
+            const userIdentifier = (currentUser?.email || currentUser?.uid || userName || "").toLowerCase();
+            const userIdentifierAlt = (currentUser?.uid || "").toLowerCase();
+            const safeKey1 = userIdentifier.replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
+            const safeKey2 = userIdentifierAlt.replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
+
+            const serverLiked = Boolean(
+              (userIdentifier && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === userIdentifier)) ||
+              (userIdentifierAlt && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === userIdentifierAlt))
+            );
+
+            const localLiked = likedPostIdsRef.current.includes(r.id);
+            const isLiked = serverLiked || localLiked;
+
+            const serverReaction =
+              (r.userReactions && (r.userReactions[safeKey1] || r.userReactions[safeKey2])) ||
+              undefined;
+
             const userReaction =
               userReactionsRef.current[r.id] ||
-              prev?.userReaction ||
+              serverReaction ||
               (isLiked ? "❤️" : undefined);
+
             return {
               ...r,
               isLiked: Boolean(isLiked),
@@ -1286,15 +1306,28 @@ export default function KarebaFeedFinal() {
         const currentUid = (currentUserRef.current?.email || currentUserRef.current?.uid || userNameRef.current || "").toLowerCase();
 
         const updatedRemote = remoteList.map((r) => {
-          const prev = prevMap.get(r.id);
-          const isLiked =
-            likedPostIdsRef.current.includes(r.id) ||
-            (currentUid && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === currentUid)) ||
-            Boolean(prev?.isLiked);
+          const userIdentifier = (currentUserRef.current?.email || currentUserRef.current?.uid || userNameRef.current || "").toLowerCase();
+          const userIdentifierAlt = (currentUserRef.current?.uid || "").toLowerCase();
+          const safeKey1 = userIdentifier.replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
+          const safeKey2 = userIdentifierAlt.replace(/\./g, '_').replace(/[@#$\[\]]/g, '_');
+
+          const serverLiked = Boolean(
+            (userIdentifier && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === userIdentifier)) ||
+            (userIdentifierAlt && r.likedBy && r.likedBy.some((u: string) => u.toLowerCase() === userIdentifierAlt))
+          );
+
+          const localLiked = likedPostIdsRef.current.includes(r.id);
+          const isLiked = serverLiked || localLiked;
+
+          const serverReaction =
+            (r.userReactions && (r.userReactions[safeKey1] || r.userReactions[safeKey2])) ||
+            undefined;
+
           const userReaction =
             userReactionsRef.current[r.id] ||
-            prev?.userReaction ||
+            serverReaction ||
             (isLiked ? "❤️" : undefined);
+
           return {
             ...r,
             isLiked: Boolean(isLiked),
@@ -2075,6 +2108,125 @@ export default function KarebaFeedFinal() {
     })();
   };
 
+  // Handler Publikasi Papan Teks Kabar Warga (maks. 500 huruf)
+  const handleCreateTextPost = async () => {
+    if (currentBanStatus.isBanned) {
+      showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
+      return;
+    }
+    if (!currentUser) {
+      setLoginRedirectMessage("Silakan masuk dengan Akun Google terlebih dahulu untuk menerbitkan kabar.");
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    const trimmedText = textPostContent.trim().slice(0, 500);
+    const trimmedLoc = textPostLocation.trim().slice(0, 30);
+    if (!trimmedText) {
+      showToast("Tulis kabar Anda terlebih dahulu!");
+      return;
+    }
+    if (!trimmedLoc) {
+      showToast("Isi lokasi kabar Anda terlebih dahulu!");
+      return;
+    }
+
+    // Periksa moderasi bahasa santun
+    const checkText = checkContentModeration(trimmedText);
+    if (!checkText.isClean) {
+      showToast(`Ditolak: ${checkText.reason} Dilarang menggunakan kata "${checkText.flaggedWord}".`);
+      return;
+    }
+    const checkLoc = checkContentModeration(textPostLocation);
+    if (!checkLoc.isClean) {
+      showToast(`Ditolak: Lokasi mengandung kata tidak pantas ("${checkLoc.flaggedWord}").`);
+      return;
+    }
+
+    setIsPublishingTextPost(true);
+
+    const finalLoc = textPostLocation.trim().slice(0, 30);
+    const postTitle = trimmedText.split("\n")[0].slice(0, 24) || "Kabar Warga";
+    const feedId = `kareba-text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const postId = feedId;
+
+    // Bersihkan formulir teks dan tutup modal
+    setTextPostContent("");
+    setTextPostLocation("");
+    setIsTextPostModalOpen(false);
+
+    const newFeedItem: FeedItem = {
+      id: feedId,
+      user: userName,
+      init: initial,
+      name: userName,
+      authorUid: currentUser?.uid || "",
+      email: currentUser?.email || "",
+      avatar: undefined,
+      time: "Baru saja",
+      text: trimmedText,
+      img: "",
+      mediaType: "image",
+      like: 0,
+      isLiked: false,
+      location: finalLoc || undefined,
+      comments: [],
+      isMyPost: true,
+      createdAtTimestamp: Date.now(),
+    };
+
+    const newPostItem: PostItem = {
+      id: postId,
+      title: postTitle,
+      loc: finalLoc || "Sulawesi Tengah",
+      img: "",
+      caption: trimmedText,
+      createdAt: "Baru saja",
+      name: userName,
+      authorUid: currentUser?.uid || "",
+      email: currentUser?.email || "",
+      user: userName,
+      init: initial,
+      isMyPost: true,
+      createdAtTimestamp: Date.now(),
+    };
+
+    setFeed((prev) => [newFeedItem, ...prev]);
+    setPosts((prev) => [newPostItem, ...prev]);
+
+    // Tambahkan ke running text
+    const newBulletin: BulletinItem = {
+      id: `b-${Date.now()}`,
+      category: "KABAR WARGA",
+      text: `@${userName}: ${postTitle} — ${trimmedText.slice(0, 90)}`,
+      location: finalLoc || "Kawasan Sekitar",
+      time: "Baru saja",
+    };
+    setBulletins((prev) => [newBulletin, ...prev]);
+
+    // Auto-scroll carousel Kabar Kamu ke paling depan
+    setTimeout(() => {
+      carouselRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+    }, 100);
+
+    try {
+      await savePostToFirestore(newFeedItem, newPostItem);
+      showToast("Kabar teks berhasil dibagikan!");
+    } catch {
+      showToast("Kabar teks tersimpan lokal.");
+    } finally {
+      setIsPublishingTextPost(false);
+    }
+
+    // Scroll ke postingan baru di feed
+    setTimeout(() => {
+      const newEl = document.getElementById(`feed-post-${feedId}`);
+      if (newEl) {
+        newEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 300);
+  };
+
   // Bagikan post
   const handleShare = (text: string, postId?: string) => {
     if (navigator.share) {
@@ -2227,7 +2379,7 @@ export default function KarebaFeedFinal() {
     }
 
     setPostToDelete(null);
-    showToast("Postingan berhasil dihapus permanen dari semua penyimpanan");
+    showToast("Kabar berhasil di hapus");
   };
 
   // JIKA SEDANG MEMBUKA HALAMAN DASBOR ADMIN TERPISAH
@@ -2732,48 +2884,38 @@ export default function KarebaFeedFinal() {
           </div>
         )}
 
-        {/* STATS - RAPAT KANAN KIRI: ICON DI ATAS, ANGKA DI BAWAH, SEMUA ICON MONOKROM / TIDAK BERWARNA */}
-        <section id="stats-section" className="w-full flex items-center justify-around py-3 border-b border-neutral-200 bg-neutral-50/70">
-          <ProfileReactionStatsButton
-            totalLikes={myTotalLikes}
-            reactions={myTotalReactions}
-            onScrollToMyPosts={() => {
-              setShowSavedSection(false);
-              const el = document.getElementById("my-posts-carousel");
-              if (el) el.scrollIntoView({ behavior: "smooth" });
-            }}
-          />
-          <div className="w-px h-8 bg-neutral-200" />
-          <div className="flex-1 flex flex-col items-center justify-center py-1 min-h-[44px]" aria-label="Total kabar kamu dibagikan">
-            <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Bagikan">
-              <Share2 className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] text-neutral-700" />
-            </div>
-            <p className="font-bold text-[clamp(15px,4.2vw,17.5px)] text-neutral-900 leading-tight">
-              {myTotalShares > 0
-                ? (myTotalShares >= 1000 ? `${(myTotalShares / 1000).toFixed(1)}k` : myTotalShares)
-                : 0}
-            </p>
-          </div>
-          <div className="w-px h-8 bg-neutral-200" />
-          <button
-            type="button"
+        {/* PAPAN UNGGAH TEKS KABAR WARGA (MINIMALIS & PRAKTIS ALA SOSIAL MEDIA) */}
+        <section id="quick-text-composer-trigger" className="w-full bg-white px-3.5 py-3 border-b border-neutral-200">
+          <div
             onClick={() => {
-              setShowSavedSection(true);
-              const el = document.getElementById("my-posts-carousel");
-              if (el) el.scrollIntoView({ behavior: "smooth" });
+              if (currentBanStatus.isBanned) {
+                showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
+                return;
+              }
+              if (!currentUser) {
+                setLoginRedirectMessage("Masuk dengan Akun Google untuk menulis kabar warga.");
+                setIsLoginModalOpen(true);
+                return;
+              }
+              setIsTextPostModalOpen(true);
             }}
-            className="flex-1 flex flex-col items-center justify-center py-1 hover:bg-neutral-200/50 rounded-lg transition active:scale-95 cursor-pointer min-h-[44px]"
-            aria-label="Total kabar kamu disimpan (klik untuk melihat Tersimpan)"
+            className="flex items-center gap-2.5 p-2 bg-neutral-50 hover:bg-neutral-100/90 rounded-xl border border-neutral-200/90 cursor-pointer transition active:scale-[0.99] group shadow-2xs"
           >
-            <div className="flex items-center justify-center text-neutral-700 mb-1" aria-label="Icon Simpan">
-              <Bookmark className="w-[clamp(18px,5vw,22px)] h-[clamp(18px,5vw,22px)] text-neutral-700" />
+            {/* Avatar Inisial Akun Pengguna */}
+            <div className="w-8 h-8 rounded-full bg-[#00632B] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+              {initial}
             </div>
-            <p className="font-bold text-[clamp(15px,4.2vw,17.5px)] text-neutral-900 leading-tight">
-              {myTotalSaves > 0
-                ? (myTotalSaves >= 1000 ? `${(myTotalSaves / 1000).toFixed(1)}k` : myTotalSaves)
-                : 0}
-            </p>
-          </button>
+
+            {/* Input Trigger / Placeholder Teks */}
+            <div className="flex-1 min-w-0 flex items-center justify-between">
+              <span className="text-xs text-neutral-500 font-medium truncate">
+                Tulis kabar warga hari ini...
+              </span>
+              <span className="p-1 rounded-md text-[#00632B] bg-emerald-50 border border-emerald-200/60 group-hover:bg-[#00632B] group-hover:text-white transition shrink-0 ml-2">
+                <PenLine className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          </div>
         </section>
 
         {/* HORIZONTAL: KABAR KAMU & KABAR TERSIMPAN (SELALU MUNCUL, TIDAK PERNAH HILANG) */}
@@ -2781,62 +2923,59 @@ export default function KarebaFeedFinal() {
           <div className="flex items-center justify-between mb-3 px-3">
             {/* SISI KIRI: KABAR KAMU */}
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSavedSection(false)}
-                className="flex items-center gap-2 text-left cursor-pointer group"
-                aria-label="Lihat Kabar Saya"
-              >
-                <h3
-                  className={`font-bold text-sm transition ${
-                    !showSavedSection
-                      ? "text-neutral-900 font-extrabold"
-                      : "text-neutral-500 group-hover:text-neutral-800"
-                  }`}
+              {showSavedSection ? (
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-sm text-neutral-900">
+                    Kabar Tersimpan
+                  </h3>
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-[#00632B]">
+                    {savedItems.length}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowSavedSection(false)}
+                  className="flex items-center gap-2 text-left cursor-pointer group"
+                  aria-label="Lihat Kabar Saya"
                 >
-                  Kabar Saya
-                </h3>
-                <span
-                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full transition ${
-                    !showSavedSection
-                      ? "bg-[#00632B]/10 text-[#00632B]"
-                      : "bg-neutral-100 text-neutral-500"
-                  }`}
-                >
-                  {posts.length}
-                </span>
-              </button>
+                  <h3 className="font-extrabold text-sm text-neutral-900">
+                    Kabar Saya
+                  </h3>
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-[#00632B]/10 text-[#00632B]">
+                    {posts.length}
+                  </span>
+                </button>
+              )}
             </div>
 
-            {/* SUDUT KANAN: TULISAN SIMPAN */}
-            <button
-              id="saved-posts-count-badge"
-              type="button"
-              onClick={() => setShowSavedSection((prev) => !prev)}
-              className={`text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer ${
-                showSavedSection
-                  ? "bg-[#00632B] text-white shadow-xs"
-                  : "bg-emerald-50 text-[#00632B] border border-emerald-200/80 hover:bg-emerald-100/80"
-              }`}
-              title="Kabar Tersimpan"
-              aria-label="Simpan"
-            >
-              <Bookmark
-                className={`w-3.5 h-3.5 ${
-                  showSavedSection ? "fill-white text-white" : "fill-[#00632B] text-[#00632B]"
-                }`}
-              />
-              <span>Simpan</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  showSavedSection
-                    ? "bg-white/20 text-white"
-                    : "bg-[#00632B]/10 text-[#00632B]"
-                }`}
+            {/* SUDUT KANAN: TOMBOL BERALIH ANTARA SIMPAN ATAU KEMBALI */}
+            {showSavedSection ? (
+              <button
+                id="back-to-my-posts-btn"
+                type="button"
+                onClick={() => setShowSavedSection(false)}
+                className="text-xs font-bold flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition active:scale-95 cursor-pointer"
+                aria-label="Kembali ke Kabar Saya"
               >
-                {savedItems.length}
-              </span>
-            </button>
+                <span>&larr; Kabar Saya</span>
+              </button>
+            ) : (
+              <button
+                id="saved-posts-count-badge"
+                type="button"
+                onClick={() => setShowSavedSection(true)}
+                className="text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer bg-emerald-50 text-[#00632B] border border-emerald-200/80 hover:bg-emerald-100/80"
+                title="Kabar Tersimpan"
+                aria-label="Simpan"
+              >
+                <Bookmark className="w-3.5 h-3.5 fill-[#00632B] text-[#00632B]" />
+                <span>Simpan</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-[#00632B]/10 text-[#00632B]">
+                  {savedItems.length}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* KONTEN KARTU: TERSIMPAN ATAU KABAR KAMU */}
@@ -2879,40 +3018,47 @@ export default function KarebaFeedFinal() {
                         }
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="relative w-[104px] min-w-[104px] max-w-[104px] bg-emerald-50/80 hover:bg-emerald-100/70 rounded-xl p-1.5 cursor-pointer transition-all duration-150 border border-emerald-200/80 shadow-2xs shrink-0 select-none active:scale-[0.98]"
+                      className="relative w-[104px] min-w-[104px] max-w-[104px] h-[162px] bg-emerald-50/80 hover:bg-emerald-100/70 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-emerald-200/80 shadow-2xs shrink-0 select-none active:scale-[0.98] flex flex-col justify-between"
                       style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
                     >
-                      <div className="relative overflow-hidden rounded-lg bg-neutral-100 h-[68px] w-full flex items-center justify-center select-none">
-                        {isVid ? (
-                          <div className="relative h-[68px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-lg">
+                      <div className="relative overflow-hidden rounded-none bg-neutral-100 h-[116px] w-full flex items-center justify-center select-none">
+                        {isVid && (p.thumbnail || p.img) ? (
+                          <div className="relative h-[116px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-none">
                             <img
                               src={p.thumbnail || p.img}
                               alt={p.title}
                               draggable={false}
                               onContextMenu={(e) => e.preventDefault()}
-                              className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
+                              className="h-[116px] w-full object-cover rounded-none pointer-events-none select-none"
                               style={{ WebkitTouchCallout: "none" }}
                             />
                             <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none">
-                              <div className="w-5 h-5 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xs border border-white/20">
-                                <Play className="w-2.5 h-2.5 fill-white translate-x-0.5" />
+                              <div className="w-6 h-6 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xs border border-white/20">
+                                <Play className="w-3 h-3 fill-white translate-x-0.5" />
                               </div>
                             </div>
                           </div>
-                        ) : (
+                        ) : p.img ? (
                           <img
                             src={p.img}
                             alt={p.title}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
-                            className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
+                            className="h-[116px] w-full object-cover rounded-none pointer-events-none select-none"
                             style={{ WebkitTouchCallout: "none" }}
                             onError={(e) => {
                               e.currentTarget.style.display = "none";
                             }}
                           />
+                        ) : (
+                          <div className="w-full h-full p-2 bg-gradient-to-br from-emerald-100/60 to-emerald-200/50 flex flex-col items-center justify-center text-center rounded-none">
+                            <PenLine className="w-5 h-5 text-[#00632B] mb-1" />
+                            <span className="text-[10px] font-bold text-neutral-800 line-clamp-3 leading-tight">
+                              {p.caption || p.title}
+                            </span>
+                          </div>
                         )}
-                        <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
+                        <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded-none text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
                           {isVid ? (
                             <>
                               <Video className="w-2 h-2 text-emerald-400" />
@@ -2926,8 +3072,10 @@ export default function KarebaFeedFinal() {
                           )}
                         </span>
                       </div>
-                      <p className="text-[11.5px] mt-1 font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
-                      <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
+                      <div className="w-full pt-1">
+                        <p className="text-[11.5px] font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
+                        <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
+                      </div>
                     </div>
                   );
                 })}
@@ -2936,17 +3084,32 @@ export default function KarebaFeedFinal() {
           ) : (
             /* KARTU KABAR KAMU (TAMPIL KETIKA KARTU TERSIMPAN TIDAK AKTIF) */
             <CardCarousel id="user-posts-carousel" className="animate-fade-in">
-              {/* KARTU BUAT REELS (EBBU KAREBA) - PERSIS SCREENSHOT INSTAGRAM REELS */}
+              {/* KARTU BUAT REELS (EBBU KAREBA) - PERSIS MODEL STORY DI FB TAPI BUKAN STORY */}
               <div
                 id="user-create-reel-card"
                 data-card-item="true"
-                onClick={() => {
-                  if (!(window as any).__KAREBATA_IS_DRAGGING_CARD__) {
-                    handleEbbuKarebaClick();
+                onTouchStart={(e) => {
+                  (e.currentTarget as any).__START_POS__ = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                }}
+                onTouchEnd={(e) => {
+                  const start = (e.currentTarget as any).__START_POS__;
+                  if (start && e.changedTouches[0]) {
+                    const dx = Math.abs(e.changedTouches[0].clientX - start.x);
+                    const dy = Math.abs(e.changedTouches[0].clientY - start.y);
+                    if (dx > 7 || dy > 7) {
+                      return; // Sedang menggeser/scroll layar, jangan buka modal
+                    }
                   }
                 }}
+                onClick={(e) => {
+                  if ((window as any).__KAREBATA_IS_DRAGGING_CARD__) {
+                    e.preventDefault();
+                    return;
+                  }
+                  handleEbbuKarebaClick();
+                }}
                 onContextMenu={(e) => e.preventDefault()}
-                className="relative w-[104px] min-w-[104px] max-w-[104px] h-[108px] rounded-xl p-1.5 cursor-pointer transition-all duration-150 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col items-center justify-center border border-white/20 overflow-hidden"
+                className="relative w-[104px] min-w-[104px] max-w-[104px] h-[162px] rounded-none p-2 cursor-pointer transition-all duration-150 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col items-center justify-between border border-white/20 overflow-hidden"
                 style={{
                   WebkitTouchCallout: "none",
                   touchAction: "pan-x pan-y",
@@ -2954,8 +3117,12 @@ export default function KarebaFeedFinal() {
                     "linear-gradient(180deg, #004d21 0%, #00632B 40%, #059669 75%, #10b981 100%)",
                 }}
               >
+                <div className="w-full flex justify-start">
+                  <span className="w-2 h-2 rounded-full bg-white/40" />
+                </div>
+
                 {/* Lingkaran Putih Tengah dengan Ikon Media & Badge Play ▶️ */}
-                <div className="relative w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform duration-150">
+                <div className="relative w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform duration-150 my-auto">
                   {/* Ikon Media (Galeri Foto & Video) */}
                   <svg className="w-5 h-5 drop-shadow-2xs" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
@@ -2978,9 +3145,11 @@ export default function KarebaFeedFinal() {
                 </div>
 
                 {/* Teks: Ebbu kareba */}
-                <span className="text-white font-bold text-[11px] leading-tight text-center drop-shadow-xs mt-2 tracking-tight">
-                  Ebbu kareba
-                </span>
+                <div className="w-full text-center pb-1">
+                  <span className="text-white font-bold text-[11px] leading-tight block drop-shadow-xs tracking-tight">
+                    Ebbu kareba
+                  </span>
+                </div>
               </div>
 
               {posts.length === 0 ? (
@@ -2991,7 +3160,7 @@ export default function KarebaFeedFinal() {
                       handleEbbuKarebaClick();
                     }
                   }}
-                  className="relative w-[130px] min-w-[130px] max-w-[130px] h-[108px] bg-neutral-50 hover:bg-neutral-100 rounded-xl p-2 cursor-pointer transition-all duration-150 border border-dashed border-neutral-300 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center active:scale-[0.98]"
+                  className="relative w-[116px] min-w-[116px] max-w-[116px] h-[162px] bg-neutral-50 hover:bg-neutral-100 rounded-none p-2 cursor-pointer transition-all duration-150 border border-dashed border-neutral-300 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center active:scale-[0.98]"
                 >
                   <p className="text-[11px] font-bold text-neutral-800 leading-tight">
                     Kabar Saya Masih Kosong
@@ -3019,12 +3188,12 @@ export default function KarebaFeedFinal() {
                         }
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="relative w-[104px] min-w-[104px] max-w-[104px] bg-neutral-50 hover:bg-neutral-100 rounded-xl p-1.5 cursor-pointer transition-all duration-150 border border-neutral-200 shadow-2xs shrink-0 select-none group active:scale-[0.98]"
+                      className="relative w-[104px] min-w-[104px] max-w-[104px] h-[162px] bg-neutral-50 hover:bg-neutral-100 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-neutral-200 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col justify-between"
                       style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
                     >
-                      <div className="relative overflow-hidden rounded-lg bg-neutral-100 h-[68px] w-full flex items-center justify-center select-none">
-                        {isVid ? (
-                          <div className="relative h-[68px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-lg">
+                      <div className="relative overflow-hidden rounded-none bg-neutral-100 h-[116px] w-full flex items-center justify-center select-none">
+                        {isVid && (p.thumbnail || p.img) ? (
+                          <div className="relative h-[116px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-none">
                             <img
                               src={p.thumbnail || p.img}
                               alt={p.title}
@@ -3032,16 +3201,16 @@ export default function KarebaFeedFinal() {
                               decoding="async"
                               draggable={false}
                               onContextMenu={(e) => e.preventDefault()}
-                              className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
+                              className="h-[116px] w-full object-cover rounded-none pointer-events-none select-none"
                               style={{ WebkitTouchCallout: "none" }}
                             />
                             <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none">
-                              <div className="w-5 h-5 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xs border border-white/20">
-                                <Play className="w-2.5 h-2.5 fill-white translate-x-0.5" />
+                              <div className="w-6 h-6 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-xs border border-white/20">
+                                <Play className="w-3 h-3 fill-white translate-x-0.5" />
                               </div>
                             </div>
                           </div>
-                        ) : (
+                        ) : p.img ? (
                           <img
                             src={p.img}
                             alt={p.title}
@@ -3049,14 +3218,21 @@ export default function KarebaFeedFinal() {
                             decoding="async"
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
-                            className="h-[68px] w-full object-cover rounded-lg pointer-events-none select-none"
+                            className="h-[116px] w-full object-cover rounded-none pointer-events-none select-none"
                             style={{ WebkitTouchCallout: "none" }}
                             onError={(e) => {
                               e.currentTarget.style.display = "none";
                             }}
                           />
+                        ) : (
+                          <div className="w-full h-full p-2 bg-gradient-to-br from-amber-100/60 to-emerald-100/50 flex flex-col items-center justify-center text-center rounded-none">
+                            <PenLine className="w-5 h-5 text-[#00632B] mb-1" />
+                            <span className="text-[10px] font-bold text-neutral-800 line-clamp-3 leading-tight">
+                              {p.caption || p.title}
+                            </span>
+                          </div>
                         )}
-                        <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
+                        <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded-none text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
                           {isVid ? (
                             <>
                               <Video className="w-2 h-2 text-emerald-400" />
@@ -3070,8 +3246,10 @@ export default function KarebaFeedFinal() {
                           )}
                         </span>
                       </div>
-                      <p className="text-[11.5px] mt-1 font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
-                      <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
+                      <div className="w-full pt-1">
+                        <p className="text-[11.5px] font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
+                        <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
+                      </div>
                     </div>
                   );
                 })
@@ -3172,7 +3350,7 @@ export default function KarebaFeedFinal() {
                     <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Deskripsi Kabar:
                   </label>
                   <span className={`text-[11px] font-semibold ${description.trim().length >= 99 ? "text-emerald-700" : "text-amber-700"}`}>
-                    {description.trim().length}/500 {description.trim().length < 99 ? `(kurang ${99 - description.trim().length} huruf)` : "✓ Lolos (≥99 huruf)"}
+                    {description.trim().length} huruf {description.trim().length < 99 ? `(kurang ${99 - description.trim().length})` : "✓ Lolos (≥99 huruf)"}
                   </span>
                 </div>
                 <textarea
@@ -3181,7 +3359,7 @@ export default function KarebaFeedFinal() {
                   maxLength={500}
                   rows={3}
                   onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-                  placeholder="Ketik deskripsi kabar minimal 99 huruf agar dapat dibagikan... (maks. 500 huruf)"
+                  placeholder="Ketik deskripsi kabar minimal 99 huruf agar dapat dibagikan..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none"
                   autoFocus
                 />
@@ -3573,57 +3751,69 @@ export default function KarebaFeedFinal() {
                   </div>
                 </div>
 
-                {/* Media Foto/Video: Vertikal rasio 4:5 dipotong atas bawah, Horizontal rasio asli */}
-                <div id={`feed-post-media-${f.id}`} className="w-full scroll-mt-20 feed-media-wrapper" style={{ touchAction: "pan-y" }}>
-                  <FeedMedia
-                    src={f.img}
-                    thumbnail={f.thumbnail}
-                    alt={f.text}
-                    description={f.text}
-                    mediaType={f.mediaType}
-                    author={{
-                      name: f.name || f.user || "Warga Kareba",
-                      username: f.user,
-                      email: f.email || `${f.user}@karebata.id`,
-                      location: f.location || "Kawasan Sekitar",
-                      time: f.time,
-                      initials: (f.user ? f.user.trim().replace(/^@/, "")[0] : f.init || "W").toUpperCase(),
-                      avatar: f.avatar,
-                      description: f.text,
-                    }}
-                  />
-                </div>
+                {/* Media Foto/Video ATAU Kartu Teks Elegan jika tanpa foto/video */}
+                {f.img ? (
+                  <div id={`feed-post-media-${f.id}`} className="w-full scroll-mt-20 feed-media-wrapper" style={{ touchAction: "pan-y" }}>
+                    <FeedMedia
+                      src={f.img}
+                      thumbnail={f.thumbnail}
+                      alt={f.text}
+                      description={f.text}
+                      mediaType={f.mediaType}
+                      author={{
+                        name: f.name || f.user || "Warga Kareba",
+                        username: f.user,
+                        email: f.email || `${f.user}@karebata.id`,
+                        location: f.location || "Kawasan Sekitar",
+                        time: f.time,
+                        initials: (f.user ? f.user.trim().replace(/^@/, "")[0] : f.init || "W").toUpperCase(),
+                        avatar: f.avatar,
+                        description: f.text,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full px-4 pt-1 pb-2">
+                    <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs">
+                      <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text">
+                        {f.text}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-                {/* Post Content / Deskripsi di bawah media - Hanya menampilkan selengkapnya jika teks benar-benar panjang/terpotong */}
-                <div className="px-4">
-                  {(() => {
-                    const isLong = f.text.length > 110 || f.text.split("\n").length > 2;
-                    return (
-                      <div
-                        id={`post-desc-container-${f.id}`}
-                        onClick={() => {
-                          if (isLong) {
-                            toggleExpandPost(f.id);
-                          }
-                        }}
-                        className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
-                      >
-                        <h3
-                          className={`text-[clamp(18px,5vw,22px)] font-bold text-neutral-900 tracking-tight leading-snug transition-all ${
-                            isLong && !expandedPosts[f.id] ? "line-clamp-2" : ""
-                          }`}
+                {/* Post Content / Deskripsi di bawah media (Hanya jika memiliki foto/video) */}
+                {f.img && (
+                  <div className="px-4">
+                    {(() => {
+                      const isLong = f.text.length > 110 || f.text.split("\n").length > 2;
+                      return (
+                        <div
+                          id={`post-desc-container-${f.id}`}
+                          onClick={() => {
+                            if (isLong) {
+                              toggleExpandPost(f.id);
+                            }
+                          }}
+                          className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
                         >
-                          {f.text}
-                        </h3>
-                        {isLong && (
-                          <span className="text-[clamp(14px,3.8vw,16px)] font-bold text-[#00632B] hover:text-[#004f22] mt-1.5 inline-block">
-                            {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
+                          <h3
+                            className={`text-[clamp(18px,5vw,22px)] font-bold text-neutral-900 tracking-tight leading-snug transition-all ${
+                              isLong && !expandedPosts[f.id] ? "line-clamp-2" : ""
+                            }`}
+                          >
+                            {f.text}
+                          </h3>
+                          {isLong && (
+                            <span className="text-[clamp(14px,3.8vw,16px)] font-bold text-[#00632B] hover:text-[#004f22] mt-1.5 inline-block">
+                              {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 {/* Baris Ringkasan Reaksi (Emoji & Total) - Dapat Diketuk untuk Melihat Rincian Angka per Emoji */}
                 {f.like > 0 && (
@@ -4229,13 +4419,17 @@ export default function KarebaFeedFinal() {
 
             {/* Ringkasan Singkat Postingan yang Sedang Dikomentari */}
             <div className="px-4 py-2.5 bg-neutral-50/80 border-b border-neutral-200 flex items-center gap-3 shrink-0">
-              {activeCommentItem.img && (
+              {activeCommentItem.img && activeCommentItem.img.trim() ? (
                 <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-200 shrink-0 border border-neutral-200">
                   {activeCommentItem.mediaType === "video" ? (
                     <video src={activeCommentItem.img} className="w-full h-full object-cover" />
                   ) : (
                     <img src={activeCommentItem.img} alt="Pratinjau" className="w-full h-full object-cover" />
                   )}
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 border border-emerald-200">
+                  <PenLine className="w-4 h-4 text-[#00632B]" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -4498,6 +4692,243 @@ export default function KarebaFeedFinal() {
                   className="w-full py-2 px-4 text-neutral-500 hover:text-neutral-800 text-xs font-semibold rounded-xl hover:bg-neutral-100 transition cursor-pointer"
                 >
                   Tutup &amp; Potong di Galeri HP
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* POP-UP PILIHAN MEDIA KUSTOM (HANYA KAMERA & GALERI, HILANGKAN PILIHAN JELAJAH FILE) */}
+        {isMediaChoiceModalOpen && (
+          <div
+            id="media-choice-bottom-sheet"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 max-w-md mx-auto animate-fade-in select-none"
+            onClick={() => setIsMediaChoiceModalOpen(false)}
+          >
+            <div
+              className="w-full bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-neutral-200 animate-slide-up space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Garis Handle Tarik */}
+              <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto sm:hidden" />
+
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                <div>
+                  <h3 className="font-extrabold text-base text-neutral-900">
+                    Bagikan Kabar Warga
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Pilih sumber foto atau video yang ingin Anda unggah
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMediaChoiceModalOpen(false)}
+                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition"
+                  aria-label="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 3 Pilihan Bersih & Jelas: Kamera, Galeri, atau Tulis Teks */}
+              <div className="grid grid-cols-3 gap-2.5 pt-1">
+                {/* 1. Ambil dari Kamera Langsung */}
+                <button
+                  id="choice-camera-btn"
+                  type="button"
+                  onClick={() => {
+                    setIsMediaChoiceModalOpen(false);
+                    openCamera();
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200/80 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
+                >
+                  <div className="w-11 h-11 rounded-full bg-[#00632B] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                    <CameraIcon className="w-5 h-5" strokeWidth={2.2} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-xs text-neutral-900">Kamera</p>
+                    <p className="text-[9.5px] text-neutral-500 mt-0.5">Foto baru</p>
+                  </div>
+                </button>
+
+                {/* 2. Pilih dari Galeri HP */}
+                <button
+                  id="choice-gallery-btn"
+                  type="button"
+                  onClick={() => {
+                    setIsMediaChoiceModalOpen(false);
+                    openCustomGallery();
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
+                >
+                  <div className="w-11 h-11 rounded-full bg-neutral-800 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                    <ImageIcon className="w-5 h-5" strokeWidth={2.2} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-xs text-neutral-900">Galeri</p>
+                    <p className="text-[9.5px] text-neutral-500 mt-0.5">Foto/Video</p>
+                  </div>
+                </button>
+
+                {/* 3. Tulis Teks Kabar Saja (Batas 500 Huruf) */}
+                <button
+                  id="choice-text-btn"
+                  type="button"
+                  onClick={() => {
+                    setIsMediaChoiceModalOpen(false);
+                    setIsTextPostModalOpen(true);
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200/80 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
+                >
+                  <div className="w-11 h-11 rounded-full bg-[#E5A000] text-neutral-950 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                    <PenLine className="w-5 h-5" strokeWidth={2.2} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-xs text-neutral-900">Teks Saja</p>
+                    <p className="text-[9.5px] text-neutral-500 mt-0.5">Tanpa media</p>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsMediaChoiceModalOpen(false)}
+                className="w-full py-2.5 text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800 rounded-xl hover:bg-neutral-100 transition cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL / PAPAN UNGGAH TEKS KABAR WARGA (BATAS 500 HURUF) */}
+        {isTextPostModalOpen && (
+          <div
+            id="text-post-modal"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 max-w-md mx-auto animate-fade-in select-none"
+            onClick={() => {
+              if (!isPublishingTextPost) setIsTextPostModalOpen(false);
+            }}
+          >
+            <div
+              className="w-full bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-neutral-200 animate-slide-up space-y-4 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Garis Handle Tarik */}
+              <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto sm:hidden" />
+
+              {/* Header Papan Tulis Kabar */}
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-[#00632B] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                    {initial}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-neutral-900">
+                      Tulis Kabar Warga
+                    </h3>
+                    <p className="text-[11px] text-neutral-500">
+                      Sebagai <span className="font-bold text-[#00632B]">@{userName}</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTextPostModalOpen(false)}
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition"
+                  aria-label="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Pedoman Komunitas Santun Ringkas */}
+              <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-2.5 text-xs text-emerald-950 flex items-start gap-2 select-none">
+                <ShieldCheck className="w-4 h-4 text-[#00632B] shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <span className="font-bold text-neutral-900">Bahasa Santun:</span> Gunakan tutur kata yang santun, bebas dari ujaran kebencian, fitnah, kata jorok atau makian.
+                </div>
+              </div>
+
+              {/* Kotak Textarea Papan Teks (Batas 500 Huruf) */}
+              <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white transition space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <label htmlFor="text-post-textarea" className="font-bold text-neutral-700 flex items-center gap-1.5">
+                    <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Teks Kabar Warga:
+                  </label>
+                  <span className={`text-[11px] font-mono font-semibold ${textPostContent.length >= 500 ? "text-red-600 font-bold" : "text-neutral-500"}`}>
+                    {textPostContent.length}/500
+                  </span>
+                </div>
+                <textarea
+                  id="text-post-textarea"
+                  value={textPostContent}
+                  maxLength={500}
+                  rows={5}
+                  onChange={(e) => setTextPostContent(e.target.value.slice(0, 500))}
+                  placeholder="Apa kabar atau informasi yang ingin Anda sampaikan ke warga sekitar hari ini?..."
+                  className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none leading-relaxed"
+                  autoFocus
+                />
+              </div>
+
+              {/* Lokasi Kabar (Wajib Diisi / Maks 30 Huruf) */}
+              <div className={`rounded-xl p-3 border transition space-y-1.5 ${
+                textPostLocation.trim()
+                  ? "bg-white border-[#00632B]/50"
+                  : "bg-neutral-50 border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white"
+              }`}>
+                <div className="flex items-center justify-between text-xs">
+                  <label htmlFor="text-post-loc-input" className="font-bold text-neutral-700 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500" /> Lokasi Kabar (Wajib):
+                  </label>
+                  <span className={`text-[10px] font-medium ${textPostLocation.length >= 30 ? "text-red-600 font-bold" : textPostLocation.trim() ? "text-emerald-600 font-semibold" : "text-neutral-400"}`}>
+                    {textPostLocation.length}/30 {textPostLocation.trim() ? "✓" : ""}
+                  </span>
+                </div>
+                <input
+                  id="text-post-loc-input"
+                  type="text"
+                  maxLength={30}
+                  value={textPostLocation}
+                  onChange={(e) => setTextPostLocation(e.target.value.slice(0, 30))}
+                  placeholder="Ketik lokasi (contoh: Danau Tempe, Sengkang)..."
+                  className="bg-transparent w-full outline-none text-sm text-neutral-900 placeholder-neutral-400"
+                />
+              </div>
+
+              {/* Tombol Bagikan Kabar Teks - Berubah Hijau Aktif HANYA JIKA Teks & Lokasi Dua-duanya Terisi */}
+              <div className="pt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsTextPostModalOpen(false)}
+                  disabled={isPublishingTextPost}
+                  className="w-1/3 py-3 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200/80 rounded-xl transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  id="submit-text-post-btn"
+                  type="button"
+                  disabled={!textPostContent.trim() || !textPostLocation.trim() || isPublishingTextPost}
+                  onClick={handleCreateTextPost}
+                  className={`flex-1 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
+                    textPostContent.trim() && textPostLocation.trim() && !isPublishingTextPost
+                      ? "bg-[#00632B] hover:bg-[#004f22] text-white cursor-pointer shadow-md active:scale-[0.99]"
+                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  <span>
+                    {isPublishingTextPost
+                      ? "Menerbitkan..."
+                      : !textPostContent.trim()
+                      ? "Tulis teks kabar dulu"
+                      : !textPostLocation.trim()
+                      ? "Isi lokasi dulu"
+                      : "Bagikan Kabar Teks"}
+                  </span>
                 </button>
               </div>
             </div>
