@@ -753,11 +753,6 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           openFullscreen();
         }}
       >
-        {/* Placeholder skeleton halus jika sedang decode perdana di jaringan lambat */}
-        {!isImageReady && (
-          <div className="absolute inset-0 bg-neutral-800/80 animate-pulse pointer-events-none" />
-        )}
-
         <img
           src={src}
           alt={alt}
@@ -767,9 +762,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           onLoad={handleImageLoad}
-          className={`w-full h-full object-cover object-center block select-none pointer-events-none transition-opacity duration-150 ${
-            isImageReady ? "opacity-100" : "opacity-0"
-          }`}
+          className="w-full h-full object-cover object-center block select-none pointer-events-none"
           style={{ width: "100%", height: "100%", WebkitTouchCallout: "none", touchAction: "pan-y" }}
         />
 

@@ -18,14 +18,14 @@ const DEFAULT_ANNOUNCEMENTS: BulletinItem[] = [
   {
     id: "b-promo-1",
     category: "PASANG IKLAN",
-    text: "📢 Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
+    text: "Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
     location: "Layanan Iklan",
     time: "Aktif",
   },
   {
     id: "b-promo-2",
     category: "IKLAN VIDEO",
-    text: "🎬 Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
+    text: "Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
     location: "Slot Terbatas",
     time: "Aktif",
   },
@@ -39,7 +39,7 @@ const DEFAULT_ANNOUNCEMENTS: BulletinItem[] = [
   {
     id: "b-promo-3",
     category: "PROMO UMKM",
-    text: "✨ Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
+    text: "Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
     location: "Kemitraan Usaha",
     time: "Terkini",
   },
@@ -194,13 +194,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
               <div
                 key={`m1-${item.id}-${idx}`}
                 onClick={() => handleItemPress(item)}
-                className="inline-flex items-center gap-1.5 px-3 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
               >
-                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-1.5 py-0.5 rounded border border-neutral-700/60 leading-none">
+                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
                   {item.category}
                 </span>
-                <span className="font-normal">{item.text}</span>
-                <span className="text-neutral-500 text-[11px] mx-1">•</span>
+                <span className="font-medium tracking-wide">{item.text}</span>
+                <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
               </div>
             ))}
 
@@ -209,13 +209,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
               <div
                 key={`m2-${item.id}-${idx}`}
                 onClick={() => handleItemPress(item)}
-                className="inline-flex items-center gap-1.5 px-3 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
               >
-                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-1.5 py-0.5 rounded border border-neutral-700/60 leading-none">
+                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
                   {item.category}
                 </span>
-                <span className="font-normal">{item.text}</span>
-                <span className="text-neutral-500 text-[11px] mx-1">•</span>
+                <span className="font-medium tracking-wide">{item.text}</span>
+                <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
               </div>
             ))}
           </div>

@@ -222,14 +222,14 @@ export default function KarebaFeedFinal() {
     {
       id: "b-promo-1",
       category: "PASANG IKLAN",
-      text: "📢 Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
+      text: "Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
       location: "Layanan Iklan",
       time: "Aktif",
     },
     {
       id: "b-promo-2",
       category: "IKLAN VIDEO",
-      text: "🎬 Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
+      text: "Tersedia slot Iklan Video & Pop-up tampil di layar utama warga langsung terhubung ke WhatsApp jualan Anda! Hubungi WA Admin: 085351037179.",
       location: "Slot Terbatas",
       time: "Aktif",
     },
@@ -243,7 +243,7 @@ export default function KarebaFeedFinal() {
     {
       id: "b-promo-3",
       category: "PROMO UMKM",
-      text: "✨ Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
+      text: "Mau produk atau jasa Anda laris dilihat ribuan warga sekitar setiap hari? Pasang iklan sekarang juga di Kareba'Ta!",
       location: "Kemitraan Usaha",
       time: "Terkini",
     },

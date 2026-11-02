@@ -1,6 +1,7 @@
-import React, { useRef, useState } from "react";
-import { MessageCircle, ExternalLink, Megaphone, MapPin, Play, Pause, Volume2, VolumeX, Video as VideoIcon } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { MessageCircle, ExternalLink, Megaphone, MapPin, Play, Pause, Volume2, VolumeX, Video as VideoIcon, Maximize2, X } from "lucide-react";
 import { SponsorAd } from "../types";
+import { createPortal } from "react-dom";
 
 interface SponsorAdCardProps {
   ad: SponsorAd;
@@ -100,8 +101,26 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [adAspectRatio, setAdAspectRatio] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const fsVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setIsFullscreen(false);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [isFullscreen]);
 
   const initialLetter = ad.advertiserName ? ad.advertiserName.trim().charAt(0).toUpperCase() : "S";
 
@@ -207,7 +226,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 onPause={() => setIsPlaying(false)}
               />
 
-              {/* Tombol Kontrol Suara & Putar Video di Pojok Bawah */}
+              {/* Tombol Kontrol Suara, Layar Penuh & Putar Video di Pojok Bawah */}
               <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
                 <button
                   type="button"
@@ -216,6 +235,17 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                   aria-label={isMuted ? "Bunyikan Suara" : "Matikan Suara"}
                 >
                   {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFullscreen(true);
+                  }}
+                  className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md text-white flex items-center justify-center transition shadow-md cursor-pointer active:scale-95 border border-white/20"
+                  aria-label="Layar Penuh Iklan"
+                >
+                  <Maximize2 className="w-3.5 h-3.5 text-white" />
                 </button>
                 <button
                   type="button"
@@ -330,6 +360,86 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
           )}
         </div>
       </div>
+
+      {/* FULLSCREEN MODAL VIEWER UNTUK IKLAN VIDEO & GAMBAR */}
+      {isFullscreen && typeof document !== "undefined" && createPortal(
+        <div
+          id="sponsor-ad-fullscreen-modal"
+          className="fixed inset-0 z-[9999] bg-black text-white flex flex-col justify-between overflow-hidden select-none animate-fade-in"
+          style={{ overscrollBehavior: "none", touchAction: "none" }}
+        >
+          {/* Header Fullscreen Iklan */}
+          <header className="px-4 py-3.5 bg-gradient-to-b from-black/90 via-black/60 to-transparent flex items-center justify-between z-20 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0 pr-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-600 flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/20 shadow-xs">
+                {initialLetter}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-nowrap">
+                  <p className="font-bold text-sm text-white truncate leading-tight">{ad.advertiserName}</p>
+                  <span className="text-[10px] bg-amber-500 text-slate-950 font-extrabold px-1.5 py-0.2 rounded-full uppercase">Sponsor</span>
+                </div>
+                {ad.location && (
+                  <p className="text-xs text-neutral-300 truncate mt-0.5">{ad.location}</p>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(false)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer active:scale-95 shrink-0"
+              aria-label="Tutup Layar Penuh"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </header>
+
+          {/* Area Media Video di Layar Penuh */}
+          <div className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden bg-black">
+            {isVideo ? (
+              <video
+                ref={fsVideoRef}
+                src={mediaSource}
+                poster={ad.thumbnailUrl}
+                playsInline
+                autoPlay
+                loop
+                controls
+                className="max-w-full max-h-full object-contain mx-auto"
+              />
+            ) : (
+              <img
+                src={mediaSource}
+                alt={ad.title}
+                className="max-w-full max-h-full object-contain mx-auto"
+              />
+            )}
+          </div>
+
+          {/* Footer Call-to-Action di Layar Penuh */}
+          <footer className="px-4 py-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-20 shrink-0 flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h5 className="font-bold text-sm text-white truncate">{ad.title}</h5>
+              {ad.description && (
+                <p className="text-xs text-neutral-300 line-clamp-1 mt-0.5">{ad.description}</p>
+              )}
+            </div>
+
+            {ad.actionType !== "none" && (
+              <button
+                type="button"
+                onClick={handleActionClick}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shrink-0 cursor-pointer"
+              >
+                {ad.actionType === "whatsapp" ? <MessageCircle className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                <span>{ad.actionButtonText || (ad.actionType === "whatsapp" ? "WhatsApp Toko" : "Buka")}</span>
+              </button>
+            )}
+          </footer>
+        </div>,
+        document.body
+      )}
     </article>
   );
 };
