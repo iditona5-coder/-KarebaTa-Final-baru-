@@ -3155,12 +3155,7 @@ export default function KarebaFeedFinal() {
               {posts.length === 0 ? (
                 <div
                   data-card-item="true"
-                  onClick={() => {
-                    if (!(window as any).__KAREBATA_IS_DRAGGING_CARD__) {
-                      handleEbbuKarebaClick();
-                    }
-                  }}
-                  className="relative w-[116px] min-w-[116px] max-w-[116px] h-[162px] bg-neutral-50 hover:bg-neutral-100 rounded-none p-2 cursor-pointer transition-all duration-150 border border-dashed border-neutral-300 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center active:scale-[0.98]"
+                  className="relative w-[116px] min-w-[116px] max-w-[116px] h-[162px] bg-neutral-50 rounded-none p-2 border border-dashed border-neutral-300 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center cursor-default pointer-events-none"
                 >
                   <p className="text-[11px] font-bold text-neutral-800 leading-tight">
                     Kabar Saya Masih Kosong
@@ -3397,46 +3392,16 @@ export default function KarebaFeedFinal() {
                 />
               </div>
 
-              {/* Indikator Kelengkapan Syarat Posting */}
-              <div className="flex items-center justify-between text-[11px] px-1 text-neutral-500">
-                <span className="font-semibold text-neutral-600">Syarat Publikasi:</span>
-                <div className="flex items-center gap-2">
-                  <span className={`flex items-center gap-0.5 ${selectedImage ? "text-emerald-600 font-bold" : "text-neutral-400"}`}>
-                    {selectedImage ? "✓" : "○"} Media
-                  </span>
-                  <span className={`flex items-center gap-0.5 ${description.trim().length >= 99 ? "text-emerald-600 font-bold" : "text-amber-600 font-medium"}`}>
-                    {description.trim().length >= 99 ? "✓" : "○"} Deskripsi (≥99)
-                  </span>
-                  <span className={`flex items-center gap-0.5 ${selectedLocation.trim() ? "text-emerald-600 font-bold" : "text-neutral-400"}`}>
-                    {selectedLocation.trim() ? "✓" : "○"} Lokasi
-                  </span>
-                  <span className={`flex items-center gap-0.5 ${!moderationWarning ? "text-emerald-600 font-bold" : "text-red-600 font-bold"}`}>
-                    {!moderationWarning ? "✓" : "✕"} Bahasa Santun
-                  </span>
-                </div>
-              </div>
-
               {/* Tombol Publikasi Kabar - Bebas dari loading, orang bisa langsung posting lagi */}
               <div className="pt-1 pb-1">
                 <button
                   id="publish-post-btn"
                   type="button"
-                  disabled={!isPublishReady}
                   onClick={handleCreatePost}
-                  className={`w-full py-3.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
-                    isPublishReady
-                      ? "bg-[#00632B] hover:bg-[#004f22] text-white cursor-pointer shadow-md active:scale-[0.99]"
-                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
-                  }`}
+                  className="w-full py-3.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 bg-[#00632B] hover:bg-[#004f22] text-white cursor-pointer shadow-md active:scale-[0.99]"
                 >
                   <Send className="w-4 h-4" />
-                  <span>
-                    {moderationWarning
-                      ? `Hapus kata terlarang: "${moderationWarning.flaggedWord}"`
-                      : description.trim().length < 99
-                      ? `Ketik minimal 99 huruf (kurang ${Math.max(0, 99 - description.trim().length)})`
-                      : "Bagikan kabar sekarang"}
-                  </span>
+                  <span>Bagikan kabar sekarang</span>
                 </button>
               </div>
 

@@ -208,7 +208,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     }
   };
 
-  // Efek: Berhenti berjalan (pause) otomatis ketika media di-scroll keluar pandangan
+  // Efek: Otomatis berputar (autoplay) saat video masuk ke layar (seperti di FB) dan otomatis berhenti (pause) saat di-scroll lewat
   useEffect(() => {
     if (!isVideo) return;
 
@@ -218,13 +218,22 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting && currentVideo && !currentVideo.paused) {
-            safePause(currentVideo);
-            setIsPlaying(false);
+          // Ketika video terlihat dominan di layar (>= 50%), otomatis putar (autoplay) tanpa suara khas Facebook
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            if (currentVideo.paused) {
+              safePlay(currentVideo);
+              setIsPlaying(true);
+            }
+          } else if (!entry.isIntersecting || entry.intersectionRatio < 0.25) {
+            // Ketika video di-scroll keluar pandangan, otomatis jeda (pause)
+            if (!currentVideo.paused) {
+              safePause(currentVideo);
+              setIsPlaying(false);
+            }
           }
         });
       },
-      { threshold: 0.25 }
+      { threshold: [0.2, 0.5, 0.8] }
     );
 
     observer.observe(currentVideo);
@@ -232,7 +241,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [isVideo]);
+  }, [isVideo, activeVideoSrc]);
 
   const handleVideoMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const { videoWidth, videoHeight, duration } = e.currentTarget;
