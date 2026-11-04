@@ -4855,7 +4855,7 @@ export default function KarebaFeedFinal() {
                       ? "text-emerald-600 font-bold"
                       : "text-amber-600 font-semibold"
                   }`}>
-                    {textPostContent.trim().length}/99 huruf minimal {textPostContent.trim().length >= 99 ? "✓" : `(kurang ${99 - textPostContent.trim().length})`}
+                    {textPostContent.trim().length}/500 {textPostContent.trim().length >= 99 ? "✓ (Minimal 99 tercapai)" : `(Kurang ${99 - textPostContent.trim().length} huruf)`}
                   </span>
                 </div>
                 <textarea
@@ -4864,7 +4864,7 @@ export default function KarebaFeedFinal() {
                   maxLength={500}
                   rows={5}
                   onChange={(e) => setTextPostContent(e.target.value.slice(0, 500))}
-                  placeholder="Ketik kabar atau informasi warga sekitar hari ini (minimal 99 huruf agar jelas dan bermanfaat)..."
+                  placeholder="Ketik kabar atau informasi warga sekitar hari ini..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none leading-relaxed"
                   autoFocus
                 />
@@ -4890,7 +4890,7 @@ export default function KarebaFeedFinal() {
                   maxLength={30}
                   value={textPostLocation}
                   onChange={(e) => setTextPostLocation(e.target.value.slice(0, 30))}
-                  placeholder="Ketik lokasi (contoh: Danau Tempe, Sengkang)..."
+                  placeholder="Contoh: Danau Tempe, Sengkang..."
                   className="bg-transparent w-full outline-none text-sm text-neutral-900 placeholder-neutral-400"
                 />
               </div>
@@ -4918,13 +4918,7 @@ export default function KarebaFeedFinal() {
                 >
                   <Send className="w-4 h-4" />
                   <span>
-                    {isPublishingTextPost
-                      ? "Menerbitkan..."
-                      : textPostContent.trim().length < 99
-                      ? `Ketik minimal 99 huruf (kurang ${99 - textPostContent.trim().length})`
-                      : !textPostLocation.trim()
-                      ? "Isi lokasi dulu"
-                      : "Bagikan Kabar Teks"}
+                    {isPublishingTextPost ? "Menerbitkan..." : "Bagikan Kabar Teks"}
                   </span>
                 </button>
               </div>

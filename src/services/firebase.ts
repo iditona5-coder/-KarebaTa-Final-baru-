@@ -64,16 +64,16 @@ export const firebaseConfig = {
 // Inisialisasi Firebase App
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Redam log peringatan offline berkala
+// Redam log peringatan offline berkala & set level silent
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch {}
 
-// Inisialisasi Firestore dengan auto-detect long polling dan persistent multiple tab manager
+// Inisialisasi Firestore dengan experimentalForceLongPolling agar selalu stabil menembus proxy/container browser preview tanpa batas timeout 10 detik
 export const db: Firestore = (() => {
   try {
     return initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager(),
       }),
@@ -82,7 +82,7 @@ export const db: Firestore = (() => {
   } catch (e1) {
     try {
       return initializeFirestore(app, {
-        experimentalAutoDetectLongPolling: true,
+        experimentalForceLongPolling: true,
         localCache: memoryLocalCache(),
         ignoreUndefinedProperties: true,
       });
