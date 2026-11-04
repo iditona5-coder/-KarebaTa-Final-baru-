@@ -3739,11 +3739,35 @@ export default function KarebaFeedFinal() {
                   </div>
                 ) : (
                   <div className="w-full px-4 pt-1 pb-2">
-                    <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs">
-                      <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text">
-                        {f.text}
-                      </p>
-                    </div>
+                    {(() => {
+                      const isLong = f.text.length > 130 || f.text.split("\n").length > 3;
+                      return (
+                        <div
+                          id={`post-text-only-container-${f.id}`}
+                          onClick={() => {
+                            if (isLong) {
+                              toggleExpandPost(f.id);
+                            }
+                          }}
+                          className={`w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs transition-all ${
+                            isLong ? "cursor-pointer" : ""
+                          }`}
+                        >
+                          <p
+                            className={`text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text ${
+                              isLong && !expandedPosts[f.id] ? "line-clamp-3" : ""
+                            }`}
+                          >
+                            {f.text}
+                          </p>
+                          {isLong && (
+                            <span className="text-sm font-bold text-[#00632B] hover:text-[#004f22] mt-2 inline-block">
+                              {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
