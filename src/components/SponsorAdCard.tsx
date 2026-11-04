@@ -331,8 +331,8 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
           })()}
         </div>
 
-        {/* TOMBOL AKSI UTAMA (CTA) */}
-        <div className="pt-1 flex items-center justify-between gap-3">
+        {/* TOMBOL AKSI UTAMA (CTA) - Selalu Horizontal 1 Baris di Semua Layar HP */}
+        <div className="pt-1 flex items-center justify-between gap-2 sm:gap-3">
           {ad.actionType !== "none" && (
             <button
               type="button"
@@ -340,18 +340,18 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               onClick={handleActionClick}
-              className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98 cursor-pointer ${
+              className={`flex-1 min-w-0 py-2.5 px-3 sm:px-4 rounded-xl font-bold text-[clamp(11.5px,3.2vw,13.5px)] flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm transition active:scale-98 cursor-pointer whitespace-nowrap select-none ${
                 ad.actionType === "whatsapp"
                   ? "bg-[#25D366] hover:bg-[#20ba59] text-white shadow-emerald-900/20"
                   : "bg-neutral-900 hover:bg-neutral-800 text-white shadow-neutral-900/20"
               }`}
             >
               {ad.actionType === "whatsapp" ? (
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="w-4 h-4 shrink-0" />
               ) : (
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-4 h-4 shrink-0" />
               )}
-              <span>{ad.actionButtonText || (ad.actionType === "whatsapp" ? "Hubungi WhatsApp Toko" : "Kunjungi Website")}</span>
+              <span className="whitespace-nowrap truncate">{ad.actionButtonText || (ad.actionType === "whatsapp" ? "Hubungi WhatsApp Toko" : "Kunjungi Website")}</span>
             </button>
           )}
 

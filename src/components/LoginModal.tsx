@@ -254,7 +254,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50"
+              className="w-full py-3 px-3 sm:px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-[clamp(12px,3.5vw,14px)] flex items-center justify-center gap-2.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 whitespace-nowrap select-none"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

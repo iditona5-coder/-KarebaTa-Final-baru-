@@ -134,20 +134,20 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
             )}
           </div>
 
-          {/* Tombol Simpan */}
+          {/* Tombol Simpan - Selalu Horizontal 1 Baris di Semua Layar HP */}
           <button
             id="submit-username-btn"
             type="button"
             onClick={handleSave}
             disabled={!isReady}
-            className={`w-full py-3.5 px-5 font-bold text-base rounded-2xl flex items-center justify-center gap-2 transition-all ${
+            className={`w-full py-3.5 px-3 sm:px-5 font-bold text-[clamp(13px,3.8vw,15.5px)] rounded-2xl flex items-center justify-center gap-2 transition-all whitespace-nowrap select-none ${
               isReady
                 ? "bg-[#00632B] hover:bg-[#004f22] text-white shadow-lg shadow-emerald-950/20 active:scale-[0.98] cursor-pointer"
                 : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
             }`}
           >
-            <span>Simpan & Masuk ke Beranda</span>
-            <ArrowRight className={`w-4 h-4 ${isReady ? "text-white" : "text-neutral-400"}`} />
+            <span className="whitespace-nowrap truncate">Simpan & Masuk ke Beranda</span>
+            <ArrowRight className={`w-4 h-4 shrink-0 ${isReady ? "text-white" : "text-neutral-400"}`} />
           </button>
       </main>
 

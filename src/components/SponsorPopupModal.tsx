@@ -288,7 +288,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 id="popup-ad-cta-btn"
                 type="button"
                 onClick={handleActionClick}
-                className={`w-full py-2.5 px-4 rounded-xl font-extrabold text-xs sm:text-sm text-white flex items-center justify-center gap-2 shadow-md transition active:scale-98 cursor-pointer ${
+                className={`w-full py-2.5 px-3 sm:px-4 rounded-xl font-extrabold text-[clamp(12px,3.4vw,14px)] text-white flex items-center justify-center gap-2 shadow-md transition active:scale-98 cursor-pointer whitespace-nowrap select-none ${
                   ad.actionType === "whatsapp"
                     ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-600/25"
                     : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-600/25"
@@ -296,13 +296,13 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
               >
                 {ad.actionType === "whatsapp" ? (
                   <>
-                    <MessageCircle className="w-4 h-4 fill-white" />
-                    <span>{ad.actionButtonText || "Hubungi via WhatsApp"}</span>
+                    <MessageCircle className="w-4 h-4 fill-white shrink-0" />
+                    <span className="whitespace-nowrap truncate">{ad.actionButtonText || "Hubungi via WhatsApp"}</span>
                   </>
                 ) : (
                   <>
-                    <ExternalLink className="w-4 h-4" />
-                    <span>{ad.actionButtonText || "Kunjungi Website Resmi"}</span>
+                    <ExternalLink className="w-4 h-4 shrink-0" />
+                    <span className="whitespace-nowrap truncate">{ad.actionButtonText || "Kunjungi Website Resmi"}</span>
                   </>
                 )}
               </button>

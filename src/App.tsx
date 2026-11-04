@@ -2126,6 +2126,10 @@ export default function KarebaFeedFinal() {
       showToast("Tulis kabar Anda terlebih dahulu!");
       return;
     }
+    if (trimmedText.length < 99) {
+      showToast(`Teks kabar minimal 99 huruf baru bisa dibagikan! (Saat ini: ${trimmedText.length} huruf, kurang ${99 - trimmedText.length})`);
+      return;
+    }
     if (!trimmedLoc) {
       showToast("Isi lokasi kabar Anda terlebih dahulu!");
       return;
@@ -2472,9 +2476,9 @@ export default function KarebaFeedFinal() {
           initialMessage={loginRedirectMessage}
         />
         {toastMessage && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-semibold border border-neutral-700 animate-slide-up">
-            <span className="w-2 h-2 rounded-full bg-[#E5A000]" />
-            <span>{toastMessage}</span>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-40px)] max-w-sm bg-neutral-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-start gap-2.5 text-xs font-medium border border-neutral-700 animate-slide-up leading-relaxed">
+            <span className="w-2 h-2 rounded-full bg-[#E5A000] shrink-0 mt-1.5" />
+            <span className="flex-1 text-left">{toastMessage}</span>
           </div>
         )}
       </>
@@ -2493,9 +2497,9 @@ export default function KarebaFeedFinal() {
           onLogout={handleLogout}
         />
         {toastMessage && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-semibold border border-neutral-700 animate-slide-up">
-            <span className="w-2 h-2 rounded-full bg-[#E5A000]" />
-            <span>{toastMessage}</span>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-40px)] max-w-sm bg-neutral-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-start gap-2.5 text-xs font-medium border border-neutral-700 animate-slide-up leading-relaxed">
+            <span className="w-2 h-2 rounded-full bg-[#E5A000] shrink-0 mt-1.5" />
+            <span className="flex-1 text-left">{toastMessage}</span>
           </div>
         )}
       </>
@@ -2533,14 +2537,14 @@ export default function KarebaFeedFinal() {
           onChange={handleNativeCameraCapture}
         />
 
-        {/* NOTIFIKASI TOAST MELAYANG UNTUK PESAN CEPAT */}
+        {/* NOTIFIKASI TOAST MELAYANG UNTUK PESAN CEPAT - SEGI EMPAT HORIZONTAL PROPORSIONAL */}
         {toastMessage && (
           <div
             id="status-toast"
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100%-32px)] bg-neutral-900/95 backdrop-blur-md text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 border border-neutral-700 animate-fade-in pointer-events-none select-none"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-40px)] max-w-sm bg-neutral-900/95 backdrop-blur-md text-white text-xs font-medium px-4 py-3 rounded-xl shadow-2xl flex items-start gap-2.5 border border-neutral-700/80 animate-fade-in pointer-events-none select-none leading-relaxed"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{toastMessage}</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span className="flex-1 text-left">{toastMessage}</span>
           </div>
         )}
 
@@ -4846,8 +4850,12 @@ export default function KarebaFeedFinal() {
                   <label htmlFor="text-post-textarea" className="font-bold text-neutral-700 flex items-center gap-1.5">
                     <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Teks Kabar Warga:
                   </label>
-                  <span className={`text-[11px] font-mono font-semibold ${textPostContent.length >= 500 ? "text-red-600 font-bold" : "text-neutral-500"}`}>
-                    {textPostContent.length}/500
+                  <span className={`text-[11px] font-mono font-semibold ${
+                    textPostContent.trim().length >= 99
+                      ? "text-emerald-600 font-bold"
+                      : "text-amber-600 font-semibold"
+                  }`}>
+                    {textPostContent.trim().length}/99 huruf minimal {textPostContent.trim().length >= 99 ? "✓" : `(kurang ${99 - textPostContent.trim().length})`}
                   </span>
                 </div>
                 <textarea
@@ -4856,7 +4864,7 @@ export default function KarebaFeedFinal() {
                   maxLength={500}
                   rows={5}
                   onChange={(e) => setTextPostContent(e.target.value.slice(0, 500))}
-                  placeholder="Apa kabar atau informasi yang ingin Anda sampaikan ke warga sekitar hari ini?..."
+                  placeholder="Ketik kabar atau informasi warga sekitar hari ini (minimal 99 huruf agar jelas dan bermanfaat)..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none leading-relaxed"
                   autoFocus
                 />
@@ -4887,7 +4895,7 @@ export default function KarebaFeedFinal() {
                 />
               </div>
 
-              {/* Tombol Bagikan Kabar Teks - Berubah Hijau Aktif HANYA JIKA Teks & Lokasi Dua-duanya Terisi */}
+              {/* Tombol Bagikan Kabar Teks - Berubah Hijau Aktif HANYA JIKA Teks Minimal 99 Huruf & Lokasi Terisi */}
               <div className="pt-1 flex items-center gap-2">
                 <button
                   type="button"
@@ -4900,10 +4908,10 @@ export default function KarebaFeedFinal() {
                 <button
                   id="submit-text-post-btn"
                   type="button"
-                  disabled={!textPostContent.trim() || !textPostLocation.trim() || isPublishingTextPost}
+                  disabled={textPostContent.trim().length < 99 || !textPostLocation.trim() || isPublishingTextPost}
                   onClick={handleCreateTextPost}
                   className={`flex-1 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
-                    textPostContent.trim() && textPostLocation.trim() && !isPublishingTextPost
+                    textPostContent.trim().length >= 99 && textPostLocation.trim() && !isPublishingTextPost
                       ? "bg-[#00632B] hover:bg-[#004f22] text-white cursor-pointer shadow-md active:scale-[0.99]"
                       : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
                   }`}
@@ -4912,8 +4920,8 @@ export default function KarebaFeedFinal() {
                   <span>
                     {isPublishingTextPost
                       ? "Menerbitkan..."
-                      : !textPostContent.trim()
-                      ? "Tulis teks kabar dulu"
+                      : textPostContent.trim().length < 99
+                      ? `Ketik minimal 99 huruf (kurang ${99 - textPostContent.trim().length})`
                       : !textPostLocation.trim()
                       ? "Isi lokasi dulu"
                       : "Bagikan Kabar Teks"}
