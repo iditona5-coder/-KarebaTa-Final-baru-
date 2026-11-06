@@ -41,6 +41,9 @@ export interface PostItem {
   userReaction?: ReactionType;
   reactions?: Record<string, number>;
   createdAtTimestamp?: number;
+  danaNumber?: string;
+  danaName?: string;
+  qrisUrl?: string;
 }
 
 export interface CommentItem {
@@ -82,6 +85,16 @@ export interface FeedItem {
   isHidden?: boolean;
   category?: string;
   createdAtTimestamp?: number;
+  danaNumber?: string;
+  danaName?: string;
+  qrisUrl?: string;
+}
+
+export interface UserWalletSettings {
+  danaNumber: string;
+  danaName: string;
+  qrisUrl?: string;
+  updatedAt?: number;
 }
 
 export interface ReportItem {

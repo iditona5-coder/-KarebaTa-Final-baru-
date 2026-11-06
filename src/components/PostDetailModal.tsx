@@ -10,6 +10,7 @@ import {
   Eye,
   MoreHorizontal,
   Link2,
+  Gift,
 } from "lucide-react";
 import { PostItem, FeedItem, ReactionType } from "../types";
 import { FeedMedia } from "./FeedMedia";
@@ -39,6 +40,7 @@ interface PostDetailModalProps {
   initial?: string;
   commentsCount?: number;
   onOpenComments?: () => void;
+  onOpenGift?: (item: FeedItem | PostItem) => void;
 }
 
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({
@@ -63,6 +65,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   initial = "K",
   commentsCount = 0,
   onOpenComments,
+  onOpenGift,
 }) => {
   if (!post) return null;
 
@@ -373,6 +376,21 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <Share2 className="w-4 h-4" />
               <span>Bagikan</span>
             </button>
+
+            {/* Tombol Hadiah Apresiasi (DANA): AKTIF HANYA JIKA POSTINGAN MENCAPAI >= 500 SUKA */}
+            {((likeCount >= 500) || ((feedItem?.like || 0) >= 500)) && onOpenGift && (
+              <button
+                id={`detail-reward-gift-btn-${post.id}`}
+                type="button"
+                onClick={() => onOpenGift(feedItem || post)}
+                className="flex items-center gap-1.5 py-1 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 text-amber-900 border border-amber-300 hover:border-amber-400 cursor-pointer transition active:scale-95 shadow-2xs animate-fade-in"
+                aria-label="Beri Hadiah Apresiasi DANA"
+                title="Beri Hadiah Apresiasi DANA (Postingan >= 500 Suka)"
+              >
+                <Gift className="w-4 h-4 text-amber-600 animate-pulse" />
+                <span className="font-extrabold text-amber-950">Hadiah</span>
+              </button>
+            )}
 
             {/* Ikon Tayangan / Dilihat (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
             <div

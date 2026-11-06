@@ -142,6 +142,9 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
       isHidden: false,
       createdAtServer: serverTimestamp(),
       createdAtTimestamp: feedItem.createdAtTimestamp || Date.now(),
+      danaNumber: feedItem.danaNumber || postItem.danaNumber || '',
+      danaName: feedItem.danaName || postItem.danaName || '',
+      qrisUrl: feedItem.qrisUrl || postItem.qrisUrl || '',
     };
 
     if (feedItem.avatar) {
@@ -1918,6 +1921,48 @@ export async function updateBulletinInFirestore(
   } catch (err) {
     console.warn("[Firebase] Gagal update bulletin:", err);
     return false;
+  }
+}
+
+/**
+ * Menyimpan / Memperbarui Nomor DANA & QRIS Warga ke Firestore
+ */
+export async function saveUserWalletToFirestore(
+  uid: string,
+  walletData: { danaNumber: string; danaName: string; qrisUrl?: string }
+): Promise<boolean> {
+  if (!db || !uid) return false;
+  try {
+    const walletDoc = doc(db, "wallets", uid);
+    await setDoc(walletDoc, {
+      ...walletData,
+      updatedAt: Date.now(),
+      updatedAtServer: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  } catch (err) {
+    console.warn("[Firebase] Gagal menyimpan data dompet DANA:", err);
+    return false;
+  }
+}
+
+/**
+ * Mengambil Nomor DANA & QRIS Warga dari Firestore
+ */
+export async function getUserWalletFromFirestore(
+  uid: string
+): Promise<{ danaNumber: string; danaName: string; qrisUrl?: string } | null> {
+  if (!db || !uid) return null;
+  try {
+    const walletDoc = doc(db, "wallets", uid);
+    const snap = await getDoc(walletDoc);
+    if (snap.exists()) {
+      return snap.data() as { danaNumber: string; danaName: string; qrisUrl?: string };
+    }
+    return null;
+  } catch (err) {
+    console.warn("[Firebase] Gagal mengambil data dompet DANA:", err);
+    return null;
   }
 }
 

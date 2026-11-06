@@ -34,8 +34,11 @@ import {
   Link2,
   Clock,
   Plus,
+  Gift,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
+import { RewardGiftModal } from "./components/RewardGiftModal";
+import { WalletSettingsModal } from "./components/WalletSettingsModal";
 import { FeedMedia } from "./components/FeedMedia";
 import { FeedItem, PostItem, ReportItem, HelpSettings, DEFAULT_HELP_SETTINGS, SponsorAd, AdSettings, DEFAULT_AD_SETTINGS, ReactionType } from "./types";
 import { KarebaTaLogo, KarebaPinIcon } from "./components/KarebaTaLogo";
@@ -82,6 +85,8 @@ import {
   checkIfUserBanned,
   BannedUser,
   listenToAdSettings,
+  saveUserWalletToFirestore,
+  getUserWalletFromFirestore,
   auth,
   User,
   isUserAdmin,
@@ -158,6 +163,31 @@ export default function KarebaFeedFinal() {
   const [selectedVideoDuration, setSelectedVideoDuration] = useState<number | null>(null);
   const [videoDurationAlert, setVideoDurationAlert] = useState<{ isOpen: boolean; duration: number } | null>(null);
   const [description, setDescription] = useState("");
+
+  // State untuk Fitur Hadiah Apresiasi (DANA) saat postingan >= 500 Suka
+  const [activeGiftPost, setActiveGiftPost] = useState<FeedItem | null>(null);
+  const [isWalletSettingsOpen, setIsWalletSettingsOpen] = useState(false);
+  const [myDanaNumber, setMyDanaNumber] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_my_dana_number") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [myDanaName, setMyDanaName] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_my_dana_name") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [myQrisUrl, setMyQrisUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_my_qris_url") || "";
+    } catch {
+      return "";
+    }
+  });
   const [selectedLocation, setSelectedLocation] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
 
@@ -414,12 +444,27 @@ export default function KarebaFeedFinal() {
               localStorage.setItem("karebata_username", resolvedUsername);
               localStorage.setItem("karebata_last_registered_username", resolvedUsername);
               localStorage.setItem(`karebata_custom_username_${user.uid}`, resolvedUsername);
-              if (user.email) {
-                localStorage.setItem(`karebata_registered_${user.email.toLowerCase()}`, resolvedUsername);
-              }
               sessionStorage.setItem("karebata_session_active", "true");
               sessionStorage.setItem("karebata_active_session", "true");
             } catch {}
+
+            // Ambil data dompet DANA warga dari Firestore jika ada
+            getUserWalletFromFirestore(user.uid).then((wallet) => {
+              if (wallet) {
+                if (wallet.danaNumber) {
+                  setMyDanaNumber(wallet.danaNumber);
+                  localStorage.setItem("karebata_my_dana_number", wallet.danaNumber);
+                }
+                if (wallet.danaName) {
+                  setMyDanaName(wallet.danaName);
+                  localStorage.setItem("karebata_my_dana_name", wallet.danaName);
+                }
+                if (wallet.qrisUrl) {
+                  setMyQrisUrl(wallet.qrisUrl);
+                  localStorage.setItem("karebata_my_qris_url", wallet.qrisUrl);
+                }
+              }
+            }).catch(() => {});
 
             // Jika akun baru (belum terdaftar di Firestore dan belum punya nama): bawa ke set_name agar akun baru bisa mengetik namanya sendiri
             if (!isKnownAccount) {
@@ -1427,7 +1472,9 @@ export default function KarebaFeedFinal() {
       activeDetailPost ||
       activePopupAd ||
       isLoginModalOpen ||
-      videoDurationAlert?.isOpen
+      videoDurationAlert?.isOpen ||
+      Boolean(activeGiftPost) ||
+      isWalletSettingsOpen
     );
 
     if (isAnyModalOpen) {
@@ -1453,6 +1500,8 @@ export default function KarebaFeedFinal() {
     activePopupAd,
     isLoginModalOpen,
     videoDurationAlert,
+    activeGiftPost,
+    isWalletSettingsOpen,
   ]);
 
   // Efek penandaan postingan ketika kata pencarian cocok
@@ -2025,6 +2074,9 @@ export default function KarebaFeedFinal() {
         comments: [],
         isMyPost: true,
         createdAtTimestamp: Date.now(),
+        danaNumber: myDanaNumber || undefined,
+        danaName: myDanaName || undefined,
+        qrisUrl: myQrisUrl || undefined,
       };
 
       const newPostItem: PostItem = {
@@ -2045,6 +2097,9 @@ export default function KarebaFeedFinal() {
         init: initial,
         isMyPost: true,
         createdAtTimestamp: Date.now(),
+        danaNumber: myDanaNumber || undefined,
+        danaName: myDanaName || undefined,
+        qrisUrl: myQrisUrl || undefined,
       };
 
       setFeed((prev) => [newFeedItem, ...prev]);
@@ -2177,6 +2232,9 @@ export default function KarebaFeedFinal() {
       comments: [],
       isMyPost: true,
       createdAtTimestamp: Date.now(),
+      danaNumber: myDanaNumber || undefined,
+      danaName: myDanaName || undefined,
+      qrisUrl: myQrisUrl || undefined,
     };
 
     const newPostItem: PostItem = {
@@ -2193,6 +2251,9 @@ export default function KarebaFeedFinal() {
       init: initial,
       isMyPost: true,
       createdAtTimestamp: Date.now(),
+      danaNumber: myDanaNumber || undefined,
+      danaName: myDanaName || undefined,
+      qrisUrl: myQrisUrl || undefined,
     };
 
     setFeed((prev) => [newFeedItem, ...prev]);
@@ -2459,6 +2520,10 @@ export default function KarebaFeedFinal() {
             onReport={(id, user) => {
               handleReportPost(id, user, activeDetailPost?.title || activeDetailPost?.caption);
               setActiveDetailPost(null);
+            }}
+            onOpenGift={(item) => {
+              const targetFeedItem = feed.find((f) => f.id === item.id) || (item as FeedItem);
+              setActiveGiftPost(targetFeedItem);
             }}
           />
         )}
@@ -2822,7 +2887,20 @@ export default function KarebaFeedFinal() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Tombol Pengaturan Dompet Hadiah DANA (Menerima hadiah saat postingan >= 500 Like) */}
+            <button
+              id="profile-wallet-settings-btn"
+              type="button"
+              onClick={() => setIsWalletSettingsOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#118EEA] bg-sky-50 hover:bg-sky-100 rounded-xl border border-sky-200 transition active:scale-95 cursor-pointer shadow-2xs"
+              title="Atur Dompet Hadiah DANA"
+              aria-label="Atur Dompet DANA"
+            >
+              <Gift className="w-3.5 h-3.5 text-[#118EEA]" />
+              <span className="hidden xs:inline sm:inline">Dompet DANA</span>
+            </button>
+
             {/* Icon Dasbor Admin HANYA Muncul di Akun Admin Khusus (iditona5@gmail.com) */}
             {isUserAdmin(currentUser?.email) && (
               <button
@@ -3842,6 +3920,23 @@ export default function KarebaFeedFinal() {
                     <span className="whitespace-nowrap font-bold">Bagikan</span>
                   </button>
 
+                  {/* Tombol Hadiah Apresiasi (DANA): OTOMATIS AKTIF HANYA JIKA POSTINGAN MENCAPAI >= 500 SUKA */}
+                  {(f.like || 0) >= 500 && (
+                    <button
+                      id={`reward-gift-btn-${f.id}`}
+                      type="button"
+                      onClick={() => setActiveGiftPost(f)}
+                      className="flex items-center gap-1.5 py-1.5 px-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 text-amber-900 border border-amber-300 hover:border-amber-400 min-h-[36px] cursor-pointer transition active:scale-95 shadow-2xs animate-fade-in"
+                      aria-label="Beri Hadiah Apresiasi DANA"
+                      title="Beri Hadiah Apresiasi DANA (Postingan >= 500 Suka)"
+                    >
+                      <Gift className="w-[clamp(17px,4.5vw,20px)] h-[clamp(17px,4.5vw,20px)] text-amber-600 animate-pulse" />
+                      <span className="whitespace-nowrap font-extrabold text-[clamp(11px,3vw,12.5px)] text-amber-950">
+                        Hadiah
+                      </span>
+                    </button>
+                  )}
+
                   {/* Ikon Tayangan / View (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
                   <div
                     className="flex items-center gap-1.5 py-1.5 min-h-[40px] text-neutral-500 select-none ml-auto sm:ml-0"
@@ -4633,6 +4728,10 @@ export default function KarebaFeedFinal() {
               handleReportPost(id, user, activeDetailPost?.title || activeDetailPost?.caption);
               setActiveDetailPost(null);
             }}
+            onOpenGift={(item) => {
+              const targetFeedItem = feed.find((f) => f.id === item.id) || (item as FeedItem);
+              setActiveGiftPost(targetFeedItem);
+            }}
           />
         )}
 
@@ -4925,6 +5024,44 @@ export default function KarebaFeedFinal() {
             </div>
           </div>
         )}
+
+        {/* MODAL BERI HADIAH APRESIASI DANA (SAAT POSTINGAN >= 500 LIKE) */}
+        {activeGiftPost && (
+          <RewardGiftModal
+            post={activeGiftPost}
+            isOpen={Boolean(activeGiftPost)}
+            onClose={() => setActiveGiftPost(null)}
+            onShowToast={showToast}
+          />
+        )}
+
+        {/* MODAL PENGATURAN DOMPET HADIAH DANA WARGA */}
+        <WalletSettingsModal
+          isOpen={isWalletSettingsOpen}
+          onClose={() => setIsWalletSettingsOpen(false)}
+          currentDanaNumber={myDanaNumber}
+          currentDanaName={myDanaName}
+          currentQrisUrl={myQrisUrl}
+          onSave={async (data) => {
+            setMyDanaNumber(data.danaNumber);
+            setMyDanaName(data.danaName);
+            setMyQrisUrl(data.qrisUrl || "");
+            try {
+              localStorage.setItem("karebata_my_dana_number", data.danaNumber);
+              localStorage.setItem("karebata_my_dana_name", data.danaName);
+              if (data.qrisUrl) {
+                localStorage.setItem("karebata_my_qris_url", data.qrisUrl);
+              } else {
+                localStorage.removeItem("karebata_my_qris_url");
+              }
+            } catch {}
+
+            if (currentUser?.uid) {
+              await saveUserWalletToFirestore(currentUser.uid, data);
+            }
+          }}
+          onShowToast={showToast}
+        />
       </div>
     </div>
   );
