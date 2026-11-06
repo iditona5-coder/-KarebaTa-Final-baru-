@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Gift, Copy, Check, ExternalLink, X, Heart, Sparkles, Smartphone, QrCode } from "lucide-react";
-import { FeedItem } from "../types";
+import { FeedItem, GiftNominalOption, DEFAULT_GIFT_NOMINALS } from "../types";
 
 interface RewardGiftModalProps {
   post: FeedItem;
   isOpen: boolean;
   onClose: () => void;
   onShowToast?: (msg: string) => void;
+  nominalOptions?: GiftNominalOption[];
+  minLikes?: number;
 }
 
 export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
@@ -14,26 +16,22 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
   isOpen,
   onClose,
   onShowToast,
+  nominalOptions = DEFAULT_GIFT_NOMINALS,
+  minLikes = 500,
 }) => {
+  const activeNominals = nominalOptions && nominalOptions.length > 0 ? nominalOptions : DEFAULT_GIFT_NOMINALS;
   const [copied, setCopied] = useState(false);
-  const [selectedNominal, setSelectedNominal] = useState<number>(5000);
+  const [selectedNominal, setSelectedNominal] = useState<number>(() => {
+    return activeNominals[0]?.value || 5000;
+  });
   const [activeTab, setActiveTab] = useState<"dana" | "qris">("dana");
 
-  if (!isOpen) return null;
+  if (!isOpen || !post) return null;
 
-  // Nomor DANA pembuat berita (fallback jika pembuat berita belum mengisi, beri panduan)
   const danaNumber = post.danaNumber?.trim() || "";
   const danaOwner = post.danaName?.trim() || post.name || post.user || "Warga Kareba";
   const qrisUrl = post.qrisUrl?.trim() || "";
-
-  const nominalOptions = [
-    { value: 2000, label: "Rp 2.000", desc: "☕ Traktir Kopi" },
-    { value: 5000, label: "Rp 5.000", desc: "🥤 Traktir Es Teh" },
-    { value: 10000, label: "Rp 10.000", desc: "🍜 Traktir Makan" },
-    { value: 25000, label: "Rp 25.000", desc: "🌟 Apresiasi Hebat" },
-  ];
-
-  const handleCopy = () => {
+  const handleCopyDana = () => {
     if (!danaNumber) return;
     navigator.clipboard.writeText(danaNumber);
     setCopied(true);
@@ -69,10 +67,10 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h3 className="font-extrabold text-sm sm:text-base leading-tight truncate">
-                  Beri Hadiah Apresiasi
+                  Beri Pa'bere Apresiasi
                 </h3>
                 <span className="text-[10px] bg-slate-950 text-amber-300 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  &ge; 500 Suka
+                  &ge; {minLikes} Suka
                 </span>
               </div>
               <p className="text-[11px] text-slate-900/90 font-medium truncate mt-0.5">
@@ -109,7 +107,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
             </div>
           </div>
 
-          {/* Tab Pilihan Saluran Hadiah: DANA atau QRIS */}
+          {/* Tab Pilihan Saluran Pa'bere: DANA atau QRIS */}
           {qrisUrl && (
             <div className="flex rounded-xl bg-neutral-100 p-1 gap-1">
               <button
@@ -139,13 +137,13 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
             </div>
           )}
 
-          {/* Pilihan Nominal Apresiasi */}
+          {/* Pilihan Nominal Pa'bere */}
           <div>
             <label className="text-xs font-bold text-neutral-700 block mb-2">
-              Pilih Rencana Nominal Hadiah:
+              Pilih Rencana Nominal Pa'bere:
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {nominalOptions.map((opt) => (
+              {activeNominals.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
@@ -200,7 +198,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={handleCopy}
+                      onClick={handleCopyDana}
                       className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0 ${
                         copied
                           ? "bg-emerald-600 text-white"

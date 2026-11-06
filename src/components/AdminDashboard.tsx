@@ -49,6 +49,7 @@ import {
   Play,
   Upload,
   MapPin,
+  Gift,
 } from "lucide-react";
 import {
   loginAdminWithEmailPassword,
@@ -92,6 +93,8 @@ import {
   AdminAuditLog,
   AdminAppConfig,
   DEFAULT_ADMIN_APP_CONFIG,
+  GiftNominalOption,
+  DEFAULT_GIFT_NOMINALS,
 } from "../types";
 import { BulletinItem } from "./RunningTextBar";
 import { deleteFromImageKit, uploadToImageKit } from "../services/imagekit";
@@ -228,6 +231,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [confirmAdminPassword, setConfirmAdminPassword] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // State Pengaturan Jumlah Pa'bere (Hadiah) & Syarat Minimal Suka
+  const [giftNominals, setGiftNominals] = useState<GiftNominalOption[]>(() => {
+    return appConfig.giftNominals && appConfig.giftNominals.length > 0
+      ? appConfig.giftNominals
+      : DEFAULT_GIFT_NOMINALS;
+  });
+  const [giftMinLikes, setGiftMinLikes] = useState<number>(() => {
+    return typeof appConfig.giftMinLikes === "number" ? appConfig.giftMinLikes : 500;
+  });
+  const [isSavingGiftConfig, setIsSavingGiftConfig] = useState(false);
+
   // State Dialog Konfirmasi Kustom (Menggantikan confirm bawaan browser)
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -262,6 +276,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setSettingsWorkingHours(cfg.adminWorkingHours || "Setiap Hari: 08.00 - 21.00 WITA");
       setSettingsPrivacy(cfg.privacyPolicyText);
       setSettingsTerms(cfg.termsOfServiceText);
+      if (Array.isArray(cfg.giftNominals) && cfg.giftNominals.length > 0) {
+        setGiftNominals(cfg.giftNominals);
+      }
+      if (typeof cfg.giftMinLikes === "number") {
+        setGiftMinLikes(cfg.giftMinLikes);
+      }
     });
     return () => unsubConfig();
   }, []);
@@ -2695,6 +2715,265 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "settings" && (
             <div className="space-y-6 animate-fade-in">
+              {/* KARTU PENGATURAN PILIHAN JUMLAH PA'BERE (HADIAH) & AMBANG BATAS SUKA */}
+              <div className="bg-white border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-xs">
+                      <Gift className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-base text-neutral-900">
+                          Pengaturan Pilihan Jumlah Pa'bere & Syarat Suka (Like)
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 border border-amber-500/30">
+                          Aktif Real-time
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        Kelola pilihan nominal traktir apresiasi kreator serta batas minimal tanda Suka agar tombol <b>Pa'bere</b> muncul di postingan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-amber-50 px-3.5 py-2 rounded-2xl border border-amber-200/60 shrink-0">
+                    <span className="text-[11px] font-bold text-neutral-500">Syarat Saat Ini:</span>
+                    <span className="font-mono text-sm sm:text-base font-black text-amber-700">
+                      &ge; {giftMinLikes} Suka
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bagian 1: Syarat Minimal Suka (Like) */}
+                <div className="bg-neutral-50/80 p-4 rounded-2xl border border-neutral-200/80 space-y-2">
+                  <label className="text-xs font-bold text-neutral-700 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+                      <span>Syarat Minimal Suka (Like) Postingan:</span>
+                    </span>
+                    <span className="text-[11px] text-neutral-500 font-normal">
+                      Ketik 0 jika ingin tombol Pa'bere selalu muncul di semua postingan
+                    </span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1 max-w-xs">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100000}
+                        step={10}
+                        value={giftMinLikes}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                          setGiftMinLikes(val);
+                        }}
+                        className="w-full bg-white border border-neutral-200 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-900 font-mono placeholder:text-neutral-400 focus:outline-none transition shadow-xs"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-neutral-400">
+                        Suka
+                      </span>
+                    </div>
+                    <div className="text-xs text-neutral-500">
+                      {giftMinLikes === 0 ? (
+                        <span className="text-emerald-600 font-semibold">Semua postingan langsung ada tombol Pa'bere.</span>
+                      ) : (
+                        <span>Hanya postingan dengan <b>&ge; {giftMinLikes.toLocaleString("id-ID")} Suka</b> yang menampilkan tombol Pa'bere.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bagian 2: Daftar Pilihan Nominal Pa'bere */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                      <Gift className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Daftar Pilihan Nominal Pa'bere ({giftNominals.length} Pilihan):</span>
+                    </label>
+                    <span className="text-[11px] text-neutral-500">
+                      Warga dapat memilih salah satu nominal ini saat mengirim apresiasi via DANA / QRIS
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {giftNominals.map((nom, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white p-3.5 rounded-2xl border border-neutral-200/90 shadow-xs hover:border-amber-400/80 transition space-y-2.5 relative group"
+                      >
+                        <div className="flex items-center justify-between gap-2 border-b border-neutral-100 pb-2">
+                          <span className="text-[11px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                            Pilihan #{idx + 1}
+                          </span>
+                          {giftNominals.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGiftNominals((prev) => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="text-neutral-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                              title="Hapus nominal ini"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[10px] font-semibold text-neutral-500 block mb-1">
+                              Nominal (Angka Rp):
+                            </span>
+                            <input
+                              type="number"
+                              min={500}
+                              step={500}
+                              value={nom.value}
+                              onChange={(e) => {
+                                const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                                setGiftNominals((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx
+                                      ? {
+                                          ...item,
+                                          value: val,
+                                          label: item.label.startsWith("Rp ")
+                                            ? `Rp ${val.toLocaleString("id-ID")}`
+                                            : item.label,
+                                        }
+                                      : item
+                                  )
+                                );
+                              }}
+                              className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-neutral-900 focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-semibold text-neutral-500 block mb-1">
+                              Label Tombol:
+                            </span>
+                            <input
+                              type="text"
+                              maxLength={20}
+                              value={nom.label}
+                              onChange={(e) => {
+                                const l = e.target.value;
+                                setGiftNominals((prev) =>
+                                  prev.map((item, i) => (i === idx ? { ...item, label: l } : item))
+                                );
+                              }}
+                              placeholder="Rp 2.000"
+                              className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-neutral-900 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] font-semibold text-neutral-500 block mb-1">
+                            Deskripsi / Ucapan Apresiasi:
+                          </span>
+                          <input
+                            type="text"
+                            maxLength={35}
+                            value={nom.desc || ""}
+                            onChange={(e) => {
+                              const d = e.target.value;
+                              setGiftNominals((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, desc: d } : item))
+                              );
+                            }}
+                            placeholder="Contoh: Traktir Kopi ☕"
+                            className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextVal = (giftNominals[giftNominals.length - 1]?.value || 25000) * 2;
+                        setGiftNominals((prev) => [
+                          ...prev,
+                          {
+                            value: nextVal,
+                            label: `Rp ${nextVal.toLocaleString("id-ID")}`,
+                            desc: "Apresiasi Spesial 🎉",
+                          },
+                        ]);
+                      }}
+                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Tambah Pilihan Nominal Baru</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGiftNominals(DEFAULT_GIFT_NOMINALS);
+                        setGiftMinLikes(500);
+                        showToast("Pilihan nominal & syarat like dikembalikan ke standar awal.");
+                      }}
+                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-semibold rounded-xl border border-neutral-200 transition cursor-pointer flex items-center gap-1.5"
+                      title="Kembalikan ke Rp 2.000, Rp 5.000, Rp 10.000, Rp 25.000 & 500 likes"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>Kembalikan ke Standar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tombol Simpan Pengaturan Pa'bere */}
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+                  <button
+                    type="button"
+                    disabled={isSavingGiftConfig}
+                    onClick={async () => {
+                      if (!giftNominals || giftNominals.length === 0) {
+                        showToast("Minimal harus ada 1 pilihan nominal Pa'bere.");
+                        return;
+                      }
+                      for (const nom of giftNominals) {
+                        if (!nom.value || nom.value <= 0) {
+                          showToast("Nominal harus berupa angka lebih dari 0.");
+                          return;
+                        }
+                        if (!nom.label.trim()) {
+                          showToast("Label pilihan nominal tidak boleh kosong.");
+                          return;
+                        }
+                      }
+                      setIsSavingGiftConfig(true);
+                      try {
+                        await saveAdminAppConfig({
+                          giftNominals,
+                          giftMinLikes,
+                        });
+                        await logAdminActivity(
+                          "SETTINGS_CHANGE",
+                          `Admin memperbarui pilihan nominal Pa'bere (${giftNominals.length} opsi) & syarat minimal like (${giftMinLikes} likes)`,
+                          currentUser?.email || PRIMARY_ADMIN_EMAIL
+                        );
+                        showToast("Pengaturan pilihan nominal Pa'bere & syarat like berhasil disimpan dan aktif real-time!");
+                      } catch {
+                        showToast("Gagal menyimpan pengaturan Pa'bere. Silakan coba lagi.");
+                      } finally {
+                        setIsSavingGiftConfig(false);
+                      }
+                    }}
+                    className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg shadow-amber-900/10 transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingGiftConfig ? "Menyimpan..." : "Simpan Pengaturan Pa'bere & Syarat Like"}</span>
+                  </button>
+                </div>
+              </div>
+
               {/* KARTU KHUSUS: PENGATURAN NOMOR WHATSAPP & JAM RESPON ADMIN */}
               <div className="bg-gradient-to-r from-[#0F172A] via-[#111C35] to-[#0F172A] border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 pb-4">

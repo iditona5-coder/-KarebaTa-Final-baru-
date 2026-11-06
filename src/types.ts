@@ -204,6 +204,19 @@ export interface AdminAuditLog {
   timeString: string;
 }
 
+export interface GiftNominalOption {
+  value: number;
+  label: string;
+  desc: string;
+}
+
+export const DEFAULT_GIFT_NOMINALS: GiftNominalOption[] = [
+  { value: 2000, label: "Rp 2.000", desc: "☕ Traktir Kopi" },
+  { value: 5000, label: "Rp 5.000", desc: "🥤 Traktir Es Teh" },
+  { value: 10000, label: "Rp 10.000", desc: "🍜 Traktir Makan" },
+  { value: 25000, label: "Rp 25.000", desc: "🌟 Pa'bere Hebat" },
+];
+
 export interface AdminAppConfig {
   appName: string;
   appLogoUrl: string;
@@ -214,6 +227,8 @@ export interface AdminAppConfig {
   termsOfServiceText: string;
   adminPasscode: string; // Kunci rahasia tambahan
   updatedAt?: number;
+  giftNominals?: GiftNominalOption[];
+  giftMinLikes?: number;
 }
 
 export const DEFAULT_ADMIN_APP_CONFIG: AdminAppConfig = {
@@ -225,6 +240,8 @@ export const DEFAULT_ADMIN_APP_CONFIG: AdminAppConfig = {
   privacyPolicyText: "Kareba'Ta menghormati privasi seluruh warga masyarakat pengguna. Seluruh data pengguna disimpan secara aman di Google Firebase dan hanya digunakan untuk kepentingan verifikasi akun serta ketertiban interaksi komunitas warga.",
   termsOfServiceText: "1. Pengguna wajib menyajikan informasi yang jujur, tidak mengandung unsur hoaks, fitnah, ujaran kebencian, atau pornografi.\n2. Admin berhak menghapus konten yang melanggar aturan dan menangguhkan/memblokir akun pelanggar.\n3. Hak cipta foto dan video tetap milik pengguna yang mengunggah.",
   adminPasscode: "123456", // Default passcode cadangan, dapat diubah oleh admin kapan saja
+  giftNominals: DEFAULT_GIFT_NOMINALS,
+  giftMinLikes: 500,
 };
 
 

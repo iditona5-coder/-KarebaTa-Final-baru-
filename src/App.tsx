@@ -40,7 +40,7 @@ import { PostDetailModal } from "./components/PostDetailModal";
 import { RewardGiftModal } from "./components/RewardGiftModal";
 import { WalletSettingsModal } from "./components/WalletSettingsModal";
 import { FeedMedia } from "./components/FeedMedia";
-import { FeedItem, PostItem, ReportItem, HelpSettings, DEFAULT_HELP_SETTINGS, SponsorAd, AdSettings, DEFAULT_AD_SETTINGS, ReactionType } from "./types";
+import { FeedItem, PostItem, ReportItem, HelpSettings, DEFAULT_HELP_SETTINGS, SponsorAd, AdSettings, DEFAULT_AD_SETTINGS, ReactionType, AdminAppConfig, DEFAULT_ADMIN_APP_CONFIG } from "./types";
 import { KarebaTaLogo, KarebaPinIcon } from "./components/KarebaTaLogo";
 import { SearchModal, SearchFilterCategory } from "./components/SearchModal";
 import { CommentActions } from "./components/CommentActions";
@@ -196,7 +196,17 @@ export default function KarebaFeedFinal() {
   const [videoDurationAlert, setVideoDurationAlert] = useState<{ isOpen: boolean; duration: number } | null>(null);
   const [description, setDescription] = useState("");
 
-  // State untuk Fitur Hadiah Apresiasi (DANA) saat postingan >= 500 Suka
+  // State Pengaturan Aplikasi dari Admin (Konfigurasi Hadiah Pa'bere & Syarat Like)
+  const [appConfig, setAppConfig] = useState<AdminAppConfig>(() => {
+    try {
+      const cached = localStorage.getItem("karebata_admin_app_config");
+      if (cached) return { ...DEFAULT_ADMIN_APP_CONFIG, ...JSON.parse(cached) };
+    } catch {}
+    return DEFAULT_ADMIN_APP_CONFIG;
+  });
+  const giftMinLikes = typeof appConfig.giftMinLikes === "number" ? appConfig.giftMinLikes : 500;
+
+  // State untuk Fitur Hadiah Apresiasi (DANA) saat postingan memenuhi syarat Suka
   const [activeGiftPost, setActiveGiftPost] = useState<FeedItem | null>(null);
   const [isWalletSettingsOpen, setIsWalletSettingsOpen] = useState(false);
   const [myDanaNumber, setMyDanaNumber] = useState<string>(() => {
@@ -1327,10 +1337,16 @@ export default function KarebaFeedFinal() {
 
   // Beranda selalu menampilkan seluruh kabar warga asli (pencarian tampil eksklusif di Halaman Pencarian)
   const displayFeed = useMemo(() => {
-    const activePosts = feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id));
-    // Sisipkan postingan contoh resmi Admin di bagian atas untuk pratinjau tampilan ikon admin & tombol hadiah
+    let deletedIds = new Set<string>();
+    try {
+      const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
+    } catch {}
+
+    const activePosts = feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id) && !deletedIds.has(item.id));
+    // Sisipkan postingan contoh resmi Admin di bagian atas untuk pratinjau jika belum dihapus
     const hasAdminPreview = activePosts.some((p) => p.id === SAMPLE_ADMIN_POST.id);
-    if (!hasAdminPreview) {
+    if (!hasAdminPreview && !deletedIds.has(SAMPLE_ADMIN_POST.id)) {
       return [SAMPLE_ADMIN_POST, ...activePosts];
     }
     return activePosts;
@@ -1479,6 +1495,7 @@ export default function KarebaFeedFinal() {
     });
 
     const unsubConfig = listenToAdminAppConfig((cfg) => {
+      setAppConfig(cfg);
       setHelpSettings((prev) => ({
         ...prev,
         whatsappNumber: cfg.adminWhatsapp || prev.whatsappNumber,
@@ -2555,7 +2572,7 @@ export default function KarebaFeedFinal() {
             views={feed.find((f) => f.id === activeDetailPost.id)?.views || activeDetailPost.views || 0}
             onClose={() => setActiveDetailPost(null)}
             onShowToast={showToast}
-            isOwner={activeDetailPost ? isMyPost(activeDetailPost) : false}
+            isOwner={activeDetailPost ? (isMyPost(activeDetailPost) || isUserAdmin(currentUser?.email)) : false}
             isSaved={Boolean(activeDetailPost && savedPostIds.includes(activeDetailPost.id))}
             onToggleSave={handleToggleSave}
             onShare={handlePostShared}
@@ -2587,6 +2604,7 @@ export default function KarebaFeedFinal() {
               const targetFeedItem = feed.find((f) => f.id === item.id) || (item as FeedItem);
               setActiveGiftPost(targetFeedItem);
             }}
+            minLikes={giftMinLikes}
           />
         )}
       </>
@@ -3802,8 +3820,8 @@ export default function KarebaFeedFinal() {
                             </div>
                           </button>
 
-                          {/* 2. Opsi Laporkan Kabar (Pada postingan orang lain) ATAU Hapus Kabar (Pada postingan sendiri) */}
-                          {isMyPost(f) ? (
+                          {/* 2. Opsi Laporkan Kabar (Pada postingan orang lain) ATAU Hapus Kabar (Pada postingan sendiri / Hak Admin) */}
+                          {isMyPost(f) || isUserAdmin(currentUser?.email) ? (
                             <button
                               id={`menu-delete-btn-${f.id}`}
                               type="button"
@@ -3819,7 +3837,7 @@ export default function KarebaFeedFinal() {
                                   Hapus Kabar
                                 </p>
                                 <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
-                                  Hapus postingan Anda
+                                  {isMyPost(f) ? "Hapus postingan Anda" : "Hapus postingan (Hak Admin)"}
                                 </p>
                               </div>
                             </button>
@@ -3992,19 +4010,19 @@ export default function KarebaFeedFinal() {
                     <span className="whitespace-nowrap font-bold">Bagikan</span>
                   </button>
 
-                  {/* Tombol Hadiah Apresiasi (DANA): AKTIF SAAT >= 500 LIKE ATAU UNTUK POSTINGAN ADMIN (PRATINJAU SEMENTARA) */}
-                  {((f.like || 0) >= 500 || f.isAdminPost || isUserAdmin(f.email) || isUserAdmin(currentUser?.email)) && (
+                  {/* Tombol Pa'bere (DANA): AKTIF SAAT >= giftMinLikes LIKE ATAU UNTUK POSTINGAN ADMIN (PRATINJAU SEMENTARA) */}
+                  {((f.like || 0) >= giftMinLikes || f.isAdminPost || isUserAdmin(f.email) || isUserAdmin(currentUser?.email)) && (
                     <button
                       id={`reward-gift-btn-${f.id}`}
                       type="button"
                       onClick={() => setActiveGiftPost(f)}
-                      className="flex items-center gap-1.5 py-1.5 px-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 text-amber-900 border border-amber-300 hover:border-amber-400 min-h-[36px] cursor-pointer transition active:scale-95 shadow-2xs animate-fade-in"
-                      aria-label="Beri Hadiah Apresiasi DANA"
-                      title="Beri Hadiah Apresiasi DANA"
+                      className="flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition text-neutral-600 hover:text-amber-600 active:scale-95 animate-fade-in"
+                      aria-label="Beri Pa'bere"
+                      title="Beri Pa'bere"
                     >
-                      <Gift className="w-[clamp(17px,4.5vw,20px)] h-[clamp(17px,4.5vw,20px)] text-amber-600 animate-pulse" />
-                      <span className="whitespace-nowrap font-extrabold text-[clamp(11px,3vw,12.5px)] text-amber-950">
-                        Hadiah
+                      <Gift className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-amber-600" />
+                      <span className="whitespace-nowrap font-bold">
+                        Pa'bere
                       </span>
                     </button>
                   )}
@@ -4762,7 +4780,7 @@ export default function KarebaFeedFinal() {
             views={feed.find((f) => f.id === activeDetailPost.id)?.views || activeDetailPost.views || 0}
             onClose={() => setActiveDetailPost(null)}
             onShowToast={showToast}
-            isOwner={activeDetailPost ? isMyPost(activeDetailPost) : false}
+            isOwner={activeDetailPost ? (isMyPost(activeDetailPost) || isUserAdmin(currentUser?.email)) : false}
             isSaved={Boolean(activeDetailPost && savedPostIds.includes(activeDetailPost.id))}
             onToggleSave={handleToggleSave}
             onShare={handlePostShared}
@@ -4804,6 +4822,7 @@ export default function KarebaFeedFinal() {
               const targetFeedItem = feed.find((f) => f.id === item.id) || (item as FeedItem);
               setActiveGiftPost(targetFeedItem);
             }}
+            minLikes={giftMinLikes}
           />
         )}
 
@@ -5097,13 +5116,15 @@ export default function KarebaFeedFinal() {
           </div>
         )}
 
-        {/* MODAL BERI HADIAH APRESIASI DANA (SAAT POSTINGAN >= 500 LIKE) */}
+        {/* MODAL BERI HADIAH APRESIASI DANA (SAAT POSTINGAN MEMENUHI SYARAT LIKE) */}
         {activeGiftPost && (
           <RewardGiftModal
             post={activeGiftPost}
             isOpen={Boolean(activeGiftPost)}
             onClose={() => setActiveGiftPost(null)}
             onShowToast={showToast}
+            nominalOptions={appConfig.giftNominals}
+            minLikes={giftMinLikes}
           />
         )}
 

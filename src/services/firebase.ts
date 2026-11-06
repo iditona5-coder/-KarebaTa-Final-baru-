@@ -1600,6 +1600,8 @@ export function listenToAdminAppConfig(
             termsOfServiceText: data.termsOfServiceText || DEFAULT_ADMIN_APP_CONFIG.termsOfServiceText,
             adminPasscode: data.adminPasscode || DEFAULT_ADMIN_APP_CONFIG.adminPasscode,
             updatedAt: data.updatedAtServer?.toMillis?.() || Date.now(),
+            giftNominals: Array.isArray(data.giftNominals) && data.giftNominals.length > 0 ? data.giftNominals : DEFAULT_ADMIN_APP_CONFIG.giftNominals,
+            giftMinLikes: typeof data.giftMinLikes === "number" ? data.giftMinLikes : DEFAULT_ADMIN_APP_CONFIG.giftMinLikes,
           };
           try {
             localStorage.setItem("karebata_admin_app_config", JSON.stringify(merged));
