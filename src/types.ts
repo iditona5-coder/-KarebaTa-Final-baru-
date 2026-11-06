@@ -44,6 +44,7 @@ export interface PostItem {
   danaNumber?: string;
   danaName?: string;
   qrisUrl?: string;
+  isAdminPost?: boolean;
 }
 
 export interface CommentItem {
@@ -88,6 +89,7 @@ export interface FeedItem {
   danaNumber?: string;
   danaName?: string;
   qrisUrl?: string;
+  isAdminPost?: boolean;
 }
 
 export interface UserWalletSettings {

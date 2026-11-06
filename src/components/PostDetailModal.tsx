@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Link2,
   Gift,
+  ShieldCheck,
 } from "lucide-react";
 import { PostItem, FeedItem, ReactionType } from "../types";
 import { FeedMedia } from "./FeedMedia";
@@ -136,6 +137,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   <span className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[150px] sm:max-w-[200px]">
                     {authorName.startsWith("@") ? authorName : `@${authorName}`}
                   </span>
+                  {(post.isAdminPost || feedItem?.isAdminPost || authorName.toLowerCase().includes("admin") || (post.email && post.email.includes("iditona5"))) && (
+                    <span
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-[#00632B] text-[10px] font-extrabold border border-emerald-300 shadow-2xs shrink-0 select-none"
+                      title="Akun Resmi Admin KarebaTa"
+                    >
+                      <ShieldCheck className="w-3 h-3 text-[#00632B]" />
+                      <span>Admin</span>
+                    </span>
+                  )}
                   <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
                   <span className="text-[12px] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
                     {postTime}
@@ -377,15 +387,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <span>Bagikan</span>
             </button>
 
-            {/* Tombol Hadiah Apresiasi (DANA): AKTIF HANYA JIKA POSTINGAN MENCAPAI >= 500 SUKA */}
-            {((likeCount >= 500) || ((feedItem?.like || 0) >= 500)) && onOpenGift && (
+            {/* Tombol Hadiah Apresiasi (DANA): AKTIF SAAT >= 500 SUKA ATAU UNTUK POSTINGAN ADMIN */}
+            {((likeCount >= 500) || ((feedItem?.like || 0) >= 500) || post.isAdminPost || feedItem?.isAdminPost || (post.email && post.email.includes("iditona5"))) && onOpenGift && (
               <button
                 id={`detail-reward-gift-btn-${post.id}`}
                 type="button"
                 onClick={() => onOpenGift(feedItem || post)}
                 className="flex items-center gap-1.5 py-1 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 text-amber-900 border border-amber-300 hover:border-amber-400 cursor-pointer transition active:scale-95 shadow-2xs animate-fade-in"
                 aria-label="Beri Hadiah Apresiasi DANA"
-                title="Beri Hadiah Apresiasi DANA (Postingan >= 500 Suka)"
+                title="Beri Hadiah Apresiasi DANA"
               >
                 <Gift className="w-4 h-4 text-amber-600 animate-pulse" />
                 <span className="font-extrabold text-amber-950">Hadiah</span>

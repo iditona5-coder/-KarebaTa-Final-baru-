@@ -102,6 +102,38 @@ import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
 import { SplashScreen } from "./components/SplashScreen";
 
+// Postingan Contoh Resmi Admin KarebaTa untuk Pratinjau Tampilan Ikon Admin & Fitur Hadiah DANA
+export const SAMPLE_ADMIN_POST: FeedItem = {
+  id: "admin-preview-kabar-1",
+  user: "admin",
+  name: "Admin Resmi KarebaTa",
+  init: "A",
+  email: PRIMARY_ADMIN_EMAIL,
+  time: "Baru saja",
+  text: "📢 Halo Warga Sulawesi Tengah! Ini adalah contoh postingan resmi dari Admin KarebaTa. Ikon Akun Resmi Admin dan Fitur Hadiah Apresiasi DANA kini aktif untuk pratinjau tampilan warga.",
+  img: "https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=1200&q=80",
+  like: 520,
+  views: 1250,
+  shares: 45,
+  saves: 18,
+  location: "Palu, Sulawesi Tengah",
+  mediaType: "image",
+  isLiked: false,
+  comments: [
+    {
+      id: "c-admin-demo-1",
+      user: "WargaPalu",
+      text: "Tampilan postingan admin dan icon hadiah apresiasi DANA-nya sudah kelihatan mantap kanda! 👏",
+      time: "Baru saja",
+      likes: 5,
+      isLiked: false,
+    },
+  ],
+  isAdminPost: true,
+  danaNumber: "081234567890",
+  danaName: "Admin KarebaTa",
+};
+
 export default function KarebaFeedFinal() {
   const [showSplash, setShowSplash] = useState(() => {
     try {
@@ -448,23 +480,42 @@ export default function KarebaFeedFinal() {
               sessionStorage.setItem("karebata_active_session", "true");
             } catch {}
 
+            // Reset data dompet DANA agar tidak membawa data akun sebelumnya saat beralih akun
+            setMyDanaNumber("");
+            setMyDanaName("");
+            setMyQrisUrl("");
+
+            // Muat data dompet DANA yang terikat khusus ke UID akun ini
+            const userDanaNum = localStorage.getItem(`karebata_dana_number_${user.uid}`) || "";
+            const userDanaName = localStorage.getItem(`karebata_dana_name_${user.uid}`) || "";
+            const userQris = localStorage.getItem(`karebata_qris_url_${user.uid}`) || "";
+            if (userDanaNum) setMyDanaNumber(userDanaNum);
+            if (userDanaName) setMyDanaName(userDanaName);
+            if (userQris) setMyQrisUrl(userQris);
+
             // Ambil data dompet DANA warga dari Firestore jika ada
             getUserWalletFromFirestore(user.uid).then((wallet) => {
               if (wallet) {
-                if (wallet.danaNumber) {
-                  setMyDanaNumber(wallet.danaNumber);
-                  localStorage.setItem("karebata_my_dana_number", wallet.danaNumber);
-                }
-                if (wallet.danaName) {
-                  setMyDanaName(wallet.danaName);
-                  localStorage.setItem("karebata_my_dana_name", wallet.danaName);
-                }
-                if (wallet.qrisUrl) {
-                  setMyQrisUrl(wallet.qrisUrl);
-                  localStorage.setItem("karebata_my_qris_url", wallet.qrisUrl);
-                }
+                setMyDanaNumber(wallet.danaNumber || "");
+                setMyDanaName(wallet.danaName || "");
+                setMyQrisUrl(wallet.qrisUrl || "");
+                if (wallet.danaNumber) localStorage.setItem(`karebata_dana_number_${user.uid}`, wallet.danaNumber);
+                if (wallet.danaName) localStorage.setItem(`karebata_dana_name_${user.uid}`, wallet.danaName);
+                if (wallet.qrisUrl) localStorage.setItem(`karebata_qris_url_${user.uid}`, wallet.qrisUrl);
+              } else if (!userDanaNum) {
+                setMyDanaNumber("");
+                setMyDanaName("");
+                setMyQrisUrl("");
               }
             }).catch(() => {});
+
+            // Muat daftar postingan tersimpan (bookmark) khusus untuk akun ini
+            try {
+              const userSaved = localStorage.getItem(`karebata_saved_posts_${user.uid}`);
+              setSavedPostIds(userSaved ? JSON.parse(userSaved) : []);
+            } catch {
+              setSavedPostIds([]);
+            }
 
             // Jika akun baru (belum terdaftar di Firestore dan belum punya nama): bawa ke set_name agar akun baru bisa mengetik namanya sendiri
             if (!isKnownAccount) {
@@ -674,10 +725,8 @@ export default function KarebaFeedFinal() {
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
       } else {
-        // Cek fallback lokal sebelum mengarahkan ke form nama
+        // Cek fallback lokal khusus akun Google ini sebelum mengarahkan ke form nama
         const localFallback =
-          localStorage.getItem("karebata_username") ||
-          localStorage.getItem("karebata_last_registered_username") ||
           (email ? localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) : null) ||
           localStorage.getItem(`karebata_custom_username_${uid}`);
         if (localFallback && localFallback.trim() && localFallback !== "warga_kareba") {
@@ -693,9 +742,7 @@ export default function KarebaFeedFinal() {
       }
     } catch {
       const fallbackCached = 
-        localStorage.getItem("karebata_username") ||
-        localStorage.getItem("karebata_last_registered_username") ||
-        localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) ||
+        (email ? localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) : null) ||
         localStorage.getItem(`karebata_custom_username_${uid}`);
       if (fallbackCached && fallbackCached.trim() && fallbackCached !== "warga_kareba") {
         const clean = fallbackCached.trim().slice(0, 13);
@@ -786,6 +833,10 @@ export default function KarebaFeedFinal() {
       setCurrentUser(null);
       setUserName("");
       setPosts([]);
+      setMyDanaNumber("");
+      setMyDanaName("");
+      setMyQrisUrl("");
+      setSavedPostIds([]);
       try {
         sessionStorage.clear();
         localStorage.removeItem("kareba_guest_mode");
@@ -794,6 +845,11 @@ export default function KarebaFeedFinal() {
         localStorage.removeItem("karebata_last_registered_username");
         localStorage.removeItem("karebata_active_uid");
         localStorage.removeItem("karebata_active_email");
+        localStorage.removeItem("karebata_my_dana_number");
+        localStorage.removeItem("karebata_my_dana_name");
+        localStorage.removeItem("karebata_my_qris_url");
+        localStorage.removeItem("karebata_user_posts");
+        localStorage.removeItem("karebata_saved_posts");
       } catch {}
       setViewMode("login");
       showToast("Berhasil keluar dari akun. Sesi diamankan.");
@@ -881,18 +937,18 @@ export default function KarebaFeedFinal() {
     const myEmail = (user?.email || "").trim().toLowerCase();
 
     // 1. Cek kecocokan UID unik akun Google (paling presisi antar akun)
-    if (myUid && item.authorUid && item.authorUid.trim() === myUid) {
-      return true;
+    if (item.authorUid) {
+      return Boolean(myUid && item.authorUid.trim() === myUid);
     }
 
     // 2. Cek kecocokan alamat email akun Google
-    if (myEmail && item.email && item.email.trim().toLowerCase() === myEmail) {
-      return true;
+    if (item.email) {
+      return Boolean(myEmail && item.email.trim().toLowerCase() === myEmail);
     }
 
-    // 3. Cek kecocokan username / nama akun
-    if (name && item.user && item.user.trim().toLowerCase() === name) {
-      return true;
+    // 3. Fallback hanya untuk data lama tanpa authorUid maupun email
+    if (name && item.user) {
+      return item.user.trim().toLowerCase() === name;
     }
 
     return false;
@@ -1107,34 +1163,27 @@ export default function KarebaFeedFinal() {
       if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
     } catch {}
 
-    if (feed.length > 0) {
-      setPosts((prev) => {
-        const cleanPrev = prev.filter((p) => !deletedIds.has(p.id) && !isDummyMedia(p));
-        const myFeedPosts: PostItem[] = feed
-          .filter((f) => isMyPost(f) && !isDummyMedia(f) && !deletedIds.has(f.id))
-          .map((f) => ({
-            id: f.id,
-            title: f.text || "Kabar Kamu",
-            loc: f.location || "Wilayah Sekitar",
-            img: f.img || "",
-            thumbnail: f.thumbnail,
-            mediaType: f.mediaType || "image",
-            caption: f.text || "",
-            createdAt: f.time || "Baru saja",
-            name: f.name || f.user || "Warga",
-            email: f.email || "",
-            user: f.user || "warga",
-            init: f.init || initial,
-            isMyPost: true,
-          }));
-        if (myFeedPosts.length === 0) return cleanPrev;
-        const prevIds = new Set(cleanPrev.map((p) => p.id));
-        const missing = myFeedPosts.filter((p) => !prevIds.has(p.id));
-        if (missing.length === 0) return cleanPrev;
-        return [...missing, ...cleanPrev];
-      });
+    if (currentUser && feed.length > 0) {
+      const myFeedPosts: PostItem[] = feed
+        .filter((f) => isMyPost(f) && !isDummyMedia(f) && !deletedIds.has(f.id))
+        .map((f) => ({
+          id: f.id,
+          title: f.text || "Kabar Kamu",
+          loc: f.location || "Wilayah Sekitar",
+          img: f.img || "",
+          thumbnail: f.thumbnail,
+          mediaType: f.mediaType || "image",
+          caption: f.text || "",
+          createdAt: f.time || "Baru saja",
+          name: f.name || f.user || "Warga",
+          email: f.email || "",
+          user: f.user || "warga",
+          init: f.init || initial,
+          isMyPost: true,
+        }));
+      setPosts(myFeedPosts);
     } else {
-      setPosts((prev) => prev.filter((p) => !deletedIds.has(p.id) && !isDummyMedia(p)));
+      setPosts([]);
     }
   }, [feed, currentUser, userName, userEmail]);
 
@@ -1232,6 +1281,9 @@ export default function KarebaFeedFinal() {
     setSavedPostIds((prev) => {
       const next = prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId];
       try {
+        if (currentUser?.uid) {
+          localStorage.setItem(`karebata_saved_posts_${currentUser.uid}`, JSON.stringify(next));
+        }
         localStorage.setItem("karebata_saved_posts", JSON.stringify(next));
       } catch {
         // Abaikan jika penyimpanan terbatas
@@ -1275,7 +1327,13 @@ export default function KarebaFeedFinal() {
 
   // Beranda selalu menampilkan seluruh kabar warga asli (pencarian tampil eksklusif di Halaman Pencarian)
   const displayFeed = useMemo(() => {
-    return feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id));
+    const activePosts = feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id));
+    // Sisipkan postingan contoh resmi Admin di bagian atas untuk pratinjau tampilan ikon admin & tombol hadiah
+    const hasAdminPreview = activePosts.some((p) => p.id === SAMPLE_ADMIN_POST.id);
+    if (!hasAdminPreview) {
+      return [SAMPLE_ADMIN_POST, ...activePosts];
+    }
+    return activePosts;
   }, [feed, hiddenPostIds]);
 
   // Helper untuk menggulirkan layar langsung tertuju ke media postingan di feed
@@ -2077,6 +2135,7 @@ export default function KarebaFeedFinal() {
         danaNumber: myDanaNumber || undefined,
         danaName: myDanaName || undefined,
         qrisUrl: myQrisUrl || undefined,
+        isAdminPost: isUserAdmin(currentUser?.email),
       };
 
       const newPostItem: PostItem = {
@@ -2100,6 +2159,7 @@ export default function KarebaFeedFinal() {
         danaNumber: myDanaNumber || undefined,
         danaName: myDanaName || undefined,
         qrisUrl: myQrisUrl || undefined,
+        isAdminPost: isUserAdmin(currentUser?.email),
       };
 
       setFeed((prev) => [newFeedItem, ...prev]);
@@ -2235,6 +2295,7 @@ export default function KarebaFeedFinal() {
       danaNumber: myDanaNumber || undefined,
       danaName: myDanaName || undefined,
       qrisUrl: myQrisUrl || undefined,
+      isAdminPost: isUserAdmin(currentUser?.email),
     };
 
     const newPostItem: PostItem = {
@@ -2254,6 +2315,7 @@ export default function KarebaFeedFinal() {
       danaNumber: myDanaNumber || undefined,
       danaName: myDanaName || undefined,
       qrisUrl: myQrisUrl || undefined,
+      isAdminPost: isUserAdmin(currentUser?.email),
     };
 
     setFeed((prev) => [newFeedItem, ...prev]);
@@ -3654,6 +3716,16 @@ export default function KarebaFeedFinal() {
                         >
                           {f.user.startsWith("@") ? f.user : `@${f.user}`}
                         </button>
+                        {/* BADGE / IKON RESMI POSTINGAN ADMIN */}
+                        {(f.isAdminPost || isUserAdmin(f.email) || f.user.toLowerCase().includes("admin") || f.email === PRIMARY_ADMIN_EMAIL) && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-[#00632B] text-[10px] font-extrabold border border-emerald-300 shadow-2xs shrink-0 select-none"
+                            title="Akun Resmi Admin KarebaTa"
+                          >
+                            <ShieldCheck className="w-3 h-3 text-[#00632B]" />
+                            <span>Admin</span>
+                          </span>
+                        )}
                         <span className="text-neutral-300 text-[10px] shrink-0 select-none">·</span>
                         <span className="text-[clamp(11.5px,3vw,13px)] text-neutral-400 font-normal shrink-0 whitespace-nowrap">
                           {f.time}
@@ -3920,15 +3992,15 @@ export default function KarebaFeedFinal() {
                     <span className="whitespace-nowrap font-bold">Bagikan</span>
                   </button>
 
-                  {/* Tombol Hadiah Apresiasi (DANA): OTOMATIS AKTIF HANYA JIKA POSTINGAN MENCAPAI >= 500 SUKA */}
-                  {(f.like || 0) >= 500 && (
+                  {/* Tombol Hadiah Apresiasi (DANA): AKTIF SAAT >= 500 LIKE ATAU UNTUK POSTINGAN ADMIN (PRATINJAU SEMENTARA) */}
+                  {((f.like || 0) >= 500 || f.isAdminPost || isUserAdmin(f.email) || isUserAdmin(currentUser?.email)) && (
                     <button
                       id={`reward-gift-btn-${f.id}`}
                       type="button"
                       onClick={() => setActiveGiftPost(f)}
                       className="flex items-center gap-1.5 py-1.5 px-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 text-amber-900 border border-amber-300 hover:border-amber-400 min-h-[36px] cursor-pointer transition active:scale-95 shadow-2xs animate-fade-in"
                       aria-label="Beri Hadiah Apresiasi DANA"
-                      title="Beri Hadiah Apresiasi DANA (Postingan >= 500 Suka)"
+                      title="Beri Hadiah Apresiasi DANA"
                     >
                       <Gift className="w-[clamp(17px,4.5vw,20px)] h-[clamp(17px,4.5vw,20px)] text-amber-600 animate-pulse" />
                       <span className="whitespace-nowrap font-extrabold text-[clamp(11px,3vw,12.5px)] text-amber-950">
@@ -5047,6 +5119,15 @@ export default function KarebaFeedFinal() {
             setMyDanaName(data.danaName);
             setMyQrisUrl(data.qrisUrl || "");
             try {
+              if (currentUser?.uid) {
+                localStorage.setItem(`karebata_dana_number_${currentUser.uid}`, data.danaNumber);
+                localStorage.setItem(`karebata_dana_name_${currentUser.uid}`, data.danaName);
+                if (data.qrisUrl) {
+                  localStorage.setItem(`karebata_qris_url_${currentUser.uid}`, data.qrisUrl);
+                } else {
+                  localStorage.removeItem(`karebata_qris_url_${currentUser.uid}`);
+                }
+              }
               localStorage.setItem("karebata_my_dana_number", data.danaNumber);
               localStorage.setItem("karebata_my_dana_name", data.danaName);
               if (data.qrisUrl) {

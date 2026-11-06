@@ -145,6 +145,7 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
       danaNumber: feedItem.danaNumber || postItem.danaNumber || '',
       danaName: feedItem.danaName || postItem.danaName || '',
       qrisUrl: feedItem.qrisUrl || postItem.qrisUrl || '',
+      isAdminPost: Boolean(feedItem.isAdminPost || postItem.isAdminPost || isUserAdmin(feedItem.email || postItem.email)),
     };
 
     if (feedItem.avatar) {
@@ -198,6 +199,10 @@ export const parsePostDoc = (docSnap: any): FeedItem => {
     category: data.category || undefined,
     isMyPost: false,
     createdAtTimestamp: Number(data.createdAtTimestamp) || (data.createdAtServer?.toMillis ? data.createdAtServer.toMillis() : 0),
+    danaNumber: data.danaNumber || '',
+    danaName: data.danaName || '',
+    qrisUrl: data.qrisUrl || '',
+    isAdminPost: Boolean(data.isAdminPost || (data.email && isUserAdmin(data.email))),
   } as any;
 };
 
@@ -472,8 +477,9 @@ function notifyAuthSubscribers(user: User | null) {
 export function loginAsSimulatedUser(email: string = PRIMARY_ADMIN_EMAIL, displayName?: string): User {
   const isAdm = isUserAdmin(email);
   const name = displayName || (isAdm ? "Admin Kareba'Ta" : "Warga Kareba");
+  const cleanEmailKey = email.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
   const simUser = {
-    uid: "user-sim-" + (isAdm ? "admin" : "warga"),
+    uid: isAdm ? "user-sim-admin" : `user-sim-${cleanEmailKey}`,
     email: email.trim(),
     displayName: name,
     photoURL: null,
