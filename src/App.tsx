@@ -950,42 +950,42 @@ export default function KarebaFeedFinal() {
 
   // Handler logout pengguna
   const handleLogout = async () => {
-    const ok = await logoutUser();
-    if (ok) {
-      setCurrentUser(null);
-      currentUserRef.current = null;
-      setUserName("");
-      userNameRef.current = "";
-      setPosts([]);
-      setMyPayoutMethod("bank");
-      setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
-      setMyBankAccountNumber("");
-      setMyBankAccountName("");
-      setMyDanaNumber("");
-      setMyDanaName("");
-      setMyQrisUrl("");
-      setSavedPostIds([]);
-      try {
-        sessionStorage.clear();
-        localStorage.removeItem("kareba_guest_mode");
-        localStorage.removeItem("karebata_is_logged_in");
-        localStorage.removeItem("karebata_username");
-        localStorage.removeItem("karebata_last_registered_username");
-        localStorage.removeItem("karebata_active_uid");
-        localStorage.removeItem("karebata_active_email");
-        localStorage.removeItem("karebata_my_payout_method");
-        localStorage.removeItem("karebata_my_bank_name");
-        localStorage.removeItem("karebata_my_bank_account_number");
-        localStorage.removeItem("karebata_my_bank_account_name");
-        localStorage.removeItem("karebata_my_dana_number");
-        localStorage.removeItem("karebata_my_dana_name");
-        localStorage.removeItem("karebata_my_qris_url");
-        localStorage.removeItem("karebata_user_posts");
-        localStorage.removeItem("karebata_saved_posts");
-      } catch {}
-      setViewMode("login");
-      showToast("Berhasil keluar dari akun. Sesi diamankan.");
-    }
+    try {
+      await logoutUser();
+    } catch {}
+    setCurrentUser(null);
+    currentUserRef.current = null;
+    setUserName("");
+    userNameRef.current = "";
+    setPosts([]);
+    setMyPayoutMethod("bank");
+    setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
+    setMyBankAccountNumber("");
+    setMyBankAccountName("");
+    setMyDanaNumber("");
+    setMyDanaName("");
+    setMyQrisUrl("");
+    setSavedPostIds([]);
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem("kareba_guest_mode");
+      localStorage.removeItem("karebata_is_logged_in");
+      localStorage.removeItem("karebata_username");
+      localStorage.removeItem("karebata_last_registered_username");
+      localStorage.removeItem("karebata_active_uid");
+      localStorage.removeItem("karebata_active_email");
+      localStorage.removeItem("karebata_my_payout_method");
+      localStorage.removeItem("karebata_my_bank_name");
+      localStorage.removeItem("karebata_my_bank_account_number");
+      localStorage.removeItem("karebata_my_bank_account_name");
+      localStorage.removeItem("karebata_my_dana_number");
+      localStorage.removeItem("karebata_my_dana_name");
+      localStorage.removeItem("karebata_my_qris_url");
+      localStorage.removeItem("karebata_user_posts");
+      localStorage.removeItem("karebata_saved_posts");
+    } catch {}
+    setViewMode("login");
+    showToast("Berhasil keluar dari akun. Sesi diamankan.");
   };
 
   // Fungsi Tarik Layar ke Bawah untuk Memperbarui (Pull-to-Refresh)
@@ -3133,6 +3133,11 @@ export default function KarebaFeedFinal() {
                 <span className="text-neutral-500 font-medium tracking-tight">
                   @{userName.replace(/^@/, "").toLowerCase()}
                 </span>
+                {currentUser?.email && (
+                  <span className="text-[11px] text-neutral-400 font-normal truncate max-w-[130px] sm:max-w-[180px]" title={currentUser.email}>
+                    • {currentUser.email}
+                  </span>
+                )}
               </div>
             </div>
           </div>
