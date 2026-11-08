@@ -41,6 +41,10 @@ export interface PostItem {
   userReaction?: ReactionType;
   reactions?: Record<string, number>;
   createdAtTimestamp?: number;
+  payoutMethod?: "bank" | "dana" | "qris";
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
   danaNumber?: string;
   danaName?: string;
   qrisUrl?: string;
@@ -86,6 +90,10 @@ export interface FeedItem {
   isHidden?: boolean;
   category?: string;
   createdAtTimestamp?: number;
+  payoutMethod?: "bank" | "dana" | "qris";
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
   danaNumber?: string;
   danaName?: string;
   qrisUrl?: string;
@@ -93,8 +101,12 @@ export interface FeedItem {
 }
 
 export interface UserWalletSettings {
-  danaNumber: string;
-  danaName: string;
+  payoutMethod?: "bank" | "dana" | "qris";
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
+  danaNumber?: string;
+  danaName?: string;
   qrisUrl?: string;
   updatedAt?: number;
 }

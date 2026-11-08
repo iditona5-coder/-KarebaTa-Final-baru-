@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { User } from "firebase/auth";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, LogOut } from "lucide-react";
 import { KarebaTaLogo } from "./KarebaTaLogo";
 
 interface SetupUsernamePageProps {
@@ -14,6 +14,7 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
   currentUser,
   initialValue = "",
   onSaveUsername,
+  onLogout,
 }) => {
   // Biarkan input awal kosong agar tulisan @nama_kamu langsung terlihat di papan edit nama
   const [usernameInput, setUsernameInput] = useState(
@@ -74,19 +75,32 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
       <main className="w-full max-w-lg mx-auto px-5 sm:px-6 py-6 flex-1 flex flex-col justify-center space-y-6">
           {/* Info Status Akun Google Terhubung */}
           {currentUser && (
-            <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] text-white font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-[#E5A000] select-none">
-                {(usernameInput.trim().replace(/^@/, "")[0] || userInitial || "W").toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>Akun Google Terhubung</span>
+            <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] text-white font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-[#E5A000] select-none">
+                  {(usernameInput.trim().replace(/^@/, "")[0] || userInitial || "W").toUpperCase()}
                 </div>
-                <p className="text-xs text-neutral-500 truncate">
-                  {currentUser.email}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Akun Google Terhubung</span>
+                  </div>
+                  <p className="text-xs text-neutral-500 truncate">
+                    {currentUser.email}
+                  </p>
+                </div>
               </div>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1.5 rounded-xl transition active:scale-95 shrink-0 ml-2 cursor-pointer shadow-2xs"
+                  title="Ganti ke akun Google yang lain"
+                >
+                  <LogOut className="w-3 h-3 text-rose-600" />
+                  <span>Beralih Akun</span>
+                </button>
+              )}
             </div>
           )}
 

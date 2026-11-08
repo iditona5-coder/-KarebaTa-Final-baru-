@@ -74,6 +74,7 @@ import {
   listenToFirestoreBulletins,
   submitReportToFirestore,
   subscribeToAuth,
+  loginWithGoogle,
   logoutUser,
   saveUserProfile,
   getUserProfile,
@@ -166,10 +167,6 @@ export default function KarebaFeedFinal() {
           const cached = localStorage.getItem(`karebata_custom_username_${activeUid}`);
           if (cached && cached.trim() && cached !== "warga_kareba") return cached.trim().slice(0, 13);
         }
-        const directCached = localStorage.getItem("karebata_username");
-        if (directCached && directCached.trim() && directCached !== "warga_kareba") {
-          return directCached.trim().slice(0, 13);
-        }
       }
     } catch {}
     return "";
@@ -209,6 +206,34 @@ export default function KarebaFeedFinal() {
   // State untuk Fitur Hadiah Apresiasi (DANA) saat postingan memenuhi syarat Suka
   const [activeGiftPost, setActiveGiftPost] = useState<FeedItem | null>(null);
   const [isWalletSettingsOpen, setIsWalletSettingsOpen] = useState(false);
+  const [myPayoutMethod, setMyPayoutMethod] = useState<"bank" | "dana" | "qris">(() => {
+    try {
+      return (localStorage.getItem("karebata_my_payout_method") as any) || "bank";
+    } catch {
+      return "bank";
+    }
+  });
+  const [myBankName, setMyBankName] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_my_bank_name") || "Bank BRI (Bank Rakyat Indonesia)";
+    } catch {
+      return "Bank BRI (Bank Rakyat Indonesia)";
+    }
+  });
+  const [myBankAccountNumber, setMyBankAccountNumber] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_my_bank_account_number") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [myBankAccountName, setMyBankAccountName] = useState<string>(() => {
+    try {
+      return localStorage.getItem("karebata_my_bank_account_name") || "";
+    } catch {
+      return "";
+    }
+  });
   const [myDanaNumber, setMyDanaNumber] = useState<string>(() => {
     try {
       return localStorage.getItem("karebata_my_dana_number") || "";
@@ -373,14 +398,16 @@ export default function KarebaFeedFinal() {
     if (isDedicatedAdminRoute()) return "admin";
     try {
       if (typeof window !== "undefined") {
-        const isSessionActive = sessionStorage.getItem("karebata_session_active") === "true";
-        // Hanya izinkan langsung ke feed jika masih berada dalam sesi aktif (misal refresh halaman)
-        if (isSessionActive) {
-          const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
-          const cachedName = localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username");
-          if (isLoggedIn && cachedName && cachedName !== "warga_kareba") {
-            return "feed";
-          }
+        const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
+        const activeEmail = (localStorage.getItem("karebata_active_email") || "").toLowerCase();
+        const activeUid = localStorage.getItem("karebata_active_uid");
+        // HANYA gunakan nama yang terikat khusus ke akun yang aktif (email atau UID)
+        const cachedName =
+          (activeEmail ? localStorage.getItem(`karebata_registered_${activeEmail}`) : null) ||
+          (activeUid ? localStorage.getItem(`karebata_custom_username_${activeUid}`) : null);
+
+        if (isLoggedIn && cachedName && cachedName.trim() && cachedName.trim() !== "warga_kareba") {
+          return "feed";
         }
       }
     } catch {}
@@ -399,12 +426,19 @@ export default function KarebaFeedFinal() {
         sessionStorage.removeItem("karebata_admin_passcode_verified");
       } catch {}
       if (window.location.hash === "#feed") {
-        const isSessionActive = typeof window !== "undefined" && sessionStorage.getItem("karebata_session_active") === "true";
-        const existingName = userName || (typeof window !== "undefined" && (localStorage.getItem("karebata_username") || localStorage.getItem("karebata_last_registered_username")));
-        if (isSessionActive && currentUser && existingName && existingName !== "warga_kareba") {
+        const isLoggedIn = typeof window !== "undefined" && localStorage.getItem("karebata_is_logged_in") === "true";
+        const activeEmail = typeof window !== "undefined" ? (localStorage.getItem("karebata_active_email") || "").toLowerCase() : "";
+        const activeUid = typeof window !== "undefined" ? localStorage.getItem("karebata_active_uid") : null;
+        // Hanya baca nama yang terikat spesifik ke akun aktif
+        const existingName =
+          (activeEmail ? localStorage.getItem(`karebata_registered_${activeEmail}`) : null) ||
+          (activeUid ? localStorage.getItem(`karebata_custom_username_${activeUid}`) : null) ||
+          (currentUser ? userName : null);
+
+        if ((currentUser || isLoggedIn) && existingName && existingName !== "warga_kareba") {
           if (!userName && existingName) setUserName(existingName.slice(0, 13));
           setViewMode("feed");
-        } else if (isSessionActive && currentUser && !existingName) {
+        } else if ((currentUser || isLoggedIn) && !existingName) {
           setViewMode("set_name");
         } else {
           setViewMode("login");
@@ -434,17 +468,7 @@ export default function KarebaFeedFinal() {
   // Berlangganan status autentikasi Google Firebase
   useEffect(() => {
     const unsubAuth = subscribeToAuth(async (user) => {
-      const isSessionActive = typeof window !== "undefined" && sessionStorage.getItem("karebata_session_active") === "true";
-
       if (user) {
-        // Jika aplikasi baru dibuka dari luar (bukan reload di sesi aktif yang sama),
-        // pengguna wajib menekan tombol login terlebih dahulu.
-        if (!isSessionActive) {
-          setCurrentUser(null);
-          setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
-          return;
-        }
-
         setCurrentUser(user);
         try {
           localStorage.setItem("karebata_is_logged_in", "true");
@@ -452,18 +476,18 @@ export default function KarebaFeedFinal() {
           if (user.email) {
             localStorage.setItem("karebata_active_email", user.email.toLowerCase());
           }
-          sessionStorage.setItem("karebata_session_active", "true");
-          sessionStorage.setItem("karebata_active_session", "true");
         } catch {}
 
         try {
-          // Cari nama pengguna dari Firestore & cache lokal secara komprehensif
+          // Cari nama pengguna dari Firestore & cache lokal yang terisolasi khusus akun Google ini
           const res = await checkRegisteredUser(user.email, user.uid);
           
-          // Hanya cari cache yang terikat khusus ke akun Google ini (email atau UID)
+          const cleanEmail = (user.email || "").trim().toLowerCase();
+          // Hanya cari cache yang terikat khusus ke akun Google ini (email atau UID unik)
           const accountSpecificCache =
-            (user.email ? localStorage.getItem(`karebata_registered_${user.email.toLowerCase()}`) : null) ||
-            localStorage.getItem(`karebata_custom_username_${user.uid}`);
+            (cleanEmail ? localStorage.getItem(`karebata_registered_${cleanEmail}`) : null) ||
+            localStorage.getItem(`karebata_custom_username_${user.uid}`) ||
+            localStorage.getItem(`karebata_registered_user_${user.uid}`);
 
           let resolvedUsername = "";
           let isKnownAccount = false;
@@ -474,48 +498,65 @@ export default function KarebaFeedFinal() {
           } else if (accountSpecificCache && accountSpecificCache.trim() && accountSpecificCache !== "warga_kareba") {
             resolvedUsername = accountSpecificCache.trim().slice(0, 13);
             isKnownAccount = true;
-          } else if (user.displayName && user.displayName.trim()) {
-            resolvedUsername = user.displayName.trim().replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13);
-          } else if (user.email) {
-            resolvedUsername = user.email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13);
           }
 
-          if (resolvedUsername) {
+          if (isKnownAccount && resolvedUsername) {
+            // 1. AKUN SUDAH PERNAH LOGIN / TERDAFTAR SEBELUMNYA:
+            // Cukup login saja, tidak perlu ketik nama lagi! Langsung muat profil dan masuk ke beranda.
             setUserName(resolvedUsername);
             try {
               localStorage.setItem("karebata_username", resolvedUsername);
               localStorage.setItem("karebata_last_registered_username", resolvedUsername);
               localStorage.setItem(`karebata_custom_username_${user.uid}`, resolvedUsername);
+              if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, resolvedUsername);
               sessionStorage.setItem("karebata_session_active", "true");
               sessionStorage.setItem("karebata_active_session", "true");
             } catch {}
 
-            // Reset data dompet DANA agar tidak membawa data akun sebelumnya saat beralih akun
+            // Reset data dompet/rekening agar bersih dari akun sebelumnya saat beralih akun
+            setMyPayoutMethod("bank");
+            setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
+            setMyBankAccountNumber("");
+            setMyBankAccountName("");
             setMyDanaNumber("");
             setMyDanaName("");
             setMyQrisUrl("");
 
-            // Muat data dompet DANA yang terikat khusus ke UID akun ini
+            // Muat data dompet / rekening yang terikat khusus ke UID akun ini
+            const userMethod = (localStorage.getItem(`karebata_payout_method_${user.uid}`) as any) || "bank";
+            const userBank = localStorage.getItem(`karebata_bank_name_${user.uid}`) || "Bank BRI (Bank Rakyat Indonesia)";
+            const userBankNum = localStorage.getItem(`karebata_bank_account_number_${user.uid}`) || "";
+            const userBankName = localStorage.getItem(`karebata_bank_account_name_${user.uid}`) || "";
             const userDanaNum = localStorage.getItem(`karebata_dana_number_${user.uid}`) || "";
             const userDanaName = localStorage.getItem(`karebata_dana_name_${user.uid}`) || "";
             const userQris = localStorage.getItem(`karebata_qris_url_${user.uid}`) || "";
+
+            if (userMethod) setMyPayoutMethod(userMethod);
+            if (userBank) setMyBankName(userBank);
+            if (userBankNum) setMyBankAccountNumber(userBankNum);
+            if (userBankName) setMyBankAccountName(userBankName);
             if (userDanaNum) setMyDanaNumber(userDanaNum);
             if (userDanaName) setMyDanaName(userDanaName);
             if (userQris) setMyQrisUrl(userQris);
 
-            // Ambil data dompet DANA warga dari Firestore jika ada
+            // Ambil data rekening & dompet warga dari Firestore jika ada
             getUserWalletFromFirestore(user.uid).then((wallet) => {
               if (wallet) {
+                if (wallet.payoutMethod) setMyPayoutMethod(wallet.payoutMethod);
+                if (wallet.bankName) setMyBankName(wallet.bankName);
+                if (wallet.bankAccountNumber) setMyBankAccountNumber(wallet.bankAccountNumber);
+                if (wallet.bankAccountName) setMyBankAccountName(wallet.bankAccountName);
                 setMyDanaNumber(wallet.danaNumber || "");
                 setMyDanaName(wallet.danaName || "");
                 setMyQrisUrl(wallet.qrisUrl || "");
+
+                if (wallet.payoutMethod) localStorage.setItem(`karebata_payout_method_${user.uid}`, wallet.payoutMethod);
+                if (wallet.bankName) localStorage.setItem(`karebata_bank_name_${user.uid}`, wallet.bankName);
+                if (wallet.bankAccountNumber) localStorage.setItem(`karebata_bank_account_number_${user.uid}`, wallet.bankAccountNumber);
+                if (wallet.bankAccountName) localStorage.setItem(`karebata_bank_account_name_${user.uid}`, wallet.bankAccountName);
                 if (wallet.danaNumber) localStorage.setItem(`karebata_dana_number_${user.uid}`, wallet.danaNumber);
                 if (wallet.danaName) localStorage.setItem(`karebata_dana_name_${user.uid}`, wallet.danaName);
                 if (wallet.qrisUrl) localStorage.setItem(`karebata_qris_url_${user.uid}`, wallet.qrisUrl);
-              } else if (!userDanaNum) {
-                setMyDanaNumber("");
-                setMyDanaName("");
-                setMyQrisUrl("");
               }
             }).catch(() => {});
 
@@ -527,24 +568,40 @@ export default function KarebaFeedFinal() {
               setSavedPostIds([]);
             }
 
-            // Jika akun baru (belum terdaftar di Firestore dan belum punya nama): bawa ke set_name agar akun baru bisa mengetik namanya sendiri
-            if (!isKnownAccount) {
-              setViewMode("set_name");
-            } else {
-              setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
-            }
+            setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
           } else {
+            // 2. AKUN BARU ATAU BELUM PERNAH DAFTARKAN NAMA:
+            // Wajib masuk ke halaman pengetikan nama terlebih dahulu! Tidak boleh otomatis masuk ke feed.
+            setUserName("");
+            try {
+              localStorage.removeItem("karebata_username");
+            } catch {}
+
+            setMyPayoutMethod("bank");
+            setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
+            setMyBankAccountNumber("");
+            setMyBankAccountName("");
+            setMyDanaNumber("");
+            setMyDanaName("");
+            setMyQrisUrl("");
+            setSavedPostIds([]);
+
             setViewMode("set_name");
           }
         } catch {
-          // Fallback saat koneksi offline: gunakan data akun ini saja
+          // Fallback saat koneksi offline: hanya gunakan cache yang terikat ke akun Google ini
+          const cleanEmail = (user.email || "").trim().toLowerCase();
           const accountFallback =
-            (user.email ? localStorage.getItem(`karebata_registered_${user.email.toLowerCase()}`) : null) ||
-            localStorage.getItem(`karebata_custom_username_${user.uid}`) ||
-            (user.displayName ? user.displayName.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 13) : "Warga");
-          const clean = String(accountFallback).trim().slice(0, 13);
-          setUserName(clean);
-          setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
+            (cleanEmail ? localStorage.getItem(`karebata_registered_${cleanEmail}`) : null) ||
+            localStorage.getItem(`karebata_custom_username_${user.uid}`);
+          if (accountFallback && accountFallback.trim() && accountFallback !== "warga_kareba") {
+            const clean = accountFallback.trim().slice(0, 13);
+            setUserName(clean);
+            setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
+          } else {
+            setUserName("");
+            setViewMode("set_name");
+          }
         }
       } else {
         // User null: jika status lokal masih login (sedang pemulihan token saat refresh), jangan langsung hapus
@@ -557,7 +614,7 @@ export default function KarebaFeedFinal() {
       }
     });
     return () => unsubAuth();
-  }, [userName]);
+  }, []);
 
   // Berlangganan data Akun Warga yang Ditangguhkan / Diblokir secara real-time
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
@@ -706,17 +763,38 @@ export default function KarebaFeedFinal() {
     setIsLoginModalOpen(false);
     setLoginRedirectMessage(null);
 
-    const activeUser = loggedInUser || currentUser || auth.currentUser;
+    // Dapatkan instance user yang baru saja login (BUKAN closure currentUser akun sebelumnya)
+    const activeUser = loggedInUser || auth.currentUser;
     if (activeUser) {
       setCurrentUser(activeUser);
+      currentUserRef.current = activeUser;
+      try {
+        localStorage.setItem("karebata_active_uid", activeUser.uid);
+        if (activeUser.email) {
+          localStorage.setItem("karebata_active_email", activeUser.email.toLowerCase());
+        }
+      } catch {}
     }
 
     if (!activeUser) {
       return;
     }
 
-    const email = activeUser.email || "";
+    const email = (activeUser.email || "").trim().toLowerCase();
     const uid = activeUser.uid || "";
+
+    // Bersihkan data profil & rekening akun sebelumnya agar tidak tertukar
+    setUserName("");
+    userNameRef.current = "";
+    setPosts([]);
+    setMyPayoutMethod("bank");
+    setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
+    setMyBankAccountNumber("");
+    setMyBankAccountName("");
+    setMyDanaNumber("");
+    setMyDanaName("");
+    setMyQrisUrl("");
+    setSavedPostIds([]);
 
     try {
       // Periksa status pendaftaran akun Google ini di database
@@ -726,47 +804,81 @@ export default function KarebaFeedFinal() {
         // 1. AKUN SUDAH TERDAFTAR SEBELUMNYA: CUKUP LOGIN SAJA, LANGSUNG KE FEED!
         const clean = checkRes.username.trim().slice(0, 13);
         setUserName(clean);
+        userNameRef.current = clean;
         try {
           localStorage.setItem("karebata_username", clean);
           localStorage.setItem("karebata_last_registered_username", clean);
           localStorage.setItem("karebata_active_uid", uid);
-          if (email) localStorage.setItem("karebata_active_email", email.toLowerCase());
+          if (email) {
+            localStorage.setItem("karebata_active_email", email);
+            localStorage.setItem(`karebata_registered_${email}`, clean);
+          }
+          localStorage.setItem(`karebata_custom_username_${uid}`, clean);
         } catch {}
+
+        // Muat data dompet / rekening khusus akun ini
+        getUserWalletFromFirestore(uid).then((wallet) => {
+          if (wallet) {
+            if (wallet.payoutMethod) setMyPayoutMethod(wallet.payoutMethod);
+            if (wallet.bankName) setMyBankName(wallet.bankName);
+            if (wallet.bankAccountNumber) setMyBankAccountNumber(wallet.bankAccountNumber);
+            if (wallet.bankAccountName) setMyBankAccountName(wallet.bankAccountName);
+            setMyDanaNumber(wallet.danaNumber || "");
+            setMyDanaName(wallet.danaName || "");
+            setMyQrisUrl(wallet.qrisUrl || "");
+          }
+        }).catch(() => {});
+
+        try {
+          const userSaved = localStorage.getItem(`karebata_saved_posts_${uid}`);
+          setSavedPostIds(userSaved ? JSON.parse(userSaved) : []);
+        } catch {}
+
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
       } else {
         // Cek fallback lokal khusus akun Google ini sebelum mengarahkan ke form nama
         const localFallback =
-          (email ? localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) : null) ||
+          (email ? localStorage.getItem(`karebata_registered_${email}`) : null) ||
           localStorage.getItem(`karebata_custom_username_${uid}`);
         if (localFallback && localFallback.trim() && localFallback !== "warga_kareba") {
           const clean = localFallback.trim().slice(0, 13);
           setUserName(clean);
+          userNameRef.current = clean;
           setViewMode("feed");
           showToast(`Selamat datang kembali, @${clean}!`);
         } else {
           // 2. AKUN BARU ATAU BELUM PERNAH ISI NAMA PENGGUNA: WAJIB MASUK HALAMAN PENGETIKAN NAMA
           setUserName("");
+          userNameRef.current = "";
+          try {
+            localStorage.removeItem("karebata_username");
+          } catch {}
           setViewMode("set_name");
         }
       }
     } catch {
       const fallbackCached = 
-        (email ? localStorage.getItem(`karebata_registered_${email.toLowerCase()}`) : null) ||
+        (email ? localStorage.getItem(`karebata_registered_${email}`) : null) ||
         localStorage.getItem(`karebata_custom_username_${uid}`);
       if (fallbackCached && fallbackCached.trim() && fallbackCached !== "warga_kareba") {
         const clean = fallbackCached.trim().slice(0, 13);
         setUserName(clean);
+        userNameRef.current = clean;
         try {
           localStorage.setItem("karebata_username", clean);
           localStorage.setItem("karebata_last_registered_username", clean);
           localStorage.setItem("karebata_active_uid", uid);
-          if (email) localStorage.setItem("karebata_active_email", email.toLowerCase());
+          if (email) localStorage.setItem("karebata_active_email", email);
         } catch {}
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
       } else {
         setUserName("");
+        userNameRef.current = "";
+        try {
+          localStorage.removeItem("karebata_username");
+        } catch {}
         setViewMode("set_name");
       }
     }
@@ -841,8 +953,14 @@ export default function KarebaFeedFinal() {
     const ok = await logoutUser();
     if (ok) {
       setCurrentUser(null);
+      currentUserRef.current = null;
       setUserName("");
+      userNameRef.current = "";
       setPosts([]);
+      setMyPayoutMethod("bank");
+      setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
+      setMyBankAccountNumber("");
+      setMyBankAccountName("");
       setMyDanaNumber("");
       setMyDanaName("");
       setMyQrisUrl("");
@@ -855,6 +973,10 @@ export default function KarebaFeedFinal() {
         localStorage.removeItem("karebata_last_registered_username");
         localStorage.removeItem("karebata_active_uid");
         localStorage.removeItem("karebata_active_email");
+        localStorage.removeItem("karebata_my_payout_method");
+        localStorage.removeItem("karebata_my_bank_name");
+        localStorage.removeItem("karebata_my_bank_account_number");
+        localStorage.removeItem("karebata_my_bank_account_name");
         localStorage.removeItem("karebata_my_dana_number");
         localStorage.removeItem("karebata_my_dana_name");
         localStorage.removeItem("karebata_my_qris_url");
@@ -937,28 +1059,41 @@ export default function KarebaFeedFinal() {
   };
 
   // Helper untuk mengecek apakah suatu postingan adalah milik akun sendiri:
-  // - Pada postingan sendiri: HANYA kita yang melihat icon X (Hapus), dan TIDAK melihat icon Laporkan.
-  // - Pada postingan orang lain: kita melihat icon Laporkan, dan TIDAK melihat icon X (Hapus).
-  const isMyPost = (item: { isMyPost?: boolean; user?: string; email?: string; authorUid?: string }) => {
-    const user = currentUserRef.current || currentUser;
-    const name = (userNameRef.current || userName || "").trim().toLowerCase();
-    if (!user && !name) return false;
-    const myUid = (user?.uid || "").trim();
-    const myEmail = (user?.email || "").trim().toLowerCase();
+  // - Pada postingan sendiri: HANYA kita yang melihat opsi Hapus, dan TIDAK melihat opsi Laporkan.
+  // - Pada postingan akun lain: HANYA melihat opsi Laporkan, dan TIDAK PERNAH bisa menghapus postingan akun lain.
+  const isMyPost = (item: { isMyPost?: boolean; user?: string; email?: string; authorUid?: string } | null | undefined) => {
+    if (!item) return false;
+    const user = currentUserRef.current || currentUser || auth.currentUser;
+    if (!user) return false;
+    const myUid = (user.uid || "").trim();
+    const myEmail = (user.email || "").trim().toLowerCase();
+
+    const postUid = (item.authorUid || "").trim();
+    const postEmail = (item.email || "").trim().toLowerCase();
 
     // 1. Cek kecocokan UID unik akun Google (paling presisi antar akun)
-    if (item.authorUid) {
-      return Boolean(myUid && item.authorUid.trim() === myUid);
+    if (postUid) {
+      return Boolean(myUid && postUid === myUid);
     }
 
     // 2. Cek kecocokan alamat email akun Google
-    if (item.email) {
-      return Boolean(myEmail && item.email.trim().toLowerCase() === myEmail);
+    if (postEmail) {
+      return Boolean(myEmail && postEmail === myEmail);
     }
 
-    // 3. Fallback hanya untuk data lama tanpa authorUid maupun email
-    if (name && item.user) {
-      return item.user.trim().toLowerCase() === name;
+    // 3. Fallback hanya untuk data lama tanpa authorUid maupun email:
+    // Wajib mencocokkan nama dan DILARANG mencocokkan jika masih berupa nama generik 'warga' / 'warga_kareba'
+    const myName = (userNameRef.current || userName || "").trim().toLowerCase();
+    const postUser = (item.user || "").trim().toLowerCase();
+    if (
+      myName &&
+      postUser &&
+      myName !== "warga" &&
+      myName !== "warga_kareba" &&
+      postUser !== "warga" &&
+      postUser !== "warga_kareba"
+    ) {
+      return myName === postUser;
     }
 
     return false;
@@ -1688,6 +1823,7 @@ export default function KarebaFeedFinal() {
       createdAt: p.createdAt || target.time || "Baru saja",
       name: target.name || p.name || target.user || p.user || "Warga",
       email: target.email || p.email,
+      authorUid: target.authorUid || p.authorUid,
       user: target.user || p.user || "warga",
       init: ((target.user || p.user || "W").trim().replace(/^@/, "")[0] || "W").toUpperCase(),
       avatar: target.avatar || p.avatar,
@@ -2127,14 +2263,17 @@ export default function KarebaFeedFinal() {
         console.warn("Gagal unggah ke ImageKit, menggunakan cache lokal:", err);
       }
 
+      const activeAuthorUid = currentUser?.uid || auth.currentUser?.uid || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_uid") : "") || "";
+      const activeAuthorEmail = (currentUser?.email || auth.currentUser?.email || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_email") : "") || "").toLowerCase();
+
       // KABAR BARU MUNCUL DI FEED & KABAR KAMU SETELAH PROSES UNGGAH 100% SELESAI
       const newFeedItem: FeedItem = {
         id: feedId,
         user: userName,
         init: initial,
         name: userName,
-        authorUid: currentUser?.uid || "",
-        email: currentUser?.email || "",
+        authorUid: activeAuthorUid,
+        email: activeAuthorEmail,
         avatar: undefined,
         time: "Baru saja",
         text: finalDesc || "Momen spesial hari ini 📸",
@@ -2148,7 +2287,10 @@ export default function KarebaFeedFinal() {
         location: finalLoc || undefined,
         comments: [],
         isMyPost: true,
-        createdAtTimestamp: Date.now(),
+        payoutMethod: myPayoutMethod || "bank",
+        bankName: myBankName || undefined,
+        bankAccountNumber: myBankAccountNumber || undefined,
+        bankAccountName: myBankAccountName || undefined,
         danaNumber: myDanaNumber || undefined,
         danaName: myDanaName || undefined,
         qrisUrl: myQrisUrl || undefined,
@@ -2167,12 +2309,16 @@ export default function KarebaFeedFinal() {
         caption: finalDesc,
         createdAt: "Baru saja",
         name: userName,
-        authorUid: currentUser?.uid || "",
-        email: currentUser?.email || "",
+        authorUid: activeAuthorUid,
+        email: activeAuthorEmail,
         user: userName,
         init: initial,
         isMyPost: true,
         createdAtTimestamp: Date.now(),
+        payoutMethod: myPayoutMethod || "bank",
+        bankName: myBankName || undefined,
+        bankAccountNumber: myBankAccountNumber || undefined,
+        bankAccountName: myBankAccountName || undefined,
         danaNumber: myDanaNumber || undefined,
         danaName: myDanaName || undefined,
         qrisUrl: myQrisUrl || undefined,
@@ -2291,13 +2437,16 @@ export default function KarebaFeedFinal() {
     setTextPostLocation("");
     setIsTextPostModalOpen(false);
 
+    const activeAuthorUid = currentUser?.uid || auth.currentUser?.uid || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_uid") : "") || "";
+    const activeAuthorEmail = (currentUser?.email || auth.currentUser?.email || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_email") : "") || "").toLowerCase();
+
     const newFeedItem: FeedItem = {
       id: feedId,
       user: userName,
       init: initial,
       name: userName,
-      authorUid: currentUser?.uid || "",
-      email: currentUser?.email || "",
+      authorUid: activeAuthorUid,
+      email: activeAuthorEmail,
       avatar: undefined,
       time: "Baru saja",
       text: trimmedText,
@@ -2309,6 +2458,10 @@ export default function KarebaFeedFinal() {
       comments: [],
       isMyPost: true,
       createdAtTimestamp: Date.now(),
+      payoutMethod: myPayoutMethod || "bank",
+      bankName: myBankName || undefined,
+      bankAccountNumber: myBankAccountNumber || undefined,
+      bankAccountName: myBankAccountName || undefined,
       danaNumber: myDanaNumber || undefined,
       danaName: myDanaName || undefined,
       qrisUrl: myQrisUrl || undefined,
@@ -2323,12 +2476,16 @@ export default function KarebaFeedFinal() {
       caption: trimmedText,
       createdAt: "Baru saja",
       name: userName,
-      authorUid: currentUser?.uid || "",
-      email: currentUser?.email || "",
+      authorUid: activeAuthorUid,
+      email: activeAuthorEmail,
       user: userName,
       init: initial,
       isMyPost: true,
       createdAtTimestamp: Date.now(),
+      payoutMethod: myPayoutMethod || "bank",
+      bankName: myBankName || undefined,
+      bankAccountNumber: myBankAccountNumber || undefined,
+      bankAccountName: myBankAccountName || undefined,
       danaNumber: myDanaNumber || undefined,
       danaName: myDanaName || undefined,
       qrisUrl: myQrisUrl || undefined,
@@ -2463,6 +2620,17 @@ export default function KarebaFeedFinal() {
     if (feedMatch) allMatchingIds.add(feedMatch.id);
     if (postMatch) allMatchingIds.add(postMatch.id);
 
+    // Validasi Keamanan: HANYA pemilik sah postingan (atau admin di dashboard admin) yang boleh menghapus!
+    const targetPost = feedMatch || postMatch;
+    const isOwner = targetPost ? isMyPost(targetPost) : false;
+    const isAdminDashboard = viewMode === "admin" && isUserAdmin(currentUser?.email);
+
+    if (!isOwner && !isAdminDashboard) {
+      showToast("Anda tidak memiliki izin untuk menghapus postingan akun lain.");
+      setPostToDelete(null);
+      return;
+    }
+
     // Tandai permanen di daftar deleted posts agar tidak pernah muncul lagi dari sinkronisasi apapun
     try {
       const storedDeleted: string[] = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
@@ -2559,6 +2727,7 @@ export default function KarebaFeedFinal() {
               createdAt: post.time,
               name: post.name,
               email: post.email,
+              authorUid: post.authorUid,
               user: post.user,
               init: post.init,
               views: post.views,
@@ -2572,7 +2741,7 @@ export default function KarebaFeedFinal() {
             views={feed.find((f) => f.id === activeDetailPost.id)?.views || activeDetailPost.views || 0}
             onClose={() => setActiveDetailPost(null)}
             onShowToast={showToast}
-            isOwner={activeDetailPost ? (isMyPost(activeDetailPost) || isUserAdmin(currentUser?.email)) : false}
+            isOwner={activeDetailPost ? isMyPost(activeDetailPost) : false}
             isSaved={Boolean(activeDetailPost && savedPostIds.includes(activeDetailPost.id))}
             onToggleSave={handleToggleSave}
             onShare={handlePostShared}
@@ -2637,7 +2806,7 @@ export default function KarebaFeedFinal() {
         {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <SetupUsernamePage
           currentUser={currentUser}
-          initialValue={userName && userName !== "warga_kareba" ? userName : ""}
+          initialValue=""
           onSaveUsername={handleSaveUsername}
           onLogout={handleLogout}
         />
@@ -2968,17 +3137,17 @@ export default function KarebaFeedFinal() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Tombol Pengaturan Dompet Hadiah DANA (Menerima hadiah saat postingan >= 500 Like) */}
+            {/* Tombol Pengaturan Rekening Bank & Dompet Hadiah (Menerima hadiah saat postingan mencapai syarat Like) */}
             <button
               id="profile-wallet-settings-btn"
               type="button"
               onClick={() => setIsWalletSettingsOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#118EEA] bg-sky-50 hover:bg-sky-100 rounded-xl border border-sky-200 transition active:scale-95 cursor-pointer shadow-2xs"
-              title="Atur Dompet Hadiah DANA"
-              aria-label="Atur Dompet DANA"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition active:scale-95 cursor-pointer shadow-2xs"
+              title="Atur Rekening Bank & DANA Penerima Hadiah"
+              aria-label="Atur Rekening & DANA"
             >
-              <Gift className="w-3.5 h-3.5 text-[#118EEA]" />
-              <span className="hidden xs:inline sm:inline">Dompet DANA</span>
+              <Gift className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="hidden xs:inline sm:inline">Rekening & DANA</span>
             </button>
 
             {/* Icon Dasbor Admin HANYA Muncul di Akun Admin Khusus (iditona5@gmail.com) */}
@@ -3820,8 +3989,8 @@ export default function KarebaFeedFinal() {
                             </div>
                           </button>
 
-                          {/* 2. Opsi Laporkan Kabar (Pada postingan orang lain) ATAU Hapus Kabar (Pada postingan sendiri / Hak Admin) */}
-                          {isMyPost(f) || isUserAdmin(currentUser?.email) ? (
+                          {/* 2. Opsi Hapus Kabar (Hanya pada postingan sendiri) ATAU Laporkan Kabar (Pada postingan akun lain) */}
+                          {isMyPost(f) ? (
                             <button
                               id={`menu-delete-btn-${f.id}`}
                               type="button"
@@ -3837,7 +4006,7 @@ export default function KarebaFeedFinal() {
                                   Hapus Kabar
                                 </p>
                                 <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
-                                  {isMyPost(f) ? "Hapus postingan Anda" : "Hapus postingan (Hak Admin)"}
+                                  Hapus postingan Anda
                                 </p>
                               </div>
                             </button>
@@ -4780,7 +4949,7 @@ export default function KarebaFeedFinal() {
             views={feed.find((f) => f.id === activeDetailPost.id)?.views || activeDetailPost.views || 0}
             onClose={() => setActiveDetailPost(null)}
             onShowToast={showToast}
-            isOwner={activeDetailPost ? (isMyPost(activeDetailPost) || isUserAdmin(currentUser?.email)) : false}
+            isOwner={activeDetailPost ? isMyPost(activeDetailPost) : false}
             isSaved={Boolean(activeDetailPost && savedPostIds.includes(activeDetailPost.id))}
             onToggleSave={handleToggleSave}
             onShare={handlePostShared}
@@ -5128,34 +5297,43 @@ export default function KarebaFeedFinal() {
           />
         )}
 
-        {/* MODAL PENGATURAN DOMPET HADIAH DANA WARGA */}
+        {/* MODAL PENGATURAN REKENING BANK & DOMPET HADIAH WARGA */}
         <WalletSettingsModal
           isOpen={isWalletSettingsOpen}
           onClose={() => setIsWalletSettingsOpen(false)}
+          currentPayoutMethod={myPayoutMethod}
+          currentBankName={myBankName}
+          currentBankAccountNumber={myBankAccountNumber}
+          currentBankAccountName={myBankAccountName}
           currentDanaNumber={myDanaNumber}
           currentDanaName={myDanaName}
           currentQrisUrl={myQrisUrl}
           onSave={async (data) => {
-            setMyDanaNumber(data.danaNumber);
-            setMyDanaName(data.danaName);
-            setMyQrisUrl(data.qrisUrl || "");
+            if (data.payoutMethod) setMyPayoutMethod(data.payoutMethod);
+            if (data.bankName) setMyBankName(data.bankName);
+            if (data.bankAccountNumber !== undefined) setMyBankAccountNumber(data.bankAccountNumber);
+            if (data.bankAccountName !== undefined) setMyBankAccountName(data.bankAccountName);
+            if (data.danaNumber !== undefined) setMyDanaNumber(data.danaNumber);
+            if (data.danaName !== undefined) setMyDanaName(data.danaName);
+            if (data.qrisUrl !== undefined) setMyQrisUrl(data.qrisUrl);
+
             try {
               if (currentUser?.uid) {
-                localStorage.setItem(`karebata_dana_number_${currentUser.uid}`, data.danaNumber);
-                localStorage.setItem(`karebata_dana_name_${currentUser.uid}`, data.danaName);
-                if (data.qrisUrl) {
-                  localStorage.setItem(`karebata_qris_url_${currentUser.uid}`, data.qrisUrl);
-                } else {
-                  localStorage.removeItem(`karebata_qris_url_${currentUser.uid}`);
-                }
+                if (data.payoutMethod) localStorage.setItem(`karebata_payout_method_${currentUser.uid}`, data.payoutMethod);
+                if (data.bankName) localStorage.setItem(`karebata_bank_name_${currentUser.uid}`, data.bankName);
+                if (data.bankAccountNumber) localStorage.setItem(`karebata_bank_account_number_${currentUser.uid}`, data.bankAccountNumber);
+                if (data.bankAccountName) localStorage.setItem(`karebata_bank_account_name_${currentUser.uid}`, data.bankAccountName);
+                if (data.danaNumber) localStorage.setItem(`karebata_dana_number_${currentUser.uid}`, data.danaNumber);
+                if (data.danaName) localStorage.setItem(`karebata_dana_name_${currentUser.uid}`, data.danaName);
+                if (data.qrisUrl) localStorage.setItem(`karebata_qris_url_${currentUser.uid}`, data.qrisUrl);
               }
-              localStorage.setItem("karebata_my_dana_number", data.danaNumber);
-              localStorage.setItem("karebata_my_dana_name", data.danaName);
-              if (data.qrisUrl) {
-                localStorage.setItem("karebata_my_qris_url", data.qrisUrl);
-              } else {
-                localStorage.removeItem("karebata_my_qris_url");
-              }
+              if (data.payoutMethod) localStorage.setItem("karebata_my_payout_method", data.payoutMethod);
+              if (data.bankName) localStorage.setItem("karebata_my_bank_name", data.bankName);
+              if (data.bankAccountNumber) localStorage.setItem("karebata_my_bank_account_number", data.bankAccountNumber);
+              if (data.bankAccountName) localStorage.setItem("karebata_my_bank_account_name", data.bankAccountName);
+              if (data.danaNumber) localStorage.setItem("karebata_my_dana_number", data.danaNumber);
+              if (data.danaName) localStorage.setItem("karebata_my_dana_name", data.danaName);
+              if (data.qrisUrl) localStorage.setItem("karebata_my_qris_url", data.qrisUrl);
             } catch {}
 
             if (currentUser?.uid) {

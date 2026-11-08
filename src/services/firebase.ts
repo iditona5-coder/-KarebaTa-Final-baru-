@@ -42,11 +42,11 @@ import {
   signOut, 
   onAuthStateChanged, 
   setPersistence,
-  browserSessionPersistence,
+  browserLocalPersistence,
   User 
 } from 'firebase/auth';
 export type { User };
-import type { FeedItem, PostItem, CommentItem, ReportItem, HelpSettings, SponsorAd, AdSettings, AdminAuditLog, AdminAppConfig, UserProfile } from '../types';
+import type { FeedItem, PostItem, CommentItem, ReportItem, HelpSettings, SponsorAd, AdSettings, AdminAuditLog, AdminAppConfig, UserProfile, UserWalletSettings } from '../types';
 import { DEFAULT_HELP_SETTINGS, DEFAULT_AD_SETTINGS, DEFAULT_ADMIN_APP_CONFIG } from '../types';
 import type { BulletinItem } from '../components/RunningTextBar';
 
@@ -94,15 +94,7 @@ export const db: Firestore = (() => {
 
 export const auth: Auth = getAuth(app);
 if (typeof window !== "undefined") {
-  setPersistence(auth, browserSessionPersistence).catch(() => {});
-  // Jika aplikasi baru dibuka setelah sebelumnya keluar / ditutup (bukan sekadar reload halaman dalam sesi aktif),
-  // pastikan sesi login sebelumnya ditutup agar pengguna diwajibkan login kembali saat masuk.
-  if (!sessionStorage.getItem("karebata_session_active")) {
-    try {
-      localStorage.removeItem("karebata_is_logged_in");
-    } catch {}
-    signOut(auth).catch(() => {});
-  }
+  setPersistence(auth, browserLocalPersistence).catch(() => {});
 }
 
 /**
@@ -528,7 +520,7 @@ export async function loginWithGoogle(): Promise<{ user: User | null; error?: st
     const result = await signInWithPopup(auth, provider);
     
     // Set persistence secara background setelah popup berhasil
-    setPersistence(auth, browserSessionPersistence).catch(() => {});
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
 
     currentSimulatedUser = null;
     try {
@@ -823,13 +815,11 @@ export async function checkRegisteredUser(
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanUid = (uid || '').trim();
 
-  // 1. Cek cache lokal terlebih dahulu untuk kecepatan instan (0ms)
+  // 1. Cek cache lokal terisolasi khusus akun ini terlebih dahulu (0ms)
   if (cleanEmail) {
     const localCached = localStorage.getItem(`karebata_registered_${cleanEmail}`);
     if (localCached && localCached.trim() && localCached !== 'warga_kareba') {
       const clean = localCached.trim().slice(0, 13);
-      localStorage.setItem('karebata_username', clean);
-      localStorage.setItem('karebata_last_registered_username', clean);
       return { isRegistered: true, username: clean };
     }
   }
@@ -837,8 +827,6 @@ export async function checkRegisteredUser(
     const localCachedUid = localStorage.getItem(`karebata_custom_username_${cleanUid}`) || localStorage.getItem(`karebata_registered_user_${cleanUid}`);
     if (localCachedUid && localCachedUid.trim() && localCachedUid !== 'warga_kareba') {
       const clean = localCachedUid.trim().slice(0, 13);
-      localStorage.setItem('karebata_username', clean);
-      localStorage.setItem('karebata_last_registered_username', clean);
       return { isRegistered: true, username: clean };
     }
   }
@@ -858,7 +846,6 @@ export async function checkRegisteredUser(
           const cleanUname = uname.trim().slice(0, 13);
           if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
           localStorage.setItem(`karebata_custom_username_${cleanUid}`, cleanUname);
-          localStorage.setItem('karebata_last_registered_username', cleanUname);
           return { isRegistered: true, username: cleanUname };
         }
       }
@@ -874,7 +861,7 @@ export async function checkRegisteredUser(
         if (uname && typeof uname === 'string' && uname.trim() && uname.trim() !== 'warga_kareba') {
           const cleanUname = uname.trim().slice(0, 13);
           localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
-          localStorage.setItem('karebata_last_registered_username', cleanUname);
+          if (cleanUid) localStorage.setItem(`karebata_custom_username_${cleanUid}`, cleanUname);
           return { isRegistered: true, username: cleanUname };
         }
       }
@@ -890,7 +877,7 @@ export async function checkRegisteredUser(
         if (uname && typeof uname === 'string' && uname.trim() && uname.trim() !== 'warga_kareba') {
           const cleanUname = uname.trim().slice(0, 13);
           localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
-          localStorage.setItem('karebata_last_registered_username', cleanUname);
+          if (cleanUid) localStorage.setItem(`karebata_custom_username_${cleanUid}`, cleanUname);
           return { isRegistered: true, username: cleanUname };
         }
       }
@@ -911,7 +898,6 @@ export async function checkRegisteredUser(
             const cleanUname = pUser.slice(0, 13);
             if (cleanEmail) localStorage.setItem(`karebata_registered_${cleanEmail}`, cleanUname);
             if (cleanUid) localStorage.setItem(`karebata_custom_username_${cleanUid}`, cleanUname);
-            localStorage.setItem('karebata_last_registered_username', cleanUname);
             return { isRegistered: true, username: cleanUname };
           }
         }
@@ -921,10 +907,18 @@ export async function checkRegisteredUser(
     return { isRegistered: false, username: null };
   } catch (err) {
     console.warn('[Firebase] Gagal cek status pendaftaran akun:', err);
-    // Jika koneksi gagal, periksa apakah ada username yang tersimpan sebelumnya
-    const lastUser = localStorage.getItem('karebata_last_registered_username') || localStorage.getItem('karebata_username');
-    if (lastUser && lastUser.trim() && lastUser !== 'warga_kareba') {
-      return { isRegistered: true, username: lastUser.trim().slice(0, 13) };
+    // HANYA periksa cache lokal yang terisolasi ke akun ini secara ketat (tanpa mengambil akun lain!)
+    if (cleanEmail) {
+      const localCached = localStorage.getItem(`karebata_registered_${cleanEmail}`);
+      if (localCached && localCached.trim() && localCached !== 'warga_kareba') {
+        return { isRegistered: true, username: localCached.trim().slice(0, 13) };
+      }
+    }
+    if (cleanUid) {
+      const localCachedUid = localStorage.getItem(`karebata_custom_username_${cleanUid}`) || localStorage.getItem(`karebata_registered_user_${cleanUid}`);
+      if (localCachedUid && localCachedUid.trim() && localCachedUid !== 'warga_kareba') {
+        return { isRegistered: true, username: localCachedUid.trim().slice(0, 13) };
+      }
     }
     return { isRegistered: false, username: null };
   }
@@ -1933,11 +1927,11 @@ export async function updateBulletinInFirestore(
 }
 
 /**
- * Menyimpan / Memperbarui Nomor DANA & QRIS Warga ke Firestore
+ * Menyimpan / Memperbarui Data Rekening Bank & Dompet Hadiah Warga ke Firestore
  */
 export async function saveUserWalletToFirestore(
   uid: string,
-  walletData: { danaNumber: string; danaName: string; qrisUrl?: string }
+  walletData: UserWalletSettings
 ): Promise<boolean> {
   if (!db || !uid) return false;
   try {
@@ -1949,27 +1943,27 @@ export async function saveUserWalletToFirestore(
     }, { merge: true });
     return true;
   } catch (err) {
-    console.warn("[Firebase] Gagal menyimpan data dompet DANA:", err);
+    console.warn("[Firebase] Gagal menyimpan data dompet hadiah:", err);
     return false;
   }
 }
 
 /**
- * Mengambil Nomor DANA & QRIS Warga dari Firestore
+ * Mengambil Data Rekening Bank & Dompet Hadiah Warga dari Firestore
  */
 export async function getUserWalletFromFirestore(
   uid: string
-): Promise<{ danaNumber: string; danaName: string; qrisUrl?: string } | null> {
+): Promise<UserWalletSettings | null> {
   if (!db || !uid) return null;
   try {
     const walletDoc = doc(db, "wallets", uid);
     const snap = await getDoc(walletDoc);
     if (snap.exists()) {
-      return snap.data() as { danaNumber: string; danaName: string; qrisUrl?: string };
+      return snap.data() as UserWalletSettings;
     }
     return null;
   } catch (err) {
-    console.warn("[Firebase] Gagal mengambil data dompet DANA:", err);
+    console.warn("[Firebase] Gagal mengambil data dompet hadiah:", err);
     return null;
   }
 }

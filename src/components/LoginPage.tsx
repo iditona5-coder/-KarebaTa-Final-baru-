@@ -35,11 +35,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setIsDomainError(false);
     try {
       sessionStorage.setItem("karebata_active_session", "true");
+      sessionStorage.setItem("karebata_session_active", "true");
       const res = await loginWithGoogle();
       if (res.user) {
         onLoginSuccess(res.user);
       } else if (res.error) {
         sessionStorage.removeItem("karebata_active_session");
+        sessionStorage.removeItem("karebata_session_active");
         if (res.error.includes("popup-closed-by-user")) {
           setErrorMessage("Jendela masuk Google ditutup. Silakan coba kembali.");
         } else if (res.error.includes("unauthorized-domain") || res.error.includes("auth/unauthorized-domain")) {
