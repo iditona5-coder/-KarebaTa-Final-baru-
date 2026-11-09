@@ -241,6 +241,7 @@ export interface AdminAppConfig {
   updatedAt?: number;
   giftNominals?: GiftNominalOption[];
   giftMinLikes?: number;
+  adminEmails?: string[];
 }
 
 export const DEFAULT_ADMIN_APP_CONFIG: AdminAppConfig = {
@@ -254,6 +255,7 @@ export const DEFAULT_ADMIN_APP_CONFIG: AdminAppConfig = {
   adminPasscode: "123456", // Default passcode cadangan, dapat diubah oleh admin kapan saja
   giftNominals: DEFAULT_GIFT_NOMINALS,
   giftMinLikes: 500,
+  adminEmails: ["iditona5@gmail.com"],
 };
 
 

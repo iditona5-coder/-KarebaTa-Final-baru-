@@ -34,7 +34,6 @@ import {
   Link2,
   Clock,
   Plus,
-  Gift,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { RewardGiftModal } from "./components/RewardGiftModal";
@@ -101,7 +100,6 @@ import { preloadFeedMedia } from "./utils/mediaPreloader";
 import { LoginModal } from "./components/LoginModal";
 import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
-import { SplashScreen } from "./components/SplashScreen";
 
 // Postingan Contoh Resmi Admin KarebaTa untuk Pratinjau Tampilan Ikon Admin & Fitur Hadiah DANA
 export const SAMPLE_ADMIN_POST: FeedItem = {
@@ -113,7 +111,7 @@ export const SAMPLE_ADMIN_POST: FeedItem = {
   time: "Baru saja",
   text: "📢 Halo Warga Sulawesi Tengah! Ini adalah contoh postingan resmi dari Admin KarebaTa. Ikon Akun Resmi Admin dan Fitur Hadiah Apresiasi DANA kini aktif untuk pratinjau tampilan warga.",
   img: "https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=1200&q=80",
-  like: 520,
+  like: 5,
   views: 1250,
   shares: 45,
   saves: 18,
@@ -136,18 +134,6 @@ export const SAMPLE_ADMIN_POST: FeedItem = {
 };
 
 export default function KarebaFeedFinal() {
-  const [showSplash, setShowSplash] = useState(() => {
-    try {
-      if (typeof window !== "undefined") {
-        if (sessionStorage.getItem("karebata_splash_shown") === "true") {
-          return false;
-        }
-        sessionStorage.setItem("karebata_splash_shown", "true");
-        return true;
-      }
-    } catch {}
-    return false;
-  });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
@@ -654,7 +640,7 @@ export default function KarebaFeedFinal() {
 
     // Cek apakah iklan pop-up sudah pernah ditampilkan di sesi saat ini
     const isShown = typeof window !== "undefined" && sessionStorage.getItem("karebata_popup_ad_shown");
-    if (!isShown && viewMode === "feed" && !activePopupAd && !showSplash) {
+    if (!isShown && viewMode === "feed" && !activePopupAd) {
       const delay = Math.max(1, adSettings.popupDelaySeconds || 2) * 1000;
       const timer = setTimeout(() => {
         const randomAd = popupAds[Math.floor(Math.random() * popupAds.length)];
@@ -665,7 +651,7 @@ export default function KarebaFeedFinal() {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [adSettings, viewMode, showSplash, activePopupAd]);
+  }, [adSettings, viewMode, activePopupAd]);
 
   // Window helper untuk memicu atau menguji tampilan pop-up ad secara instan (misal dari Admin Dashboard)
   useEffect(() => {
@@ -2698,7 +2684,6 @@ export default function KarebaFeedFinal() {
   if (viewMode === "admin") {
     return (
       <>
-        {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <AdminDashboard
           feedPosts={feed}
           onBackToFeed={() => {
@@ -2761,10 +2746,6 @@ export default function KarebaFeedFinal() {
             }
             onReact={handlePostReaction}
             onToggleLike={(id) => handleToggleLike(id)}
-            onDelete={(id) => {
-              setPostToDelete({ id, title: activeDetailPost?.title, img: activeDetailPost?.img });
-              setActiveDetailPost(null);
-            }}
             onReport={(id, user) => {
               handleReportPost(id, user, activeDetailPost?.title || activeDetailPost?.caption);
               setActiveDetailPost(null);
@@ -2784,7 +2765,6 @@ export default function KarebaFeedFinal() {
   if (viewMode === "login" || (!currentUser && typeof window !== "undefined" && !localStorage.getItem("karebata_is_logged_in"))) {
     return (
       <>
-        {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <LoginPage
           onLoginSuccess={handleLoginSuccess}
           initialMessage={loginRedirectMessage}
@@ -2803,7 +2783,6 @@ export default function KarebaFeedFinal() {
   if (viewMode === "set_name") {
     return (
       <>
-        {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
         <SetupUsernamePage
           currentUser={currentUser}
           initialValue=""
@@ -2822,7 +2801,6 @@ export default function KarebaFeedFinal() {
 
   return (
     <div className="w-full bg-neutral-100 text-neutral-900 flex justify-center selection:bg-[#00632B] selection:text-white min-h-screen">
-      {showSplash && <SplashScreen durationMs={2500} onFinish={() => setShowSplash(false)} />}
       <div id="karebata-feed-app" className={`w-full max-w-md bg-white relative font-sans shadow-sm flex flex-col min-h-screen ${selectedImage ? "pb-36" : displayFeed.length === 0 ? "pb-28" : "pb-16"}`}>
         {/* INPUT TERSEMBUNYI - INI KUNCINYA, TIDAK KELIHATAN */}
         <input
@@ -3142,18 +3120,6 @@ export default function KarebaFeedFinal() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Tombol Pengaturan Rekening Bank & Dompet Hadiah (Menerima hadiah saat postingan mencapai syarat Like) */}
-            <button
-              id="profile-wallet-settings-btn"
-              type="button"
-              onClick={() => setIsWalletSettingsOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition active:scale-95 cursor-pointer shadow-2xs"
-              title="Atur Rekening Bank & DANA Penerima Hadiah"
-              aria-label="Atur Rekening & DANA"
-            >
-              <Gift className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="hidden xs:inline sm:inline">Rekening & DANA</span>
-            </button>
 
             {/* Icon Dasbor Admin HANYA Muncul di Akun Admin Khusus (iditona5@gmail.com) */}
             {isUserAdmin(currentUser?.email) && (
@@ -3986,10 +3952,10 @@ export default function KarebaFeedFinal() {
                             />
                             <div className="min-w-0 flex-1">
                               <p className={`text-xs font-bold leading-tight ${savedPostIds.includes(f.id) ? "text-[#00632B]" : "text-neutral-800"}`}>
-                                {savedPostIds.includes(f.id) ? "Hapus dari Simpanan" : "Simpan Kabar"}
+                                {savedPostIds.includes(f.id) ? "Batal Simpan" : "Simpan Kabar"}
                               </p>
                               <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
-                                {savedPostIds.includes(f.id) ? "Tersimpan di koleksi Anda" : "Simpan untuk dibaca nanti"}
+                                {savedPostIds.includes(f.id) ? "Keluarkan dari koleksi simpanan" : "Simpan untuk dibaca nanti"}
                               </p>
                             </div>
                           </button>
@@ -4183,32 +4149,6 @@ export default function KarebaFeedFinal() {
                     <Share2 className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
                     <span className="whitespace-nowrap font-bold">Bagikan</span>
                   </button>
-
-                  {/* Tombol Pa'bere (DANA): AKTIF SAAT >= giftMinLikes LIKE ATAU UNTUK POSTINGAN ADMIN (PRATINJAU SEMENTARA) */}
-                  {((f.like || 0) >= giftMinLikes || f.isAdminPost || isUserAdmin(f.email) || isUserAdmin(currentUser?.email)) && (
-                    <button
-                      id={`reward-gift-btn-${f.id}`}
-                      type="button"
-                      onClick={() => setActiveGiftPost(f)}
-                      className="flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition text-neutral-600 hover:text-amber-600 active:scale-95 animate-fade-in"
-                      aria-label="Beri Pa'bere"
-                      title="Beri Pa'bere"
-                    >
-                      <Gift className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-amber-600" />
-                      <span className="whitespace-nowrap font-bold">
-                        Pa'bere
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Ikon Tayangan / View (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
-                  <div
-                    className="flex items-center gap-1.5 py-1.5 min-h-[40px] text-neutral-500 select-none ml-auto sm:ml-0"
-                    aria-label={`${(f.views || 0).toLocaleString("id-ID")} kali dilihat`}
-                  >
-                    <Eye className="w-[clamp(16px,4.2vw,18.5px)] h-[clamp(16px,4.2vw,18.5px)] text-neutral-400" />
-                    <span className="text-[clamp(11.5px,3vw,13px)] text-neutral-500 font-normal whitespace-nowrap">{f.views ? f.views.toLocaleString("id-ID") : 0} dilihat</span>
-                  </div>
                 </div>
 
                 {/* Bar Bagikan Interaktif (FB, WA, Salin) */}
@@ -4983,10 +4923,6 @@ export default function KarebaFeedFinal() {
               if (targetFeedItem) {
                 setActiveCommentItem(targetFeedItem);
               }
-            }}
-            onDelete={(id) => {
-              setPostToDelete({ id, title: activeDetailPost?.title, img: activeDetailPost?.img });
-              setActiveDetailPost(null);
             }}
             onReport={(id, user) => {
               handleReportPost(id, user, activeDetailPost?.title || activeDetailPost?.caption);

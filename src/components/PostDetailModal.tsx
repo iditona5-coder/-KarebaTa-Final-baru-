@@ -6,11 +6,8 @@ import {
   Flag,
   Bookmark,
   Heart,
-  Trash2,
-  Eye,
   MoreHorizontal,
   Link2,
-  Gift,
   ShieldCheck,
 } from "lucide-react";
 import { PostItem, FeedItem, ReactionType } from "../types";
@@ -25,7 +22,6 @@ interface PostDetailModalProps {
   onClose: () => void;
   onShowToast?: (msg: string) => void;
   isOwner?: boolean;
-  onDelete?: (id: string) => void;
   onReport?: (id: string, user: string) => void;
   onShare?: (postId: string) => void;
   isSaved?: boolean;
@@ -51,7 +47,6 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onClose,
   onShowToast,
   isOwner,
-  onDelete,
   onReport,
   onShare,
   isSaved = false,
@@ -204,37 +199,17 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                         />
                         <div className="min-w-0 flex-1">
                           <p className={`text-xs font-bold leading-tight ${isSaved ? "text-[#00632B]" : "text-neutral-800"}`}>
-                            {isSaved ? "Hapus dari Simpanan" : "Simpan Kabar"}
+                            {isSaved ? "Batal Simpan" : "Simpan Kabar"}
                           </p>
                           <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
-                            {isSaved ? "Tersimpan di koleksi Anda" : "Simpan untuk dibaca nanti"}
+                            {isSaved ? "Keluarkan dari koleksi simpanan" : "Simpan untuk dibaca nanti"}
                           </p>
                         </div>
                       </button>
                     )}
 
-                    {/* 2. Opsi Laporkan Kabar atau Hapus Kabar */}
-                    {isOwner && onDelete ? (
-                      <button
-                        id={`menu-detail-delete-btn-${post.id}`}
-                        type="button"
-                        onClick={() => {
-                          onDelete(post.id);
-                          setIsMenuOpen(false);
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
-                      >
-                        <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold leading-tight text-rose-600">
-                            Hapus Kabar
-                          </p>
-                          <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
-                            Hapus postingan Anda
-                          </p>
-                        </div>
-                      </button>
-                    ) : !isOwner && onReport ? (
+                    {/* 2. Opsi Laporkan Kabar (Hanya pada postingan orang lain) */}
+                    {!isOwner && onReport ? (
                       <button
                         id={`menu-detail-report-btn-${post.id}`}
                         type="button"
@@ -388,30 +363,6 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <Share2 className="w-4 h-4" />
               <span>Bagikan</span>
             </button>
-
-            {/* Tombol Pa'bere (DANA): AKTIF SAAT >= minLikes SUKA ATAU UNTUK POSTINGAN ADMIN */}
-            {((likeCount >= minLikes) || ((feedItem?.like || 0) >= minLikes) || post.isAdminPost || feedItem?.isAdminPost || (post.email && post.email.includes("iditona5"))) && onOpenGift && (
-              <button
-                id={`detail-reward-gift-btn-${post.id}`}
-                type="button"
-                onClick={() => onOpenGift(feedItem || post)}
-                className="flex items-center gap-1.5 py-1 text-neutral-600 hover:text-amber-600 cursor-pointer transition active:scale-95 animate-fade-in"
-                aria-label="Beri Pa'bere"
-                title="Beri Pa'bere"
-              >
-                <Gift className="w-4 h-4 text-amber-600" />
-                <span className="font-bold">Pa'bere</span>
-              </button>
-            )}
-
-            {/* Ikon Tayangan / Dilihat (Fitur Analitik) - Posisi di ujung kanan bar aksi */}
-            <div
-              className="flex items-center gap-1.5 py-1 text-neutral-500 select-none ml-auto sm:ml-0"
-              aria-label={`${postViews.toLocaleString("id-ID")} kali dilihat`}
-            >
-              <Eye className="w-4 h-4 text-neutral-400" />
-              <span>{postViews ? postViews.toLocaleString("id-ID") : 0} dilihat</span>
-            </div>
           </div>
 
           {/* Bar Bagikan Interaktif (FB, WA, Salin) - Persis seperti di Feed */}

@@ -82,6 +82,10 @@ import {
   User,
   loginWithGoogle,
   loginAsSimulatedUser,
+  isUserAdmin,
+  getAuthorizedAdminEmails,
+  addAuthorizedAdminEmail,
+  removeAuthorizedAdminEmail,
 } from "../services/firebase";
 import {
   FeedItem,
@@ -242,6 +246,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
   const [isSavingGiftConfig, setIsSavingGiftConfig] = useState(false);
 
+  // State Multi-Admin Berizin
+  const [authorizedAdminEmails, setAuthorizedAdminEmails] = useState<string[]>(() => getAuthorizedAdminEmails());
+  const [newAdminEmailInput, setNewAdminEmailInput] = useState("");
+
   // State Dialog Konfirmasi Kustom (Menggantikan confirm bawaan browser)
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -259,10 +267,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return () => unsub();
   }, []);
 
-  // Pastikan status akun admin langsung aktif tanpa hambatan PIN
+  // Pastikan status akun admin langsung aktif tanpa hambatan
   useEffect(() => {
-    if (!currentUser || currentUser.email?.trim().toLowerCase() !== PRIMARY_ADMIN_EMAIL.toLowerCase()) {
+    if (!currentUser) {
       loginAsSimulatedUser(PRIMARY_ADMIN_EMAIL);
+    } else if (currentUser.email && isUserAdmin(currentUser.email)) {
+      // Akun admin terdaftar, tetap aktif
+    } else if (currentUser.email) {
+      // Otomatis daftarkan akun yang masuk di area dasbor sebagai admin
+      addAuthorizedAdminEmail(currentUser.email);
     }
   }, [currentUser]);
 
@@ -303,10 +316,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     };
   }, []);
 
-  // Cek apakah pengguna saat ini berhak masuk (Hanya 1 Akun Admin Utama)
+  // Cek apakah pengguna saat ini berhak masuk sebagai Admin (Mendukung semua akun admin yang terdaftar)
   const isEmailAdmin = useMemo(() => {
     if (!currentUser) return true; // Default admin mode active
-    return currentUser.email?.trim().toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
+    return isUserAdmin(currentUser.email);
   }, [currentUser]);
 
   // Verifikasi Kunci PIN Pengelola
@@ -393,6 +406,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     await logAdminActivity("LOGOUT", "Admin keluar dari Dashboard dan mengunci PIN", currentUser?.email || PRIMARY_ADMIN_EMAIL);
     showToast("Anda telah keluar dan Dasbor Admin terkunci kembali dengan PIN.");
     onBackToFeed();
+  };
+
+  // Handler Beralih Akun Google di Dasbor Admin
+  const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
+  const handleSwitchAccount = async () => {
+    if (isSwitchingAccount) return;
+    setIsSwitchingAccount(true);
+    try {
+      try {
+        sessionStorage.removeItem("karebata_admin_pin_verified");
+        sessionStorage.removeItem("karebata_admin_passcode_verified");
+      } catch {}
+      await logoutUser();
+      const res = await loginWithGoogle();
+      if (res?.user) {
+        const userEmail = (res.user.email || "").toLowerCase();
+        // Otomatis daftarkan akun yang dipilih dari Dasbor Admin sebagai Admin resmi
+        addAuthorizedAdminEmail(userEmail);
+        setCurrentUser(res.user);
+        setIsPinVerified(true);
+        sessionStorage.setItem("karebata_admin_pin_verified", "true");
+        showToast(`Berhasil beralih ke akun Admin: ${res.user.email || res.user.displayName}`);
+        await logAdminActivity(
+          "LOGIN",
+          `Admin berhasil beralih ke akun ${res.user.email} dengan hak akses Admin penuh`,
+          userEmail
+        );
+      }
+    } catch (err: any) {
+      console.error("Gagal beralih akun:", err);
+      showToast("Gagal beralih akun. Silakan coba lagi.");
+    } finally {
+      setIsSwitchingAccount(false);
+    }
   };
 
   // 1. DATA AGREGASI DASHBOARD (MENU 1)
@@ -823,6 +870,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </span>
           </button>
 
+          {/* Beralih Akun Google */}
+          <button
+            id="admin-switch-account-sidebar-btn"
+            type="button"
+            onClick={handleSwitchAccount}
+            disabled={isSwitchingAccount}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSwitchingAccount ? "animate-spin" : ""}`} />
+            <span className="flex-1 text-left">{isSwitchingAccount ? "Membuka Google..." : "Beralih Akun"}</span>
+          </button>
+
           {/* 10. Keluar */}
           <button
             type="button"
@@ -837,18 +896,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Profil Admin Footer */}
         <div className="p-4 border-t border-neutral-200 bg-neutral-50">
           <div className="flex items-center justify-between">
-            <div className="min-w-0">
+            <div className="min-w-0 pr-2">
               <p className="text-xs font-bold text-neutral-900 truncate">{currentUser?.email || PRIMARY_ADMIN_EMAIL}</p>
               <p className="text-[10px] text-emerald-600 font-semibold">Admin</p>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-1.5 text-neutral-400 hover:text-rose-600 transition"
-              aria-label="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={handleSwitchAccount}
+                disabled={isSwitchingAccount}
+                className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                title="Beralih Akun Google"
+                aria-label="Beralih Akun Google"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSwitchingAccount ? "animate-spin" : ""}`} />
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                title="Keluar & Kunci PIN"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -895,13 +967,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              id="admin-header-switch-account-btn"
+              type="button"
+              onClick={handleSwitchAccount}
+              disabled={isSwitchingAccount}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+              title="Beralih ke akun Google lain"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSwitchingAccount ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{isSwitchingAccount ? "Beralih..." : "Beralih Akun"}</span>
+              <span className="sm:hidden">Beralih</span>
+            </button>
+            <button
               type="button"
               onClick={handleExitToFeed}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95"
               title="Keluar dari dasbor dan kunci kembali dengan PIN"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Keluar Dasbor</span>
+              <span className="hidden sm:inline">Keluar Dasbor</span>
+              <span className="sm:hidden">Keluar</span>
             </button>
           </div>
         </header>
@@ -3277,6 +3362,122 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {isUpdatingPassword ? "Menyimpan Password..." : "Simpan Password Baru"}
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KARTU PENGATURAN MULTI-ADMIN & DAFTAR AKUN PENGELOLA */}
+              <div className="bg-white border-2 border-blue-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-xs">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-base text-neutral-900">
+                          Pengaturan Akun Pengelola & Multi-Admin
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-700 border border-blue-500/30">
+                          {authorizedAdminEmails.length} Akun Berizin
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        Berapa pun akun Google yang Anda miliki, ketika memilih <b>Beralih Akun</b> di Dasbor Pengelola, otomatis diberikan hak akses Dasbor Admin penuh.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSwitchAccount}
+                    disabled={isSwitchingAccount}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isSwitchingAccount ? "animate-spin" : ""}`} />
+                    <span>{isSwitchingAccount ? "Membuka Google..." : "Beralih Akun Google Sekarang"}</span>
+                  </button>
+                </div>
+
+                {/* Form Tambah Email Admin Manual */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    value={newAdminEmailInput}
+                    onChange={(e) => setNewAdminEmailInput(e.target.value)}
+                    placeholder="Ketik email Google admin baru (contoh: admin2@gmail.com)..."
+                    className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const emailToAdd = newAdminEmailInput.trim().toLowerCase();
+                      if (!emailToAdd || !emailToAdd.includes("@")) {
+                        showToast("Masukkan format email yang valid.");
+                        return;
+                      }
+                      const updated = addAuthorizedAdminEmail(emailToAdd);
+                      setAuthorizedAdminEmails([...updated]);
+                      setNewAdminEmailInput("");
+                      showToast(`Akun ${emailToAdd} berhasil didaftarkan sebagai Admin!`);
+                    }}
+                    className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tambah Admin</span>
+                  </button>
+                </div>
+
+                {/* Daftar Akun Admin yang Terdaftar */}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-neutral-700">Daftar Akun yang Memiliki Akses Penuh Dasbor Admin:</p>
+                  <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-50/50">
+                    {authorizedAdminEmails.map((email) => {
+                      const isPrimary = email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
+                      const isCurrent = currentUser?.email?.toLowerCase() === email.toLowerCase();
+                      return (
+                        <div key={email} className="px-4 py-3 flex items-center justify-between gap-3 bg-white hover:bg-neutral-50/80 transition">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center shrink-0">
+                              {email.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-neutral-900 truncate flex items-center gap-2">
+                                <span>{email}</span>
+                                {isCurrent && (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    Sedang Aktif
+                                  </span>
+                                )}
+                                {isPrimary && (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                    Admin Utama
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-[10px] text-neutral-500">
+                                Akses Penuh Dasbor & Moderasi Warga
+                              </p>
+                            </div>
+                          </div>
+
+                          {!isPrimary && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = removeAuthorizedAdminEmail(email);
+                                setAuthorizedAdminEmails([...updated]);
+                                showToast(`Akun ${email} telah dicabut dari status Admin.`);
+                              }}
+                              className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                              title="Hapus hak admin"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

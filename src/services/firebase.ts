@@ -610,11 +610,94 @@ export function subscribeToAuth(callback: (user: User | null) => void): () => vo
 }
 
 /**
- * Cek apakah user adalah admin berizin
+ * Dapatkan daftar semua email yang memiliki hak akses Admin
+ */
+export function getAuthorizedAdminEmails(): string[] {
+  const base = [PRIMARY_ADMIN_EMAIL.toLowerCase()];
+  try {
+    const local = localStorage.getItem("karebata_authorized_admin_emails");
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((e: string) => {
+          if (typeof e === "string" && e.trim()) {
+            const clean = e.trim().toLowerCase();
+            if (!base.includes(clean)) base.push(clean);
+          }
+        });
+      }
+    }
+    const cachedConfig = localStorage.getItem("karebata_admin_app_config");
+    if (cachedConfig) {
+      const cfg = JSON.parse(cachedConfig);
+      if (Array.isArray(cfg.adminEmails)) {
+        cfg.adminEmails.forEach((e: string) => {
+          if (typeof e === "string" && e.trim()) {
+            const clean = e.trim().toLowerCase();
+            if (!base.includes(clean)) base.push(clean);
+          }
+        });
+      }
+    }
+  } catch {}
+  return base;
+}
+
+/**
+ * Tambahkan email ke daftar admin berizin
+ */
+export function addAuthorizedAdminEmail(email: string): string[] {
+  const clean = (email || "").trim().toLowerCase();
+  if (!clean) return getAuthorizedAdminEmails();
+  const current = getAuthorizedAdminEmails();
+  if (!current.includes(clean)) {
+    current.push(clean);
+  }
+  try {
+    localStorage.setItem("karebata_authorized_admin_emails", JSON.stringify(current));
+    const cachedConfig = localStorage.getItem("karebata_admin_app_config");
+    const cfg = cachedConfig ? JSON.parse(cachedConfig) : { ...DEFAULT_ADMIN_APP_CONFIG };
+    cfg.adminEmails = current;
+    localStorage.setItem("karebata_admin_app_config", JSON.stringify(cfg));
+    if (db) {
+      setDoc(doc(db, "system_settings", "app_config"), { adminEmails: current }, { merge: true }).catch(() => {});
+    }
+  } catch {}
+  return current;
+}
+
+/**
+ * Hapus email dari daftar admin berizin (kecuali PRIMARY_ADMIN_EMAIL)
+ */
+export function removeAuthorizedAdminEmail(email: string): string[] {
+  const clean = (email || "").trim().toLowerCase();
+  if (!clean || clean === PRIMARY_ADMIN_EMAIL.toLowerCase()) return getAuthorizedAdminEmails();
+  let current = getAuthorizedAdminEmails().filter((e) => e !== clean);
+  if (!current.includes(PRIMARY_ADMIN_EMAIL.toLowerCase())) {
+    current.unshift(PRIMARY_ADMIN_EMAIL.toLowerCase());
+  }
+  try {
+    localStorage.setItem("karebata_authorized_admin_emails", JSON.stringify(current));
+    const cachedConfig = localStorage.getItem("karebata_admin_app_config");
+    const cfg = cachedConfig ? JSON.parse(cachedConfig) : { ...DEFAULT_ADMIN_APP_CONFIG };
+    cfg.adminEmails = current;
+    localStorage.setItem("karebata_admin_app_config", JSON.stringify(cfg));
+    if (db) {
+      setDoc(doc(db, "system_settings", "app_config"), { adminEmails: current }, { merge: true }).catch(() => {});
+    }
+  } catch {}
+  return current;
+}
+
+/**
+ * Cek apakah user adalah admin berizin (mendukung semua akun admin yang terdaftar)
  */
 export function isUserAdmin(email?: string | null): boolean {
   if (!email) return false;
-  return email.trim().toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
+  const clean = email.trim().toLowerCase();
+  if (clean === PRIMARY_ADMIN_EMAIL.toLowerCase()) return true;
+  const admins = getAuthorizedAdminEmails();
+  return admins.includes(clean);
 }
 
 // ==========================================
@@ -1596,6 +1679,7 @@ export function listenToAdminAppConfig(
             updatedAt: data.updatedAtServer?.toMillis?.() || Date.now(),
             giftNominals: Array.isArray(data.giftNominals) && data.giftNominals.length > 0 ? data.giftNominals : DEFAULT_ADMIN_APP_CONFIG.giftNominals,
             giftMinLikes: typeof data.giftMinLikes === "number" ? data.giftMinLikes : DEFAULT_ADMIN_APP_CONFIG.giftMinLikes,
+            adminEmails: Array.isArray(data.adminEmails) ? data.adminEmails : DEFAULT_ADMIN_APP_CONFIG.adminEmails,
           };
           try {
             localStorage.setItem("karebata_admin_app_config", JSON.stringify(merged));
