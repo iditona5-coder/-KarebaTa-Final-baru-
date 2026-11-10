@@ -538,6 +538,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                                   </span>
                                   <span>•</span>
                                   <span className="shrink-0 text-[10px] text-neutral-400">{post.time}</span>
+                                  {post.isEdited && (
+                                    <span className="text-[10px] text-neutral-400 italic shrink-0" title="Kabar ini telah diedit">
+                                      • (diedit)
+                                    </span>
+                                  )}
                                 </div>
 
                                 <p className="text-xs font-semibold text-neutral-800 line-clamp-2 leading-snug group-hover:text-[#00632B] transition">
@@ -559,10 +564,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                                   <span className="flex items-center gap-0.5">
                                     <Heart className="w-3 h-3 text-red-500" />
                                     <span>{post.like || 0}</span>
-                                  </span>
-                                  <span className="flex items-center gap-0.5">
-                                    <Eye className="w-3 h-3 text-neutral-400" />
-                                    <span>{(post.views || 0).toLocaleString("id-ID")}</span>
                                   </span>
                                 </div>
                               </div>

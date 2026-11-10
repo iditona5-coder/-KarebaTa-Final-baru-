@@ -9,6 +9,8 @@ import {
   MoreHorizontal,
   Link2,
   ShieldCheck,
+  Edit3,
+  Trash2,
 } from "lucide-react";
 import { PostItem, FeedItem, ReactionType } from "../types";
 import { FeedMedia } from "./FeedMedia";
@@ -23,6 +25,8 @@ interface PostDetailModalProps {
   onShowToast?: (msg: string) => void;
   isOwner?: boolean;
   onReport?: (id: string, user: string) => void;
+  onEdit?: (post: PostItem | FeedItem) => void;
+  onDelete?: (post: PostItem | FeedItem) => void;
   onShare?: (postId: string) => void;
   isSaved?: boolean;
   onToggleSave?: (postId: string) => void;
@@ -48,6 +52,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onShowToast,
   isOwner,
   onReport,
+  onEdit,
+  onDelete,
   onShare,
   isSaved = false,
   onToggleSave,
@@ -86,6 +92,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const postText = post.caption || post.title || "Kabar Warga";
   const postLocation = post.loc || feedItem?.location;
   const postTime = post.createdAt || feedItem?.time || "Baru saja";
+  const isPostEdited = Boolean(post.isEdited || feedItem?.isEdited);
 
   return (
     <div
@@ -134,19 +141,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   <span className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[150px] sm:max-w-[200px]">
                     {authorName.startsWith("@") ? authorName : `@${authorName}`}
                   </span>
-                  {(post.isAdminPost || feedItem?.isAdminPost || authorName.toLowerCase().includes("admin") || (post.email && post.email.includes("iditona5"))) && (
-                    <span
-                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-[#00632B] text-[10px] font-extrabold border border-emerald-300 shadow-2xs shrink-0 select-none"
-                      title="Akun Resmi Admin KarebaTa"
-                    >
-                      <ShieldCheck className="w-3 h-3 text-[#00632B]" />
-                      <span>Admin</span>
-                    </span>
-                  )}
                   <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
                   <span className="text-[12px] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
                     {postTime}
                   </span>
+                  {isPostEdited && (
+                    <span className="text-[10px] text-neutral-400 italic shrink-0" title="Kabar ini telah diedit">
+                      • (diedit)
+                    </span>
+                  )}
                 </div>
                 {postLocation && (
                   <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-0.5">
@@ -208,28 +211,76 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                       </button>
                     )}
 
-                    {/* 2. Opsi Laporkan Kabar (Hanya pada postingan orang lain) */}
-                    {!isOwner && onReport ? (
-                      <button
-                        id={`menu-detail-report-btn-${post.id}`}
-                        type="button"
-                        onClick={() => {
-                          onReport(post.id, post.user || "kabar_warga");
-                          setIsMenuOpen(false);
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
-                      >
-                        <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold leading-tight text-rose-600">
-                            Laporkan Kabar
-                          </p>
-                          <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
-                            Laporkan jika melanggar
-                          </p>
-                        </div>
-                      </button>
-                    ) : null}
+                    {/* 2. Opsi Pemilik: Edit Teks Kabar & Hapus Kabar */}
+                    {isOwner ? (
+                      <>
+                        {onEdit && (
+                          <button
+                            id={`menu-detail-edit-btn-${post.id}`}
+                            type="button"
+                            onClick={() => {
+                              onEdit(post);
+                              setIsMenuOpen(false);
+                            }}
+                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group text-emerald-700"
+                          >
+                            <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-[#00632B]" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold leading-tight text-[#00632B]">
+                                Edit Teks Kabar
+                              </p>
+                              <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                                Perbaiki salah ketik / ubah teks
+                              </p>
+                            </div>
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            id={`menu-detail-delete-btn-${post.id}`}
+                            type="button"
+                            onClick={() => {
+                              onDelete(post);
+                              setIsMenuOpen(false);
+                            }}
+                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                          >
+                            <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold leading-tight text-rose-600">
+                                Hapus Kabar
+                              </p>
+                              <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                                Hapus postingan Anda
+                              </p>
+                            </div>
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      /* Opsi Orang Lain: Laporkan Kabar */
+                      onReport && (
+                        <button
+                          id={`menu-detail-report-btn-${post.id}`}
+                          type="button"
+                          onClick={() => {
+                            onReport(post.id, post.user || "kabar_warga");
+                            setIsMenuOpen(false);
+                          }}
+                          className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                        >
+                          <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold leading-tight text-rose-600">
+                              Laporkan Kabar
+                            </p>
+                            <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                              Laporkan jika melanggar
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    )}
 
                     <div className="my-1 border-t border-neutral-100" />
 

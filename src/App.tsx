@@ -34,6 +34,7 @@ import {
   Link2,
   Clock,
   Plus,
+  Edit3,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { RewardGiftModal } from "./components/RewardGiftModal";
@@ -64,6 +65,7 @@ import {
   listenToFirestorePosts,
   fetchLatestFirestorePosts,
   deletePostFromFirestore,
+  updatePostTextInFirestore,
   togglePostLikeInFirestore,
   incrementPostViewInFirestore,
   incrementPostShareInFirestore,
@@ -100,38 +102,6 @@ import { preloadFeedMedia } from "./utils/mediaPreloader";
 import { LoginModal } from "./components/LoginModal";
 import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
-
-// Postingan Contoh Resmi Admin KarebaTa untuk Pratinjau Tampilan Ikon Admin & Fitur Hadiah DANA
-export const SAMPLE_ADMIN_POST: FeedItem = {
-  id: "admin-preview-kabar-1",
-  user: "admin",
-  name: "Admin Resmi KarebaTa",
-  init: "A",
-  email: PRIMARY_ADMIN_EMAIL,
-  time: "Baru saja",
-  text: "📢 Halo Warga Sulawesi Tengah! Ini adalah contoh postingan resmi dari Admin KarebaTa. Ikon Akun Resmi Admin dan Fitur Hadiah Apresiasi DANA kini aktif untuk pratinjau tampilan warga.",
-  img: "https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?auto=format&fit=crop&w=1200&q=80",
-  like: 5,
-  views: 1250,
-  shares: 45,
-  saves: 18,
-  location: "Palu, Sulawesi Tengah",
-  mediaType: "image",
-  isLiked: false,
-  comments: [
-    {
-      id: "c-admin-demo-1",
-      user: "WargaPalu",
-      text: "Tampilan postingan admin dan icon hadiah apresiasi DANA-nya sudah kelihatan mantap kanda! 👏",
-      time: "Baru saja",
-      likes: 5,
-      isLiked: false,
-    },
-  ],
-  isAdminPost: true,
-  danaNumber: "081234567890",
-  danaName: "Admin KarebaTa",
-};
 
 export default function KarebaFeedFinal() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -367,6 +337,9 @@ export default function KarebaFeedFinal() {
     mediaType?: "image" | "video";
   } | null>(null);
   const [postToDelete, setPostToDelete] = useState<{ id: string; title?: string; img?: string } | null>(null);
+  const [editingPost, setEditingPost] = useState<{ id: string; text: string } | null>(null);
+  const [editingPostText, setEditingPostText] = useState("");
+  const [isSavingPostEdit, setIsSavingPostEdit] = useState(false);
   const [reportPostData, setReportPostData] = useState<{ id: string; user: string; text?: string } | null>(null);
   const [reportReason, setReportReason] = useState<string>("");
   const [reportDetails, setReportDetails] = useState<string>("");
@@ -1465,11 +1438,6 @@ export default function KarebaFeedFinal() {
     } catch {}
 
     const activePosts = feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id) && !deletedIds.has(item.id));
-    // Sisipkan postingan contoh resmi Admin di bagian atas untuk pratinjau jika belum dihapus
-    const hasAdminPreview = activePosts.some((p) => p.id === SAMPLE_ADMIN_POST.id);
-    if (!hasAdminPreview && !deletedIds.has(SAMPLE_ADMIN_POST.id)) {
-      return [SAMPLE_ADMIN_POST, ...activePosts];
-    }
     return activePosts;
   }, [feed, hiddenPostIds]);
 
@@ -1664,6 +1632,7 @@ export default function KarebaFeedFinal() {
       isEditProfileOpen ||
       reportPostData ||
       postToDelete ||
+      editingPost ||
       activeCommentItem ||
       activeDetailPost ||
       activePopupAd ||
@@ -1691,6 +1660,7 @@ export default function KarebaFeedFinal() {
     isEditProfileOpen,
     reportPostData,
     postToDelete,
+    editingPost,
     activeCommentItem,
     activeDetailPost,
     activePopupAd,
@@ -2680,6 +2650,80 @@ export default function KarebaFeedFinal() {
     showToast("Kabar berhasil di hapus");
   };
 
+  // FUNGSI EDIT TEKS / DESKRIPSI KABAR WARGA
+  const handleStartEditPost = (post: FeedItem | PostItem | (Record<string, any> & { id: string })) => {
+    // Validasi Keamanan: HANYA pemilik sah postingan yang boleh mengedit
+    if (!isMyPost(post as any)) {
+      showToast("Anda hanya dapat mengedit kabar milik akun Anda sendiri");
+      return;
+    }
+    const currentText = (post as any).text || (post as any).caption || (post as any).desc || (post as any).title || "";
+    setEditingPost({ id: post.id, text: currentText });
+    setEditingPostText(currentText);
+    setActiveMenuPostId(null);
+  };
+
+  const handleSavePostEdit = async () => {
+    if (!editingPost) return;
+    const trimmed = editingPostText.trim();
+    if (!trimmed) {
+      showToast("Teks kabar tidak boleh kosong");
+      return;
+    }
+
+    setIsSavingPostEdit(true);
+    try {
+      await updatePostTextInFirestore(editingPost.id, trimmed);
+
+      // 1. Update state feed utama
+      setFeed((prev) => {
+        const updated = prev.map((item) =>
+          item.id === editingPost.id
+            ? { ...item, text: trimmed, isEdited: true }
+            : item
+        );
+        try {
+          localStorage.setItem("karebata_local_feed", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // 2. Update state koleksi kabar pengguna (posts)
+      setPosts((prev) => {
+        const updated = prev.map((item) =>
+          item.id === editingPost.id
+            ? { ...item, title: trimmed, caption: trimmed, desc: trimmed, isEdited: true }
+            : item
+        );
+        try {
+          localStorage.setItem("karebata_user_posts", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // 3. Update activeDetailPost jika sedang terbuka
+      setActiveDetailPost((prev) => {
+        if (!prev || prev.id !== editingPost.id) return prev;
+        return {
+          ...prev,
+          title: trimmed,
+          caption: trimmed,
+          desc: trimmed,
+          isEdited: true,
+        };
+      });
+
+      showToast("Teks kabar berhasil diperbarui");
+      setEditingPost(null);
+      setEditingPostText("");
+    } catch (err) {
+      console.error("Gagal mengedit postingan:", err);
+      showToast("Gagal memperbarui kabar, silakan coba lagi");
+    } finally {
+      setIsSavingPostEdit(false);
+    }
+  };
+
   // JIKA SEDANG MEMBUKA HALAMAN DASBOR ADMIN TERPISAH
   if (viewMode === "admin") {
     return (
@@ -2750,6 +2794,8 @@ export default function KarebaFeedFinal() {
               handleReportPost(id, user, activeDetailPost?.title || activeDetailPost?.caption);
               setActiveDetailPost(null);
             }}
+            onEdit={(item) => handleStartEditPost(item)}
+            onDelete={(item) => setPostToDelete({ id: item.id, title: (item as any).title || (item as any).text, img: item.img })}
             onOpenGift={(item) => {
               const targetFeedItem = feed.find((f) => f.id === item.id) || (item as FeedItem);
               setActiveGiftPost(targetFeedItem);
@@ -3085,38 +3131,21 @@ export default function KarebaFeedFinal() {
           <section id="profile-section" className="w-full pt-6 pb-4 px-4 flex items-center justify-between bg-white border-b border-neutral-100">
           <div className="flex items-center gap-3.5 min-w-0">
             {/* Ikon Profil: Selalu menampilkan huruf pertama nama pengguna */}
-            <div className="relative shrink-0">
+            <div className="shrink-0">
               <div className="w-[clamp(48px,13vw,56px)] h-[clamp(48px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-[clamp(20px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
                 {initial}
               </div>
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 ring-2 ring-white rounded-full shadow-2xs" aria-label="Sedang Aktif" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h2 className="font-bold text-[clamp(16px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate max-w-[150px] sm:max-w-[200px]">
-                  {userName.startsWith("@") ? userName.replace(/^@/, "") : userName}
-                </h2>
-                <span
-                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${
-                    isUserAdmin(currentUser?.email)
-                      ? "bg-[#00632B] text-white"
-                      : "bg-emerald-100 text-emerald-800"
-                  } shrink-0 shadow-2xs`}
-                  title={isUserAdmin(currentUser?.email) ? "Pengelola Terverifikasi" : "Warga Terdaftar"}
-                >
-                  <Check className="w-2.5 h-2.5 stroke-[3]" />
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[clamp(13px,3.6vw,14.5px)] text-neutral-500 font-medium mt-0.5 whitespace-nowrap">
-                <span className="text-neutral-500 font-medium tracking-tight">
-                  @{userName.replace(/^@/, "").toLowerCase()}
-                </span>
-                {currentUser?.email && (
-                  <span className="text-[11px] text-neutral-400 font-normal truncate max-w-[130px] sm:max-w-[180px]" title={currentUser.email}>
-                    • {currentUser.email}
-                  </span>
-                )}
-              </div>
+              <h2 className="font-bold text-[clamp(16px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate max-w-[160px] sm:max-w-[220px]">
+                {userName.startsWith("@") ? userName.replace(/^@/, "") : userName}
+              </h2>
+              <p
+                className="text-[clamp(12px,3.4vw,13.5px)] text-neutral-500 font-normal mt-0.5 truncate max-w-[170px] sm:max-w-[240px]"
+                title={currentUser?.email || `@${userName.replace(/^@/, "").toLowerCase()}`}
+              >
+                {currentUser?.email || `@${userName.replace(/^@/, "").toLowerCase()}`}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -3203,18 +3232,15 @@ export default function KarebaFeedFinal() {
             }}
             className="flex items-center gap-2.5 p-2 bg-neutral-50 hover:bg-neutral-100/90 rounded-xl border border-neutral-200/90 cursor-pointer transition active:scale-[0.99] group shadow-2xs"
           >
-            {/* Avatar Inisial Akun Pengguna */}
-            <div className="w-8 h-8 rounded-full bg-[#00632B] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-              {initial}
+            {/* Ikon Pensil di Tempat Ikon Profil Sebelumnya */}
+            <div className="w-8 h-8 rounded-full bg-emerald-50 text-[#00632B] border border-emerald-200/70 group-hover:bg-[#00632B] group-hover:text-white flex items-center justify-center shrink-0 transition shadow-2xs">
+              <PenLine className="w-4 h-4" />
             </div>
 
             {/* Input Trigger / Placeholder Teks */}
-            <div className="flex-1 min-w-0 flex items-center justify-between">
-              <span className="text-xs text-neutral-500 font-medium truncate">
+            <div className="flex-1 min-w-0">
+              <span className="text-xs text-neutral-500 font-medium truncate block">
                 Tulis kabar warga hari ini...
-              </span>
-              <span className="p-1 rounded-md text-[#00632B] bg-emerald-50 border border-emerald-200/60 group-hover:bg-[#00632B] group-hover:text-white transition shrink-0 ml-2">
-                <PenLine className="w-3.5 h-3.5" />
               </span>
             </div>
           </div>
@@ -3874,20 +3900,15 @@ export default function KarebaFeedFinal() {
                         >
                           {f.user.startsWith("@") ? f.user : `@${f.user}`}
                         </button>
-                        {/* BADGE / IKON RESMI POSTINGAN ADMIN */}
-                        {(f.isAdminPost || isUserAdmin(f.email) || f.user.toLowerCase().includes("admin") || f.email === PRIMARY_ADMIN_EMAIL) && (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-[#00632B] text-[10px] font-extrabold border border-emerald-300 shadow-2xs shrink-0 select-none"
-                            title="Akun Resmi Admin KarebaTa"
-                          >
-                            <ShieldCheck className="w-3 h-3 text-[#00632B]" />
-                            <span>Admin</span>
-                          </span>
-                        )}
                         <span className="text-neutral-300 text-[10px] shrink-0 select-none">·</span>
                         <span className="text-[clamp(11.5px,3vw,13px)] text-neutral-400 font-normal shrink-0 whitespace-nowrap">
                           {f.time}
                         </span>
+                        {f.isEdited && (
+                          <span className="text-[10px] text-neutral-400 italic shrink-0" title="Kabar ini telah diedit">
+                            • (diedit)
+                          </span>
+                        )}
                       </div>
                       {f.location && (
                         <div className="flex items-center gap-1 text-[clamp(11.5px,3vw,13px)] text-neutral-500 mt-0.5">
@@ -3921,7 +3942,7 @@ export default function KarebaFeedFinal() {
                       <MoreHorizontal className="w-[clamp(19px,5vw,22px)] h-[clamp(19px,5vw,22px)] text-neutral-600" />
                     </button>
 
-                    {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Salin) */}
+                    {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Edit, Salin) */}
                     {activeMenuPostId === f.id && (
                       <>
                         {/* Backdrop untuk menutup menu saat klik di luar */}
@@ -3960,27 +3981,49 @@ export default function KarebaFeedFinal() {
                             </div>
                           </button>
 
-                          {/* 2. Opsi Hapus Kabar (Hanya pada postingan sendiri) ATAU Laporkan Kabar (Pada postingan akun lain) */}
+                          {/* 2. Opsi Edit & Hapus (Hanya pada postingan sendiri) ATAU Laporkan Kabar (Pada postingan akun lain) */}
                           {isMyPost(f) ? (
-                            <button
-                              id={`menu-delete-btn-${f.id}`}
-                              type="button"
-                              onClick={() => {
-                                setPostToDelete({ id: f.id, title: f.text, img: f.img });
-                                setActiveMenuPostId(null);
-                              }}
-                              className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
-                            >
-                              <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold leading-tight text-rose-600">
-                                  Hapus Kabar
-                                </p>
-                                <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
-                                  Hapus postingan Anda
-                                </p>
-                              </div>
-                            </button>
+                            <>
+                              <button
+                                id={`menu-edit-btn-${f.id}`}
+                                type="button"
+                                onClick={() => {
+                                  handleStartEditPost(f);
+                                  setActiveMenuPostId(null);
+                                }}
+                                className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group text-emerald-700"
+                              >
+                                <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-[#00632B]" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold leading-tight text-[#00632B]">
+                                    Edit Teks Kabar
+                                  </p>
+                                  <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                                    Perbaiki salah ketik / ubah teks
+                                  </p>
+                                </div>
+                              </button>
+
+                              <button
+                                id={`menu-delete-btn-${f.id}`}
+                                type="button"
+                                onClick={() => {
+                                  setPostToDelete({ id: f.id, title: f.text, img: f.img });
+                                  setActiveMenuPostId(null);
+                                }}
+                                className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                              >
+                                <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold leading-tight text-rose-600">
+                                    Hapus Kabar
+                                  </p>
+                                  <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                                    Hapus postingan Anda
+                                  </p>
+                                </div>
+                              </button>
+                            </>
                           ) : (
                             <button
                               id={`menu-report-btn-${f.id}`}
@@ -4282,6 +4325,112 @@ export default function KarebaFeedFinal() {
                   className="flex-1 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition cursor-pointer shadow-xs"
                 >
                   Hapus Kabar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL EDIT TEKS / DESKRIPSI KABAR WARGA */}
+        {editingPost && (
+          <div
+            id="edit-post-modal-overlay"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 max-w-md mx-auto animate-fade-in touch-none overscroll-contain select-none"
+            onClick={() => {
+              if (!isSavingPostEdit) {
+                setEditingPost(null);
+                setEditingPostText("");
+              }
+            }}
+            onTouchMove={(e) => e.preventDefault()}
+            onWheel={(e) => e.preventDefault()}
+          >
+            <div
+              className="bg-white border border-neutral-200 rounded-3xl w-full p-5 space-y-4 shadow-2xl touch-auto select-auto animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              {/* Header Modal */}
+              <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-[#00632B] flex items-center justify-center border border-emerald-200 shadow-2xs shrink-0">
+                    <Edit3 className="w-5 h-5 text-[#00632B]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-neutral-900 leading-tight">Edit Teks Kabar</h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">Perbaiki salah ketik atau ubah tulisan kabar</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isSavingPostEdit}
+                  onClick={() => {
+                    setEditingPost(null);
+                    setEditingPostText("");
+                  }}
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer disabled:opacity-40"
+                  aria-label="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Area Input Teks */}
+              <div className="space-y-1.5">
+                <label htmlFor="edit-post-textarea" className="block text-xs font-semibold text-neutral-700">
+                  Teks / Deskripsi Kabar
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="edit-post-textarea"
+                    rows={5}
+                    value={editingPostText}
+                    onChange={(e) => setEditingPostText(e.target.value)}
+                    placeholder="Tuliskan perbaikan teks kabar Anda..."
+                    disabled={isSavingPostEdit}
+                    maxLength={1000}
+                    className="w-full p-3.5 text-sm text-neutral-800 bg-neutral-50/80 rounded-2xl border border-neutral-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#00632B] focus:border-transparent transition-all placeholder:text-neutral-400 resize-none"
+                    autoFocus
+                  />
+                  <div className="flex justify-end pr-1 text-[11px] text-neutral-400 font-medium">
+                    <span>{editingPostText.length} / 1000 karakter</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tombol Aksi */}
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  id="cancel-edit-post-btn"
+                  type="button"
+                  disabled={isSavingPostEdit}
+                  onClick={() => {
+                    setEditingPost(null);
+                    setEditingPostText("");
+                  }}
+                  className="flex-1 py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  id="save-edit-post-btn"
+                  type="button"
+                  disabled={isSavingPostEdit || !editingPostText.trim()}
+                  onClick={handleSavePostEdit}
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#005224] rounded-xl transition cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isSavingPostEdit ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Simpan Perubahan</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -4928,6 +5077,8 @@ export default function KarebaFeedFinal() {
               handleReportPost(id, user, activeDetailPost?.title || activeDetailPost?.caption);
               setActiveDetailPost(null);
             }}
+            onEdit={(item) => handleStartEditPost(item)}
+            onDelete={(item) => setPostToDelete({ id: item.id, title: (item as any).title || (item as any).text, img: item.img })}
             onOpenGift={(item) => {
               const targetFeedItem = feed.find((f) => f.id === item.id) || (item as FeedItem);
               setActiveGiftPost(targetFeedItem);

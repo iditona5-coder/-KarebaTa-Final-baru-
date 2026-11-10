@@ -195,6 +195,7 @@ export const parsePostDoc = (docSnap: any): FeedItem => {
     danaName: data.danaName || '',
     qrisUrl: data.qrisUrl || '',
     isAdminPost: Boolean(data.isAdminPost || (data.email && isUserAdmin(data.email))),
+    isEdited: Boolean(data.isEdited),
   } as any;
 };
 
@@ -1958,6 +1959,31 @@ export async function updatePostByAdmin(
     return true;
   } catch (err) {
     console.warn("[Firebase] Gagal update post:", err);
+    return false;
+  }
+}
+
+/**
+ * Edit Teks / Deskripsi Postingan oleh Pemilik (atau Admin) saat ada salah ketik
+ */
+export async function updatePostTextInFirestore(
+  postId: string,
+  newText: string
+): Promise<boolean> {
+  if (!db) return true;
+  try {
+    const postDoc = doc(db, "posts", postId);
+    await updateDoc(postDoc, {
+      text: newText,
+      title: newText,
+      caption: newText,
+      isEdited: true,
+      updatedAtServer: serverTimestamp(),
+      updatedAtTimestamp: Date.now(),
+    });
+    return true;
+  } catch (err) {
+    console.warn("[Firebase] Gagal update teks postingan:", err);
     return false;
   }
 }
