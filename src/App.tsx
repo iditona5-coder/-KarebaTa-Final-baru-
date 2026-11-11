@@ -2813,7 +2813,7 @@ export default function KarebaFeedFinal() {
   if (showSplash) {
     return (
       <SplashScreen
-        durationMs={1200}
+        durationMs={2000}
         onFinish={() => {
           try {
             sessionStorage.setItem("karebata_splash_shown", "true");
@@ -2907,6 +2907,9 @@ export default function KarebaFeedFinal() {
         <div
           id="sticky-header-container"
           className="fixed top-0 left-0 right-0 z-40 bg-white w-full max-w-md mx-auto shadow-xs border-b border-neutral-100 overflow-hidden"
+          style={{
+            paddingTop: "env(safe-area-inset-top, 0px)",
+          }}
         >
           <header
             id="karebata-feed-header"

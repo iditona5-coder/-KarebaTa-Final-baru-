@@ -28,7 +28,7 @@
       "purpose": "maskable"
     },
     {
-      "src": "/app-icon.svg",
+      "src": "/logo.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"

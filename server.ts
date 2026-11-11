@@ -16,6 +16,9 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 
+// Explicitly serve public static assets (favicons, manifests, icons)
+app.use(express.static(path.resolve(__dirname, 'public')));
+
 // ImageKit credentials (configured securely on backend)
 const IMAGEKIT_URL_ENDPOINT = process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/rdyi1j1sg';
 const IMAGEKIT_PUBLIC_KEY = process.env.IMAGEKIT_PUBLIC_KEY || 'public_WEwv7Q9gV4tFyZzV0obqGnKfT94=';
