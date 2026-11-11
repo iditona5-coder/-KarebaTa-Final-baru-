@@ -16,6 +16,13 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 
+// Explicitly serve manifest.json with standard PWA MIME type and no-cache
+app.get('/manifest.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.resolve(__dirname, 'public', 'manifest.json'));
+});
+
 // Explicitly serve public static assets (favicons, manifests, icons)
 app.use(express.static(path.resolve(__dirname, 'public')));
 
