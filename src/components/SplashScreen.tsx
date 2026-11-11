@@ -10,14 +10,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   durationMs = 2000,
   onFinish,
 }) => {
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(5);
   const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
     const startTime = Date.now();
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const pct = Math.min(100, Math.round((elapsed / (durationMs - 250)) * 100));
+      const pct = Math.min(100, Math.round(5 + (elapsed / (durationMs - 250)) * 95));
       setProgress(pct);
       if (elapsed >= durationMs - 250) {
         clearInterval(interval);
@@ -72,8 +72,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           BERITAMU, SUARAMU
         </p>
 
-        {/* Batang Pemuatan (Loading Bar) yang Berjalan Aktif */}
-        <div className="w-36 h-2 bg-neutral-100 rounded-full overflow-hidden shadow-inner border border-neutral-200/70 relative">
+        {/* Batang Pemuatan (Loading Bar) yang Berjalan Nyata */}
+        <div className="w-44 h-2.5 bg-neutral-100 rounded-full overflow-hidden shadow-inner border border-neutral-200/90 relative">
           <div
             className="h-full bg-gradient-to-r from-[#00632B] via-emerald-500 to-[#E5A000] rounded-full transition-all duration-75 ease-out shadow-xs"
             style={{ width: `${progress}%` }}
