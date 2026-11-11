@@ -103,6 +103,7 @@ import { LoginModal } from "./components/LoginModal";
 import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
 import { SplashScreen } from "./components/SplashScreen";
+import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 export default function KarebaFeedFinal() {
   const [showSplash, setShowSplash] = useState(true);
@@ -3265,6 +3266,9 @@ export default function KarebaFeedFinal() {
             </div>
           </div>
         </section>
+
+        {/* BANNER SARAN INSTALASI PWA KAREBA'TA KE LAYAR BERANDA HP */}
+        <PWAInstallBanner />
 
         {/* HORIZONTAL: KABAR KAMU & KABAR TERSIMPAN (SELALU MUNCUL, TIDAK PERNAH HILANG) */}
         <section id="my-posts-carousel" className="w-full py-3.5 border-b border-neutral-200 bg-white">
