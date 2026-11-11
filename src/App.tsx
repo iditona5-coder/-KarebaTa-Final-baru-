@@ -2813,7 +2813,7 @@ export default function KarebaFeedFinal() {
   if (showSplash) {
     return (
       <SplashScreen
-        durationMs={1800}
+        durationMs={1200}
         onFinish={() => {
           try {
             sessionStorage.setItem("karebata_splash_shown", "true");

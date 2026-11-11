@@ -24,7 +24,45 @@
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-splash" style="position:fixed;inset:0;z-index:999999;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:'Poppins',system-ui,-apple-system,sans-serif;-webkit-user-select:none;user-select:none;">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+          <!-- Pin Emas KarebaTa -->
+          <div style="margin-bottom:16px;filter:drop-shadow(0 4px 6px rgba(212,139,0,0.25));">
+            <svg width="84" height="100" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 118C47 108 10 70 10 46A40 40 0 1 1 90 46C90 70 53 108 50 118Z" fill="url(#pinGradHtml)" />
+              <path d="M30 25H41V44.5L59.5 25H73.5L50.5 47.5L74.5 71H60.5L41 51V71H30V25Z" fill="#ffffff" />
+              <defs>
+                <linearGradient id="pinGradHtml" x1="15%" y1="0%" x2="85%" y2="100%">
+                  <stop offset="0%" stop-color="#FFB703" />
+                  <stop offset="50%" stop-color="#E5A000" />
+                  <stop offset="100%" stop-color="#D48B00" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <!-- Teks Brand: Kareba'Ta -->
+          <h1 style="font-size:38px;font-weight:900;letter-spacing:-0.03em;line-height:1;margin:0 0 6px 0;display:flex;align-items:center;justify-content:center;">
+            <span style="color:#00632B;">Kareba&apos;</span><span style="color:#E5A000;">Ta</span>
+          </h1>
+          <!-- Slogan Resmi: BERITAMU, SUARAMU -->
+          <p style="font-size:12px;font-weight:800;letter-spacing:0.16em;color:#E5A000;text-transform:uppercase;margin:0 0 32px 0;">
+            BERITAMU, SUARAMU
+          </p>
+          <!-- Bar Loading Berjalan -->
+          <div style="width:176px;height:10px;background:#f3f4f6;border-radius:9999px;overflow:hidden;border:1px solid rgba(229,231,235,0.9);position:relative;">
+            <div id="initial-progress" style="height:100%;width:15%;background:linear-gradient(to right,#00632B,#10b981,#E5A000);border-radius:9999px;animation:karebaProgress 1.6s cubic-bezier(0.4,0,0.2,1) infinite;"></div>
+          </div>
+        </div>
+      </div>
+      <style>
+        @keyframes karebaProgress {
+          0% { width: 8%; }
+          50% { width: 68%; }
+          100% { width: 96%; }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
