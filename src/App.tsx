@@ -102,8 +102,10 @@ import { preloadFeedMedia } from "./utils/mediaPreloader";
 import { LoginModal } from "./components/LoginModal";
 import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
+import { SplashScreen } from "./components/SplashScreen";
 
 export default function KarebaFeedFinal() {
+  const [showSplash, setShowSplash] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
@@ -2807,6 +2809,16 @@ export default function KarebaFeedFinal() {
     );
   }
 
+  // LAYAR PEMBUKA AWAL DENGAN PROGRESS LOADING BAR BERJALAN AKTIF
+  if (showSplash) {
+    return (
+      <SplashScreen
+        durationMs={2000}
+        onFinish={() => setShowSplash(false)}
+      />
+    );
+  }
+
   // JIKA BELUM LOGIN: WAJIB MASUK HALAMAN LOGIN TERLEBIH DAHULU (TIDAK ADA HALAMAN PENGUNJUNG TANPA LOGIN)
   if (viewMode === "login" || (!currentUser && typeof window !== "undefined" && !localStorage.getItem("karebata_is_logged_in"))) {
     return (
@@ -3232,14 +3244,14 @@ export default function KarebaFeedFinal() {
             }}
             className="flex items-center gap-2.5 p-2 bg-neutral-50 hover:bg-neutral-100/90 rounded-xl border border-neutral-200/90 cursor-pointer transition active:scale-[0.99] group shadow-2xs"
           >
-            {/* Ikon Pensil di Tempat Ikon Profil Sebelumnya */}
-            <div className="w-8 h-8 rounded-full bg-emerald-50 text-[#00632B] border border-emerald-200/70 group-hover:bg-[#00632B] group-hover:text-white flex items-center justify-center shrink-0 transition shadow-2xs">
-              <PenLine className="w-4 h-4" />
+            {/* Ikon Pensil Bulat di Sebelah Kiri Persis Seperti Gambar */}
+            <div className="w-8 h-8 rounded-full bg-emerald-50 text-[#00632B] border border-emerald-200/80 group-hover:bg-[#00632B] group-hover:text-white flex items-center justify-center shrink-0 transition shadow-2xs">
+              <PenLine className="w-4 h-4 text-[#00632B] group-hover:text-white transition" />
             </div>
 
             {/* Input Trigger / Placeholder Teks */}
             <div className="flex-1 min-w-0">
-              <span className="text-xs text-neutral-500 font-medium truncate block">
+              <span className="text-xs sm:text-sm text-neutral-600 font-medium truncate block">
                 Tulis kabar warga hari ini...
               </span>
             </div>
