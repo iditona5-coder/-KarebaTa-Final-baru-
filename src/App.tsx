@@ -105,7 +105,16 @@ import { SetupUsernamePage } from "./components/SetupUsernamePage";
 import { SplashScreen } from "./components/SplashScreen";
 
 export default function KarebaFeedFinal() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      if (typeof window !== "undefined") {
+        if (sessionStorage.getItem("karebata_splash_shown") === "true") {
+          return false;
+        }
+      }
+    } catch {}
+    return true;
+  });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
@@ -2813,8 +2822,13 @@ export default function KarebaFeedFinal() {
   if (showSplash) {
     return (
       <SplashScreen
-        durationMs={2000}
-        onFinish={() => setShowSplash(false)}
+        durationMs={1800}
+        onFinish={() => {
+          try {
+            sessionStorage.setItem("karebata_splash_shown", "true");
+          } catch {}
+          setShowSplash(false);
+        }}
       />
     );
   }
