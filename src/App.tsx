@@ -108,6 +108,19 @@ export default function KarebaFeedFinal() {
   const [showSplash, setShowSplash] = useState(() => {
     try {
       if (typeof window !== "undefined") {
+        // Jika dibuka dari aplikasi yang di-install di HP (PWA Standalone di Android),
+        // sistem Android sudah otomatis menampilkan splash screen bawaan WebAPK HP.
+        // Matikan splash screen kedua di React agar tampilan pembuka TIDAK DOBEL di aplikasi yang diinstal!
+        const isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          (window.navigator as any).standalone === true ||
+          document.referrer.includes("android-app://") ||
+          window.location.search.includes("source=pwa");
+
+        if (isStandalone) {
+          return false;
+        }
+
         if (sessionStorage.getItem("karebata_splash_shown") === "true") {
           return false;
         }
