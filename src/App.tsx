@@ -106,7 +106,10 @@ import { SplashScreen } from "./components/SplashScreen";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 export default function KarebaFeedFinal() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem("karebata_splash_shown");
+  });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
@@ -2814,7 +2817,7 @@ export default function KarebaFeedFinal() {
   if (showSplash) {
     return (
       <SplashScreen
-        durationMs={2000}
+        durationMs={1400}
         onFinish={() => {
           try {
             sessionStorage.setItem("karebata_splash_shown", "true");

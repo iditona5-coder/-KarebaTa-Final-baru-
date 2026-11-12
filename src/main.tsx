@@ -174,7 +174,5 @@ if (typeof window !== 'undefined') {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <App />
 );

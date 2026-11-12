@@ -29,7 +29,41 @@
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="karebata-initial-splash" style="position:fixed;inset:0;z-index:999999;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:'Poppins',system-ui,sans-serif;-webkit-user-select:none;user-select:none;">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+          <!-- Ikon Pin Emas Berhuruf K -->
+          <div style="margin-bottom:16px;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.08));">
+            <svg width="84" height="84" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 50 118 C 47 108 10 70 10 46 A 40 40 0 1 1 90 46 C 90 70 53 108 50 118 Z" fill="#E5A000" />
+              <path d="M 30 25 H 41 V 44.5 L 59.5 25 H 73.5 L 50.5 47.5 L 74.5 71 H 60.5 L 41 51 V 71 H 30 V 25 Z" fill="#ffffff" />
+            </svg>
+          </div>
+
+          <!-- Nama Brand: Kareba'Ta -->
+          <h1 style="font-size:42px;font-weight:900;letter-spacing:-0.03em;line-height:1;margin:0 0 6px 0;display:flex;align-items:center;justify-content:center;">
+            <span style="color:#00632B;">Kareba&apos;</span><span style="color:#E5A000;">Ta</span>
+          </h1>
+
+          <!-- Slogan Asli: BERITAMU, SUARAMU -->
+          <p style="font-size:12px;font-weight:800;letter-spacing:0.16em;color:#E5A000;text-transform:uppercase;margin:0 0 32px 0;">
+            BERITAMU, SUARAMU
+          </p>
+
+          <!-- Batang Pemuatan (Loading Bar) yang Berjalan Nyata -->
+          <div style="width:176px;height:10px;background:#f5f5f5;border-radius:9999px;overflow:hidden;border:1px solid rgba(229,231,235,0.9);position:relative;">
+            <div id="initial-bar-fill" style="height:100%;background:linear-gradient(to right, #00632B, #10b981, #E5A000);border-radius:9999px;animation:karebaFill 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+          </div>
+        </div>
+      </div>
+      <style>
+        @keyframes karebaFill {
+          0% { width: 10%; }
+          50% { width: 70%; }
+          100% { width: 95%; }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
