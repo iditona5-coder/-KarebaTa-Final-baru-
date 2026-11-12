@@ -51,12 +51,8 @@ async function main() {
     fs.mkdirSync(publicDir, { recursive: true });
   }
 
-  // 1. Simpan logo.svg (1:1 square 512x512)
   const logoSvgPath = path.join(publicDir, "logo.svg");
-  fs.writeFileSync(logoSvgPath, svgEmblem, "utf-8");
-  console.log("Wrote:", logoSvgPath);
-
-  const emblemBuffer = Buffer.from(svgEmblem);
+  const emblemBuffer = fs.readFileSync(logoSvgPath);
 
   // 2. Buat pwa-192x192.png (High Quality Lanczos3)
   await sharp(emblemBuffer)

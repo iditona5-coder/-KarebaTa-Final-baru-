@@ -107,8 +107,28 @@ import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 export default function KarebaFeedFinal() {
   const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem("karebata_splash_shown");
+    if (typeof window === "undefined") return false;
+    // PADA APLIKASI TERINSTAL DI HP (PWA / STANDALONE):
+    // Android OS sudah menampilkan splash screen bawaan saat ikon aplikasi diketuk di layar HP.
+    // Menampilkan lagi SplashScreen di React akan membuat tampilan pembuka muncul 2 KALI (DOBEL).
+    // Oleh sebab itu, jika berjalan dalam mode terinstal, matikan splash React agar tidak dobel!
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches ||
+      window.matchMedia("(display-mode: minimal-ui)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+      document.referrer.includes("android-app://") ||
+      window.location.search.includes("source=pwa");
+
+    if (isStandalone) {
+      return false;
+    }
+
+    try {
+      return !sessionStorage.getItem("karebata_splash_shown");
+    } catch {
+      return false;
+    }
   });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
