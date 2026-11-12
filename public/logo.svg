@@ -5,6 +5,11 @@
       <stop offset="50%" stop-color="#E5A000" />
       <stop offset="100%" stop-color="#D48B00" />
     </linearGradient>
+    <linearGradient id="barGradMaster" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00632B" />
+      <stop offset="50%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#E5A000" />
+    </linearGradient>
     <filter id="crispShadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#D48B00" flood-opacity="0.30" />
       <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08" />
@@ -35,4 +40,12 @@
   <text x="256" y="367" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="800" font-size="19" fill="#E5A000" letter-spacing="3.5">
     BERITAMU, SUARAMU
   </text>
+
+  <!-- Batang Pemuatan (Loading Bar) Resmi Kareba'Ta -->
+  <g transform="translate(156, 405)">
+    <!-- Rel Track Background -->
+    <rect width="200" height="12" rx="6" fill="#F3F4F6" stroke="#E5E7EB" stroke-width="1.5" />
+    <!-- Isi Loading Bar Aktif -->
+    <rect width="90" height="12" rx="6" fill="url(#barGradMaster)" />
+  </g>
 </svg>

@@ -7,37 +7,46 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({
-  durationMs = 1400,
+  durationMs = 1200,
   onFinish,
 }) => {
-  const [progress, setProgress] = useState(35);
+  const isStandalone = typeof window !== "undefined" && (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+    document.referrer.includes("android-app://") ||
+    window.location.search.includes("source=pwa")
+  );
+
+  const initialPct = isStandalone ? 70 : 20;
+  const effectiveDuration = isStandalone ? Math.min(durationMs, 450) : durationMs;
+  const [progress, setProgress] = useState(initialPct);
   const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
     const startTime = Date.now();
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const pct = Math.min(100, Math.round(35 + (elapsed / (durationMs - 200)) * 65));
+      const pct = Math.min(100, Math.round(initialPct + (elapsed / Math.max(1, effectiveDuration - 100)) * (100 - initialPct)));
       setProgress(pct);
-      if (elapsed >= durationMs - 200) {
+      if (elapsed >= effectiveDuration - 100) {
         clearInterval(interval);
       }
-    }, 20);
+    }, 16);
 
     const fadeTimer = setTimeout(() => {
       setIsFading(true);
-    }, Math.max(0, durationMs - 300));
+    }, Math.max(0, effectiveDuration - 150));
 
     const finishTimer = setTimeout(() => {
       if (onFinish) onFinish();
-    }, durationMs);
+    }, effectiveDuration);
 
     return () => {
       clearInterval(interval);
       clearTimeout(fadeTimer);
       clearTimeout(finishTimer);
     };
-  }, [durationMs, onFinish]);
+  }, [effectiveDuration, initialPct, onFinish]);
 
   return (
     <div
