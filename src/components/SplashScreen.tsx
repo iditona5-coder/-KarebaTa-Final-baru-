@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { KarebaPinIcon } from "./KarebaTaLogo";
 
 interface SplashScreenProps {
@@ -12,6 +12,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 }) => {
   const isStandalone = typeof window !== "undefined" && (
     window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.matchMedia("(display-mode: minimal-ui)").matches ||
     (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
     document.referrer.includes("android-app://") ||
     window.location.search.includes("source=pwa")
@@ -21,6 +23,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   const effectiveDuration = isStandalone ? Math.min(durationMs, 450) : durationMs;
   const [progress, setProgress] = useState(initialPct);
   const [isFading, setIsFading] = useState(false);
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
 
   useEffect(() => {
     const startTime = Date.now();
@@ -38,7 +42,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     }, Math.max(0, effectiveDuration - 150));
 
     const finishTimer = setTimeout(() => {
-      if (onFinish) onFinish();
+      if (onFinishRef.current) onFinishRef.current();
     }, effectiveDuration);
 
     return () => {
@@ -46,7 +50,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       clearTimeout(fadeTimer);
       clearTimeout(finishTimer);
     };
-  }, [effectiveDuration, initialPct, onFinish]);
+  }, [effectiveDuration, initialPct]);
 
   return (
     <div

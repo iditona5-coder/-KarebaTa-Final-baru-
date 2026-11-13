@@ -25,7 +25,6 @@ import {
   User as UserIcon,
   Newspaper,
   SlidersHorizontal,
-  Eye,
   HelpCircle,
   Megaphone,
   AlertTriangle,
@@ -361,6 +360,7 @@ export default function KarebaFeedFinal() {
     img?: string;
     thumbnail?: string;
     mediaType?: "image" | "video";
+    approvalStatus?: "approved" | "pending" | "rejected";
   } | null>(null);
   const [postToDelete, setPostToDelete] = useState<{ id: string; title?: string; img?: string } | null>(null);
   const [editingPost, setEditingPost] = useState<{ id: string; text: string } | null>(null);
@@ -1463,7 +1463,14 @@ export default function KarebaFeedFinal() {
       if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
     } catch {}
 
-    const activePosts = feed.filter((item) => !item.isHidden && !hiddenPostIds.includes(item.id) && !deletedIds.has(item.id));
+    const activePosts = feed.filter(
+      (item) =>
+        !item.isHidden &&
+        item.approvalStatus !== "pending" &&
+        item.approvalStatus !== "rejected" &&
+        !hiddenPostIds.includes(item.id) &&
+        !deletedIds.has(item.id)
+    );
     return activePosts;
   }, [feed, hiddenPostIds]);
 
@@ -1592,6 +1599,7 @@ export default function KarebaFeedFinal() {
             init: (p.user.replace(/^@/, "").trim()[0] || p.init || "W").toUpperCase(),
             isMyPost: true,
             createdAtTimestamp: Number(p.createdAtTimestamp) || Date.now(),
+            approvalStatus: p.approvalStatus || "approved",
           }));
 
         return remoteUserPosts;
@@ -1788,6 +1796,7 @@ export default function KarebaFeedFinal() {
         location: p.loc,
         comments: [],
         isMyPost: isOwner,
+        approvalStatus: p.approvalStatus || "approved",
       };
       setFeed((prev) => [target!, ...prev]);
     }
@@ -2247,6 +2256,8 @@ export default function KarebaFeedFinal() {
 
       const activeAuthorUid = currentUser?.uid || auth.currentUser?.uid || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_uid") : "") || "";
       const activeAuthorEmail = (currentUser?.email || auth.currentUser?.email || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_email") : "") || "").toLowerCase();
+      const needsApproval = Boolean(appConfig.requirePostApproval) && !isUserAdmin(activeAuthorEmail || currentUser?.email);
+      const initialApprovalStatus: "approved" | "pending" = needsApproval ? "pending" : "approved";
 
       // KABAR BARU MUNCUL DI FEED & KABAR KAMU SETELAH PROSES UNGGAH 100% SELESAI
       const newFeedItem: FeedItem = {
@@ -2258,7 +2269,7 @@ export default function KarebaFeedFinal() {
         email: activeAuthorEmail,
         avatar: undefined,
         time: "Baru saja",
-        text: finalDesc || "Momen spesial hari ini 📸",
+        text: finalDesc || "Momen spesial hari ini",
         img: finalMediaUrl,
         thumbnail: finalThumbnailUrl,
         fileId: uploadedFileId,
@@ -2277,6 +2288,7 @@ export default function KarebaFeedFinal() {
         danaName: myDanaName || undefined,
         qrisUrl: myQrisUrl || undefined,
         isAdminPost: isUserAdmin(currentUser?.email),
+        approvalStatus: initialApprovalStatus,
       };
 
       const newPostItem: PostItem = {
@@ -2305,20 +2317,23 @@ export default function KarebaFeedFinal() {
         danaName: myDanaName || undefined,
         qrisUrl: myQrisUrl || undefined,
         isAdminPost: isUserAdmin(currentUser?.email),
+        approvalStatus: initialApprovalStatus,
       };
 
       setFeed((prev) => [newFeedItem, ...prev]);
       setPosts((prev) => [newPostItem, ...prev]);
 
-      // Tambahkan juga ke papan teks berjalan secara instan setelah selesai
-      const newBulletin: BulletinItem = {
-        id: `b-${Date.now()}`,
-        category: "KABAR BARU",
-        text: `@${userName}: ${postTitle} — ${finalDesc.slice(0, 90)}`,
-        location: finalLoc || "Kawasan Sekitar",
-        time: "Baru saja",
-      };
-      setBulletins((prev) => [newBulletin, ...prev]);
+      // Tambahkan ke papan teks berjalan hanya jika langsung tayang (tidak menunggu persetujuan admin)
+      if (!needsApproval) {
+        const newBulletin: BulletinItem = {
+          id: `b-${Date.now()}`,
+          category: "KABAR BARU",
+          text: `@${userName}: ${postTitle} — ${finalDesc.slice(0, 90)}`,
+          location: finalLoc || "Kawasan Sekitar",
+          time: "Baru saja",
+        };
+        setBulletins((prev) => [newBulletin, ...prev]);
+      }
 
       // Auto-scroll carousel Kabar Kamu ke paling depan agar kartu langsung kelihatan
       setTimeout(() => {
@@ -2343,23 +2358,30 @@ export default function KarebaFeedFinal() {
         img: finalMediaUrl,
         thumbnail: finalThumbnailUrl,
         mediaType: currentMediaType,
+        approvalStatus: initialApprovalStatus,
       });
+
+      if (needsApproval) {
+        showToast("Kabar berhasil dikirim & menunggu persetujuan admin sebelum tayang.");
+      }
 
       uploadSuccessTimeoutRef.current = setTimeout(() => {
         setLastUploadedPost(null);
-      }, 3500);
+      }, 4500);
 
-      // Beri efek highlight pada kabar baru di feed
-      setHighlightedPostId(feedId);
-      setHighlightSource("new_upload");
+      if (!needsApproval) {
+        // Beri efek highlight pada kabar baru di feed
+        setHighlightedPostId(feedId);
+        setHighlightSource("new_upload");
 
-      // Scroll halus layar ke postingan yang baru saja berhasil diunggah
-      setTimeout(() => {
-        const newPostElement = document.getElementById(`feed-post-${feedId}`);
-        if (newPostElement) {
-          newPostElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 300);
+        // Scroll halus layar ke postingan yang baru saja berhasil diunggah
+        setTimeout(() => {
+          const newPostElement = document.getElementById(`feed-post-${feedId}`);
+          if (newPostElement) {
+            newPostElement.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 300);
+      }
 
       // Hilangkan status highlight setelah 8 detik
       setTimeout(() => {
@@ -2421,6 +2443,8 @@ export default function KarebaFeedFinal() {
 
     const activeAuthorUid = currentUser?.uid || auth.currentUser?.uid || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_uid") : "") || "";
     const activeAuthorEmail = (currentUser?.email || auth.currentUser?.email || (typeof window !== "undefined" ? localStorage.getItem("karebata_active_email") : "") || "").toLowerCase();
+    const needsApproval = Boolean(appConfig.requirePostApproval) && !isUserAdmin(activeAuthorEmail || currentUser?.email);
+    const initialApprovalStatus: "approved" | "pending" = needsApproval ? "pending" : "approved";
 
     const newFeedItem: FeedItem = {
       id: feedId,
@@ -2448,6 +2472,7 @@ export default function KarebaFeedFinal() {
       danaName: myDanaName || undefined,
       qrisUrl: myQrisUrl || undefined,
       isAdminPost: isUserAdmin(currentUser?.email),
+      approvalStatus: initialApprovalStatus,
     };
 
     const newPostItem: PostItem = {
@@ -2472,20 +2497,23 @@ export default function KarebaFeedFinal() {
       danaName: myDanaName || undefined,
       qrisUrl: myQrisUrl || undefined,
       isAdminPost: isUserAdmin(currentUser?.email),
+      approvalStatus: initialApprovalStatus,
     };
 
     setFeed((prev) => [newFeedItem, ...prev]);
     setPosts((prev) => [newPostItem, ...prev]);
 
-    // Tambahkan ke running text
-    const newBulletin: BulletinItem = {
-      id: `b-${Date.now()}`,
-      category: "KABAR WARGA",
-      text: `@${userName}: ${postTitle} — ${trimmedText.slice(0, 90)}`,
-      location: finalLoc || "Kawasan Sekitar",
-      time: "Baru saja",
-    };
-    setBulletins((prev) => [newBulletin, ...prev]);
+    // Tambahkan ke running text hanya jika langsung tayang (tidak menunggu persetujuan admin)
+    if (!needsApproval) {
+      const newBulletin: BulletinItem = {
+        id: `b-${Date.now()}`,
+        category: "KABAR WARGA",
+        text: `@${userName}: ${postTitle} — ${trimmedText.slice(0, 90)}`,
+        location: finalLoc || "Kawasan Sekitar",
+        time: "Baru saja",
+      };
+      setBulletins((prev) => [newBulletin, ...prev]);
+    }
 
     // Auto-scroll carousel Kabar Kamu ke paling depan
     setTimeout(() => {
@@ -2494,20 +2522,26 @@ export default function KarebaFeedFinal() {
 
     try {
       await savePostToFirestore(newFeedItem, newPostItem);
-      showToast("Kabar teks berhasil dibagikan!");
+      showToast(
+        needsApproval
+          ? "Kabar teks berhasil dikirim & menunggu persetujuan admin sebelum tayang."
+          : "Kabar teks berhasil dibagikan!"
+      );
     } catch {
       showToast("Kabar teks tersimpan lokal.");
     } finally {
       setIsPublishingTextPost(false);
     }
 
-    // Scroll ke postingan baru di feed
-    setTimeout(() => {
-      const newEl = document.getElementById(`feed-post-${feedId}`);
-      if (newEl) {
-        newEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 300);
+    if (!needsApproval) {
+      // Scroll ke postingan baru di feed
+      setTimeout(() => {
+        const newEl = document.getElementById(`feed-post-${feedId}`);
+        if (newEl) {
+          newEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 300);
+    }
   };
 
   // Bagikan post
@@ -3084,10 +3118,18 @@ export default function KarebaFeedFinal() {
           {lastUploadedPost && (
             <div
               id="fb-style-upload-success-bar"
-              className="w-full bg-emerald-50/90 border-t border-emerald-200 px-3.5 py-2 flex items-center gap-3 shadow-2xs animate-fade-in select-none"
+              className={`w-full border-t px-3.5 py-2 flex items-center gap-3 shadow-2xs animate-fade-in select-none ${
+                lastUploadedPost.approvalStatus === "pending"
+                  ? "bg-amber-50/95 border-amber-200"
+                  : "bg-emerald-50/90 border-emerald-200"
+              }`}
             >
               {/* Thumbnail Media Berhasil Diunggah */}
-              <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-emerald-300 bg-white flex items-center justify-center shadow-2xs">
+              <div
+                className={`relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border bg-white flex items-center justify-center shadow-2xs ${
+                  lastUploadedPost.approvalStatus === "pending" ? "border-amber-300" : "border-emerald-300"
+                }`}
+              >
                 {lastUploadedPost.mediaType === "video" ? (
                   <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-white">
                     <Video className="w-4 h-4 text-emerald-400" />
@@ -3098,18 +3140,36 @@ export default function KarebaFeedFinal() {
                     alt={lastUploadedPost.title}
                     className="w-full h-full object-cover"
                   />
+                ) : lastUploadedPost.approvalStatus === "pending" ? (
+                  <Clock className="w-5 h-5 text-amber-600" />
                 ) : (
                   <CheckCircle2 className="w-5 h-5 text-[#00632B]" />
                 )}
-                <div className="absolute -bottom-0.5 -right-0.5 bg-[#00632B] rounded-full p-0.5 shadow-2xs">
-                  <CheckCircle2 className="w-3 h-3 text-white" />
+                <div
+                  className={`absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 shadow-2xs ${
+                    lastUploadedPost.approvalStatus === "pending" ? "bg-amber-500" : "bg-[#00632B]"
+                  }`}
+                >
+                  {lastUploadedPost.approvalStatus === "pending" ? (
+                    <Clock className="w-3 h-3 text-white" />
+                  ) : (
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                  )}
                 </div>
               </div>
 
-              {/* Teks Berhasil */}
+              {/* Teks Berhasil / Menunggu Persetujuan */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1 text-xs font-bold text-[#00632B]">
-                  <span>Berita berhasil diunggah</span>
+                <div
+                  className={`flex items-center gap-1 text-xs font-bold ${
+                    lastUploadedPost.approvalStatus === "pending" ? "text-amber-800" : "text-[#00632B]"
+                  }`}
+                >
+                  <span>
+                    {lastUploadedPost.approvalStatus === "pending"
+                      ? "Menunggu persetujuan admin untuk tayang"
+                      : "Berita berhasil diunggah"}
+                  </span>
                 </div>
                 <p className="text-[11px] font-medium text-neutral-700 truncate mt-0.5">
                   {lastUploadedPost.title}
@@ -3601,6 +3661,17 @@ export default function KarebaFeedFinal() {
                               {p.caption || p.title}
                             </span>
                           </div>
+                        )}
+                        {p.approvalStatus === "pending" && (
+                          <span className="absolute top-1 left-1 text-[8.5px] bg-amber-500 px-1.5 py-0.5 rounded-none text-white flex items-center gap-0.5 z-10 font-bold shadow-xs">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>Menunggu</span>
+                          </span>
+                        )}
+                        {p.approvalStatus === "rejected" && (
+                          <span className="absolute top-1 left-1 text-[8.5px] bg-rose-600 px-1.5 py-0.5 rounded-none text-white flex items-center gap-0.5 z-10 font-bold shadow-xs">
+                            <span>Ditolak</span>
+                          </span>
                         )}
                         <span className="absolute bottom-1 right-1 text-[8.5px] bg-black/75 px-1 py-0.2 rounded-none text-white backdrop-blur-xs flex items-center gap-0.5 z-10 font-medium">
                           {isVid ? (

@@ -1,7 +1,11 @@
-const CACHE_NAME = 'karebata-v3';
+const CACHE_NAME = 'karebata-v4';
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(['/', '/manifest.json?v=4']).catch(() => {});
+    }).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -14,11 +18,28 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Standard pass-through fetch handler ensuring PWA installability across Chromium browsers
+// Fetch handler andal untuk memenuhi standar instalasi WebAPK Android (standalone tanpa ikon browser)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  // Let network handle requests directly, falling back to cache if offline
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match('/');
+          return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
+        })
+    );
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request).catch(async () => {
+      const cached = await caches.match(event.request);
+      return cached || Response.error();
+    })
   );
 });

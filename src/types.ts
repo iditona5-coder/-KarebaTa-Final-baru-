@@ -50,6 +50,7 @@ export interface PostItem {
   qrisUrl?: string;
   isAdminPost?: boolean;
   isEdited?: boolean;
+  approvalStatus?: "approved" | "pending" | "rejected";
 }
 
 export interface CommentItem {
@@ -100,6 +101,7 @@ export interface FeedItem {
   qrisUrl?: string;
   isAdminPost?: boolean;
   isEdited?: boolean;
+  approvalStatus?: "approved" | "pending" | "rejected";
 }
 
 export interface UserWalletSettings {
@@ -225,10 +227,10 @@ export interface GiftNominalOption {
 }
 
 export const DEFAULT_GIFT_NOMINALS: GiftNominalOption[] = [
-  { value: 2000, label: "Rp 2.000", desc: "☕ Traktir Kopi" },
-  { value: 5000, label: "Rp 5.000", desc: "🥤 Traktir Es Teh" },
-  { value: 10000, label: "Rp 10.000", desc: "🍜 Traktir Makan" },
-  { value: 25000, label: "Rp 25.000", desc: "🌟 Pa'bere Hebat" },
+  { value: 2000, label: "Rp 2.000", desc: "Traktir Kopi" },
+  { value: 5000, label: "Rp 5.000", desc: "Traktir Es Teh" },
+  { value: 10000, label: "Rp 10.000", desc: "Traktir Makan" },
+  { value: 25000, label: "Rp 25.000", desc: "Pa'bere Hebat" },
 ];
 
 export interface AdminAppConfig {
@@ -244,6 +246,7 @@ export interface AdminAppConfig {
   giftNominals?: GiftNominalOption[];
   giftMinLikes?: number;
   adminEmails?: string[];
+  requirePostApproval?: boolean;
 }
 
 export const DEFAULT_ADMIN_APP_CONFIG: AdminAppConfig = {
@@ -258,6 +261,7 @@ export const DEFAULT_ADMIN_APP_CONFIG: AdminAppConfig = {
   giftNominals: DEFAULT_GIFT_NOMINALS,
   giftMinLikes: 500,
   adminEmails: ["iditona5@gmail.com"],
+  requirePostApproval: false,
 };
 
 

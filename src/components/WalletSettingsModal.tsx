@@ -272,8 +272,8 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                   Nomor Akun DANA (Wajib):
                 </label>
                 <div className="relative flex items-center">
-                  <span className="absolute left-3 text-xs font-bold text-neutral-400 select-none">
-                    📱
+                  <span className="absolute left-3 text-sky-600 select-none flex items-center justify-center">
+                    <Smartphone className="w-3.5 h-3.5" />
                   </span>
                   <input
                     type="tel"

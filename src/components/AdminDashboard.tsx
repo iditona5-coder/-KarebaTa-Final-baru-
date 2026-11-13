@@ -63,6 +63,7 @@ import {
   deleteUserByAdmin,
   updatePostByAdmin,
   toggleHidePostInFirestore,
+  approvePostInFirestore,
   deletePostFromFirestore,
   listenToFirestoreBulletins,
   addBulletinToFirestore,
@@ -188,7 +189,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [feedPosts]);
 
   const [searchPostQuery, setSearchPostQuery] = useState("");
-  const [postMediaFilter, setPostMediaFilter] = useState<"all" | "image" | "video" | "hidden">("all");
+  const [postMediaFilter, setPostMediaFilter] = useState<"all" | "pending" | "image" | "video" | "hidden">("all");
   const [selectedPostForEdit, setSelectedPostForEdit] = useState<FeedItem | null>(null);
   const [editPostCaption, setEditPostCaption] = useState("");
   const [editPostLocation, setEditPostLocation] = useState("");
@@ -245,6 +246,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return typeof appConfig.giftMinLikes === "number" ? appConfig.giftMinLikes : 500;
   });
   const [isSavingGiftConfig, setIsSavingGiftConfig] = useState(false);
+  const [isTogglingApprovalSetting, setIsTogglingApprovalSetting] = useState(false);
 
   // State Multi-Admin Berizin
   const [authorizedAdminEmails, setAuthorizedAdminEmails] = useState<string[]>(() => getAuthorizedAdminEmails());
@@ -460,6 +462,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return reportsList.filter((r) => r.status === "pending").length;
   }, [reportsList]);
 
+  const pendingPostsCount = useMemo(() => {
+    return postsList.filter((p) => p.approvalStatus === "pending").length;
+  }, [postsList]);
+
+  const handleToggleRequirePostApproval = async () => {
+    if (isTogglingApprovalSetting) return;
+    const nextVal = !appConfig.requirePostApproval;
+    setIsTogglingApprovalSetting(true);
+    setAppConfig((prev) => ({ ...prev, requirePostApproval: nextVal }));
+    try {
+      await saveAdminAppConfig({ requirePostApproval: nextVal });
+      await logAdminActivity(
+        "SETTINGS_CHANGE",
+        nextVal
+          ? "Admin MENGAKTIFKAN mode persetujuan admin sebelum kabar warga tayang"
+          : "Admin MENONAKTIFKAN mode persetujuan admin (kabar warga langsung tayang)",
+        currentUser?.email || PRIMARY_ADMIN_EMAIL
+      );
+      showToast(
+        nextVal
+          ? "Persetujuan Admin AKTIF: Kabar warga harus diloloskan admin sebelum tayang."
+          : "Persetujuan Admin NONAKTIF: Kabar warga langsung tayang otomatis."
+      );
+    } catch {
+      setAppConfig((prev) => ({ ...prev, requirePostApproval: !nextVal }));
+      showToast("Gagal memperbarui pengaturan persetujuan admin.");
+    } finally {
+      setIsTogglingApprovalSetting(false);
+    }
+  };
+
 
 
   // =========================================================================
@@ -483,8 +516,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white">
                 <ShieldCheck className="w-8 h-8" />
               </div>
-              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-neutral-900 border-2 border-emerald-500 flex items-center justify-center text-xs">
-                🔒
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-neutral-900 border-2 border-emerald-500 flex items-center justify-center text-emerald-400">
+                <Lock className="w-3 h-3" />
               </span>
             </div>
             <h2 className="text-xl font-black tracking-tight text-white">
@@ -741,9 +774,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <FileText className="w-4 h-4" />
               <span>3. Postingan</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
-              {postsList.length}
-            </span>
+            <div className="flex items-center gap-1">
+              {pendingPostsCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500 text-white font-extrabold animate-pulse">
+                  {pendingPostsCount}
+                </span>
+              )}
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
+                {postsList.length}
+              </span>
+            </div>
           </button>
 
           {/* 4. Laporan */}
@@ -998,6 +1038,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "dashboard" && (
             <div className="space-y-6 animate-fade-in">
+              {pendingPostsCount > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-amber-900">
+                        {pendingPostsCount} Kabar Warga Menunggu Persetujuan Admin
+                      </p>
+                      <p className="text-[11px] text-amber-700">
+                        Mode persetujuan admin sedang aktif. Tinjau dan loloskan kabar agar tampil di beranda warga.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostMediaFilter("pending");
+                      setActiveMenu("posts");
+                    }}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0 shadow-xs"
+                  >
+                    Tinjau Sekarang &rarr;
+                  </button>
+                </div>
+              )}
               {/* Kartu Statistik Utama Material 3 */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                 {/* 1. Pengguna */}
@@ -1111,9 +1178,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </p>
 
                       <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px] text-neutral-500">
-                        <div className="flex items-center gap-2">
-                          <span>👁️ {post.views || 0} tayang</span>
-                          <span>❤️ {post.like || 0} suka</span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-neutral-400" /> {post.views || 0} tayang</span>
+                          <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-500" /> {post.like || 0} suka</span>
                         </div>
                         <button
                           type="button"
@@ -1319,6 +1386,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "posts" && (
             <div className="space-y-6 animate-fade-in">
+              {/* Bar Saklar Cepat Persetujuan Admin */}
+              <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                      appConfig.requirePostApproval
+                        ? "bg-amber-50 text-amber-600 border-amber-200"
+                        : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                    }`}
+                  >
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xs sm:text-sm font-black text-neutral-900">
+                        Persetujuan Admin Sebelum Kabar Tayang
+                      </h3>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase ${
+                          appConfig.requirePostApproval
+                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        }`}
+                      >
+                        {appConfig.requirePostApproval ? "AKTIF (Wajib Lolos)" : "NONAKTIF (Langsung Tayang)"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {appConfig.requirePostApproval
+                        ? "Kabar baru dari warga masuk antrean Menunggu sampai Admin menekan tombol Loloskan."
+                        : "Setiap kabar baru dari warga langsung tayang otomatis di beranda tanpa antrean."}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isTogglingApprovalSetting}
+                  onClick={handleToggleRequirePostApproval}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shrink-0 border ${
+                    appConfig.requirePostApproval
+                      ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-sm"
+                      : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border-neutral-300"
+                  }`}
+                >
+                  {appConfig.requirePostApproval ? (
+                    <>
+                      <ToggleRight className="w-5 h-5" />
+                      <span>ON &bull; Aktif</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-5 h-5 text-neutral-500" />
+                      <span>OFF &bull; Nonaktif</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   <div className="relative flex-1">
@@ -1333,26 +1459,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                    {(["all", "image", "video", "hidden"] as const).map((med) => (
-                      <button
-                        key={med}
-                        type="button"
-                        onClick={() => setPostMediaFilter(med)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition capitalize cursor-pointer whitespace-nowrap ${
-                          postMediaFilter === med
-                            ? "bg-emerald-600 text-white"
-                            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                        }`}
-                      >
-                        {med === "all" ? "Semua Media" : med}
-                      </button>
-                    ))}
+                    {(["pending", "all", "image", "video", "hidden"] as const).map((med) => {
+                      const label =
+                        med === "pending"
+                          ? `Menunggu (${pendingPostsCount})`
+                          : med === "all"
+                          ? "Semua Media"
+                          : med === "image"
+                          ? "Foto"
+                          : med === "video"
+                          ? "Video"
+                          : "Tersembunyi";
+                      return (
+                        <button
+                          key={med}
+                          type="button"
+                          onClick={() => setPostMediaFilter(med)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                            postMediaFilter === med
+                              ? med === "pending"
+                                ? "bg-amber-500 text-white"
+                                : "bg-emerald-600 text-white"
+                              : med === "pending" && pendingPostsCount > 0
+                              ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                          }`}
+                        >
+                          <span>{label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {postsList
                     .filter((p) => {
+                      if (postMediaFilter === "pending") return p.approvalStatus === "pending";
                       if (postMediaFilter === "hidden") return Boolean(p.isHidden);
                       if (postMediaFilter === "image") return p.mediaType !== "video" && !p.isHidden;
                       if (postMediaFilter === "video") return p.mediaType === "video" && !p.isHidden;
@@ -1367,12 +1510,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         p.user?.toLowerCase().includes(q)
                       );
                     })
-                    .map((post) => (
+                    .map((post) => {
+                      const isPending = post.approvalStatus === "pending";
+                      const isRejected = post.approvalStatus === "rejected";
+                      return (
                       <div
                         key={post.id}
-                        className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between"
+                        className={`rounded-2xl p-4 space-y-3 flex flex-col justify-between border ${
+                          isPending
+                            ? "bg-amber-50/70 border-amber-300"
+                            : isRejected
+                            ? "bg-rose-50/60 border-rose-200"
+                            : "bg-neutral-50 border-neutral-200"
+                        }`}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="font-bold text-xs text-neutral-900 truncate">
                               @{post.user || post.name || "warga"}
@@ -1380,13 +1532,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <span className="text-[10px] text-slate-500">&bull; {post.time}</span>
                           </div>
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                              post.isHidden
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                              isPending
+                                ? "bg-amber-500 text-white"
+                                : isRejected
+                                ? "bg-rose-500/20 text-rose-700"
+                                : post.isHidden
                                 ? "bg-amber-500/20 text-amber-700"
                                 : "bg-emerald-500/20 text-emerald-700"
                             }`}
                           >
-                            {post.isHidden ? "Tersembunyi" : "Aktif di Beranda"}
+                            {isPending
+                              ? "Menunggu Persetujuan"
+                              : isRejected
+                              ? "Ditolak Admin"
+                              : post.isHidden
+                              ? "Tersembunyi"
+                              : "Aktif di Beranda"}
                           </span>
                         </div>
 
@@ -1409,39 +1571,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {post.text || "Tanpa teks"}
                         </p>
 
-                        <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-                            <span>👁️ {post.views || 0}</span>
-                            <span>❤️ {post.like || 0}</span>
+                        <div className="pt-2 border-t border-neutral-200/80 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 text-[11px] text-neutral-500">
+                            <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-neutral-400" /> {post.views || 0}</span>
+                            <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-500" /> {post.like || 0}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {(isPending || isRejected) && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setPostsList((prev) =>
+                                    prev.map((p) =>
+                                      p.id === post.id
+                                        ? { ...p, approvalStatus: "approved", isHidden: false }
+                                        : p
+                                    )
+                                  );
+                                  await approvePostInFirestore(post.id, "approved");
+                                  await addBulletinToFirestore({
+                                    id: `b-approved-${post.id}-${Date.now()}`,
+                                    category: "KABAR WARGA",
+                                    text: `@${post.user || post.name || "warga"}: ${(post.text || "Kabar Warga").slice(0, 95)}`,
+                                    location: post.location || "Kawasan Sekitar",
+                                    time: "Baru saja",
+                                  });
+                                  showToast(`Kabar @${post.user || post.name || "warga"} diloloskan & langsung tayang!`);
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 shadow-xs"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Loloskan</span>
+                              </button>
+                            )}
+
+                            {isPending && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setPostsList((prev) =>
+                                    prev.map((p) =>
+                                      p.id === post.id
+                                        ? { ...p, approvalStatus: "rejected", isHidden: true }
+                                        : p
+                                    )
+                                  );
+                                  await approvePostInFirestore(post.id, "rejected");
+                                  showToast(`Kabar @${post.user || post.name || "warga"} ditolak dan tidak ditayangkan.`);
+                                }}
+                                className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>Tolak</span>
+                              </button>
+                            )}
+
                             {/* Tombol Sembunyikan / Pulihkan */}
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const nextHidden = !post.isHidden;
-                                setPostsList((prev) =>
-                                  prev.map((p) => (p.id === post.id ? { ...p, isHidden: nextHidden } : p))
-                                );
-                                await toggleHidePostInFirestore(post.id, nextHidden);
-                                await logAdminActivity(
-                                  "EDIT_DATA",
-                                  nextHidden
-                                    ? `Admin menyembunyikan postingan #${post.id} milik @${post.user || post.name}`
-                                    : `Admin memulihkan postingan #${post.id} ke beranda warga`,
-                                  currentUser?.email || PRIMARY_ADMIN_EMAIL
-                                );
-                                showToast(
-                                  nextHidden
-                                    ? "Postingan disembunyikan dari beranda warga."
-                                    : "Postingan dipulihkan ke beranda warga."
-                                );
-                              }}
-                              className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg transition cursor-pointer"
-                            >
-                              {post.isHidden ? "Pulihkan" : "Sembunyikan"}
-                            </button>
+                            {!isPending && !isRejected && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const nextHidden = !post.isHidden;
+                                  setPostsList((prev) =>
+                                    prev.map((p) => (p.id === post.id ? { ...p, isHidden: nextHidden } : p))
+                                  );
+                                  await toggleHidePostInFirestore(post.id, nextHidden);
+                                  await logAdminActivity(
+                                    "EDIT_DATA",
+                                    nextHidden
+                                      ? `Admin menyembunyikan postingan #${post.id} milik @${post.user || post.name}`
+                                      : `Admin memulihkan postingan #${post.id} ke beranda warga`,
+                                    currentUser?.email || PRIMARY_ADMIN_EMAIL
+                                  );
+                                  showToast(
+                                    nextHidden
+                                      ? "Postingan disembunyikan dari beranda warga."
+                                      : "Postingan dipulihkan ke beranda warga."
+                                  );
+                                }}
+                                className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg transition cursor-pointer"
+                              >
+                                {post.isHidden ? "Pulihkan" : "Sembunyikan"}
+                              </button>
+                            )}
 
                             {/* Tombol Edit */}
                             <button
@@ -1479,7 +1692,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
 
@@ -1596,8 +1810,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 space-y-3"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-rose-600 uppercase tracking-wide">
-                              ⚠️ {report.reason}
+                            <span className="text-xs font-black text-rose-600 uppercase tracking-wide flex items-center gap-1">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                              <span>{report.reason}</span>
                             </span>
                             <span className="text-[10px] text-slate-500">{report.timeString}</span>
                           </div>
@@ -1729,7 +1944,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Tombol Templat Cepat 1-Klik Isi Form */}
                 <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl space-y-2">
                   <p className="text-[11px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
-                    <span>⚡ Templat Cepat Teks Iklan (Klik untuk Otomatis Mengisi Form):</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Templat Cepat Teks Iklan (Klik untuk Otomatis Mengisi Form):</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -1871,7 +2087,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                           {item.location && (
                             <span className="text-[10px] text-neutral-400 font-medium flex items-center gap-0.5">
-                              📍 {item.location}
+                              <MapPin className="w-3 h-3 text-amber-500 shrink-0" /> {item.location}
                             </span>
                           )}
                         </div>
@@ -2465,7 +2681,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-emerald-600"
                         />
                         <p className="text-[10px] text-neutral-400 mt-1">
-                          Jika diisi, akan tampil pin lokasi 📍 di kartu iklan beranda dan pop-up.
+                          Jika diisi, akan tampil pin lokasi di kartu iklan beranda dan pop-up.
                         </p>
                       </div>
 
@@ -2800,6 +3016,119 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "settings" && (
             <div className="space-y-6 animate-fade-in">
+              {/* KARTU PENGATURAN PERSETUJUAN ADMIN (LOLOSKAN KABAR WARGA ON/OFF) */}
+              <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-xs ${
+                        appConfig.requirePostApproval
+                          ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
+                          : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                      }`}
+                    >
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-black text-base text-neutral-900">
+                          Persetujuan Admin Sebelum Kabar Warga Tayang
+                        </h3>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                            appConfig.requirePostApproval
+                              ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                              : "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                          }`}
+                        >
+                          {appConfig.requirePostApproval ? "AKTIF (ON)" : "NONAKTIF (OFF)"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        Atur apakah kabar yang dikirim warga harus diperiksa dan diloloskan oleh admin dulu atau langsung tayang otomatis.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    id="toggle-require-post-approval-btn"
+                    type="button"
+                    disabled={isTogglingApprovalSetting}
+                    onClick={handleToggleRequirePostApproval}
+                    className={`flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs font-black transition cursor-pointer shrink-0 border shadow-sm active:scale-95 ${
+                      appConfig.requirePostApproval
+                        ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600"
+                        : "bg-neutral-900 hover:bg-neutral-800 text-white border-neutral-900"
+                    }`}
+                  >
+                    {appConfig.requirePostApproval ? (
+                      <>
+                        <ToggleRight className="w-5 h-5" />
+                        <span>Status: AKTIF (Klik untuk Matikan)</span>
+                      </>
+                    ) : (
+                      <>
+                        <ToggleLeft className="w-5 h-5" />
+                        <span>Status: NONAKTIF (Klik untuk Aktifkan)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div
+                    className={`p-3.5 rounded-2xl border ${
+                      appConfig.requirePostApproval
+                        ? "bg-amber-50/80 border-amber-300 text-neutral-800"
+                        : "bg-neutral-50 border-neutral-200 text-neutral-600"
+                    }`}
+                  >
+                    <p className="font-extrabold text-neutral-900 flex items-center gap-1.5 mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                      <span>Jika Mode AKTIF (ON)</span>
+                    </p>
+                    <p className="leading-relaxed">
+                      Kabar foto, video, maupun teks dari warga akan ditahan di antrean <b>Menunggu Persetujuan</b>. Kabar baru muncul di beranda umum dan teks berjalan setelah Admin menekan tombol <b>Loloskan</b> di menu <b>3. Postingan</b>. Postingan dari akun Admin tetap langsung tayang.
+                    </p>
+                  </div>
+
+                  <div
+                    className={`p-3.5 rounded-2xl border ${
+                      !appConfig.requirePostApproval
+                        ? "bg-emerald-50/80 border-emerald-300 text-neutral-800"
+                        : "bg-neutral-50 border-neutral-200 text-neutral-600"
+                    }`}
+                  >
+                    <p className="font-extrabold text-neutral-900 flex items-center gap-1.5 mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Jika Mode NONAKTIF (OFF)</span>
+                    </p>
+                    <p className="leading-relaxed">
+                      Kabar dari warga langsung tayang seketika di beranda dan papan teks berjalan begitu proses unggah selesai, tanpa perlu menunggu persetujuan manual admin.
+                    </p>
+                  </div>
+                </div>
+
+                {pendingPostsCount > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 text-xs font-bold text-amber-900">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Saat ini ada {pendingPostsCount} kabar warga menunggu persetujuan Anda.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPostMediaFilter("pending");
+                        setActiveMenu("posts");
+                      }}
+                      className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
+                    >
+                      Buka Antrean ({pendingPostsCount}) &rarr;
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* KARTU PENGATURAN PILIHAN JUMLAH PA'BERE (HADIAH) & AMBANG BATAS SUKA */}
               <div className="bg-white border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
@@ -2969,7 +3298,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 prev.map((item, i) => (i === idx ? { ...item, desc: d } : item))
                               );
                             }}
-                            placeholder="Contoh: Traktir Kopi ☕"
+                            placeholder="Contoh: Traktir Kopi"
                             className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none"
                           />
                         </div>
@@ -2987,7 +3316,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {
                             value: nextVal,
                             label: `Rp ${nextVal.toLocaleString("id-ID")}`,
-                            desc: "Apresiasi Spesial 🎉",
+                            desc: "Apresiasi Spesial",
                           },
                         ]);
                       }}

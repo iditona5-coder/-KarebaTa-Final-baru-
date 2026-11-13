@@ -115,7 +115,7 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
       authorUid: feedItem.authorUid || postItem.authorUid || '',
       email: feedItem.email || postItem.email || '',
       time: feedItem.time || postItem.createdAt || 'Baru saja',
-      text: feedItem.text || postItem.title || postItem.caption || 'Momen spesial hari ini 📸',
+      text: feedItem.text || postItem.title || postItem.caption || 'Momen spesial hari ini',
       img: feedItem.img || postItem.img || '',
       thumbnail: feedItem.thumbnail || postItem.thumbnail || '',
       fileId: feedItem.fileId || postItem.fileId || '',
@@ -132,6 +132,7 @@ export async function savePostToFirestore(feedItem: FeedItem, postItem: PostItem
       title: postItem.title || feedItem.text || '',
       isMyPost: false,
       isHidden: false,
+      approvalStatus: feedItem.approvalStatus || postItem.approvalStatus || 'approved',
       createdAtServer: serverTimestamp(),
       createdAtTimestamp: feedItem.createdAtTimestamp || Date.now(),
       danaNumber: feedItem.danaNumber || postItem.danaNumber || '',
@@ -196,6 +197,7 @@ export const parsePostDoc = (docSnap: any): FeedItem => {
     qrisUrl: data.qrisUrl || '',
     isAdminPost: Boolean(data.isAdminPost || (data.email && isUserAdmin(data.email))),
     isEdited: Boolean(data.isEdited),
+    approvalStatus: (data.approvalStatus as "approved" | "pending" | "rejected") || 'approved',
   } as any;
 };
 
@@ -1681,6 +1683,7 @@ export function listenToAdminAppConfig(
             giftNominals: Array.isArray(data.giftNominals) && data.giftNominals.length > 0 ? data.giftNominals : DEFAULT_ADMIN_APP_CONFIG.giftNominals,
             giftMinLikes: typeof data.giftMinLikes === "number" ? data.giftMinLikes : DEFAULT_ADMIN_APP_CONFIG.giftMinLikes,
             adminEmails: Array.isArray(data.adminEmails) ? data.adminEmails : DEFAULT_ADMIN_APP_CONFIG.adminEmails,
+            requirePostApproval: Boolean(data.requirePostApproval),
           };
           try {
             localStorage.setItem("karebata_admin_app_config", JSON.stringify(merged));
@@ -2010,6 +2013,37 @@ export async function toggleHidePostInFirestore(
     return true;
   } catch (err) {
     console.warn("[Firebase] Gagal toggle hide post:", err);
+    return false;
+  }
+}
+
+/**
+ * Loloskan / Tolak Postingan Warga yang Menunggu Persetujuan Admin
+ */
+export async function approvePostInFirestore(
+  postId: string,
+  approvalStatus: "approved" | "rejected" | "pending"
+): Promise<boolean> {
+  if (!db) return true;
+  try {
+    const postDoc = doc(db, "posts", postId);
+    await updateDoc(postDoc, {
+      approvalStatus,
+      isHidden: approvalStatus === "rejected",
+      updatedAtServer: serverTimestamp(),
+    });
+    await logAdminActivity(
+      "EDIT_DATA",
+      approvalStatus === "approved"
+        ? `Admin meloloskan & menerbitkan postingan #${postId} ke beranda warga`
+        : approvalStatus === "rejected"
+        ? `Admin menolak postingan #${postId}`
+        : `Admin mengembalikan postingan #${postId} ke antrean persetujuan`,
+      PRIMARY_ADMIN_EMAIL
+    );
+    return true;
+  } catch (err) {
+    console.warn("[Firebase] Gagal memperbarui status persetujuan post:", err);
     return false;
   }
 }

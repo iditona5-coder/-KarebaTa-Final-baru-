@@ -87,7 +87,7 @@ export const PWAInstallBanner: React.FC = () => {
                 <h3 className="text-base font-extrabold text-neutral-900">
                   Pasang Aplikasi Kareba'Ta
                 </h3>
-                <p className="text-xs text-neutral-500">Ikon resmi Kareba'Ta (Pin Emas + Loading Bar)</p>
+                <p className="text-xs text-neutral-500">Ikon bersih resmi Kareba'Ta tanpa lencana browser</p>
               </div>
             </div>
             <ol className="text-xs text-neutral-700 space-y-2.5 my-4 bg-neutral-50 p-3.5 rounded-xl border border-neutral-200">
@@ -101,11 +101,11 @@ export const PWAInstallBanner: React.FC = () => {
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-bold text-[#00632B]">3.</span>
-                <span>Pastikan memilih <strong>Kareba'Ta</strong> (jangan memilih aplikasi lain).</span>
+                <span>Pilih <strong>"Instal"</strong> (bukan <em>Buat pintasan</em>) agar ikon bersih tanpa lambang Chrome kecil di sudut kanan.</span>
               </li>
             </ol>
             <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 mb-4 text-[11px] text-amber-900 leading-relaxed">
-              💡 <em>Setelah terpasang di HP, buka langsung dari ikon Kareba'Ta di beranda HP ta'. Tampilan pembuka sudah dilengkapi loading bar resmi!</em>
+              <em>Jika sebelumnya terpasang pintasan lama, hapus pintasan lama sekali saja lalu pasang ulang agar ikon bersih tanpa batang loading muncul.</em>
             </div>
             <button
               type="button"

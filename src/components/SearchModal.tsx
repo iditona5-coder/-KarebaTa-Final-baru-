@@ -10,7 +10,6 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Heart,
-  Eye,
   Video,
   ArrowLeft,
   Trash2,
@@ -112,12 +111,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const allAvailablePosts = useMemo(() => {
     const map = new Map<string, FeedItem>();
     feed.forEach((item) => {
-      if (!item.isHidden) {
+      if (!item.isHidden && item.approvalStatus !== "pending" && item.approvalStatus !== "rejected") {
         map.set(item.id, item);
       }
     });
     posts.forEach((item) => {
-      if (!map.has(item.id)) {
+      if (!map.has(item.id) && item.approvalStatus !== "pending" && item.approvalStatus !== "rejected") {
         map.set(item.id, {
           id: item.id,
           user: item.user || "Warga",
