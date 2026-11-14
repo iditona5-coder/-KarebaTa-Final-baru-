@@ -242,7 +242,7 @@ export default function KarebaFeedFinal() {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
 
-  // State untuk Papan Unggah Teks Kabar Warga (maks. 500 huruf)
+  // State untuk Papan Unggah Teks Kabar Warga (maks. 1000 huruf)
   const [isTextPostModalOpen, setIsTextPostModalOpen] = useState(false);
   const [textPostContent, setTextPostContent] = useState("");
   const [textPostLocation, setTextPostLocation] = useState("");
@@ -2192,7 +2192,7 @@ export default function KarebaFeedFinal() {
     const initialMediaUrl = selectedImage;
     const initialThumbnailUrl = selectedThumbnail || (selectedMediaType === "image" ? selectedImage : undefined);
     const currentMediaType = selectedMediaType;
-    const finalDesc = description.trim().slice(0, 500);
+    const finalDesc = description.trim().slice(0, 1000);
     const finalLoc = selectedLocation.trim().slice(0, 30);
     const postTitle = finalDesc.split("\n")[0].slice(0, 24) || "Momen Spesial";
     const feedId = `kareba-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -2393,7 +2393,7 @@ export default function KarebaFeedFinal() {
     })();
   };
 
-  // Handler Publikasi Papan Teks Kabar Warga (maks. 500 huruf)
+  // Handler Publikasi Papan Teks Kabar Warga (maks. 1000 huruf)
   const handleCreateTextPost = async () => {
     if (currentBanStatus.isBanned) {
       showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
@@ -2405,7 +2405,7 @@ export default function KarebaFeedFinal() {
       return;
     }
 
-    const trimmedText = textPostContent.trim().slice(0, 500);
+    const trimmedText = textPostContent.trim().slice(0, 1000);
     const trimmedLoc = textPostLocation.trim().slice(0, 30);
     if (!trimmedText) {
       showToast("Tulis kabar Anda terlebih dahulu!");
@@ -3784,7 +3784,7 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
 
-              {/* KETIK DESKRIPSI KABAR (BATAS 500 HURUF) */}
+              {/* KETIK DESKRIPSI KABAR (BATAS 1000 HURUF) */}
               <div className={`rounded-xl p-3 border transition space-y-1.5 ${
                 moderationWarning
                   ? "border-red-400 bg-red-50/40"
@@ -3795,16 +3795,16 @@ export default function KarebaFeedFinal() {
                     <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Deskripsi Kabar:
                   </label>
                   <span className={`text-[11px] font-semibold ${description.trim().length >= 99 ? "text-emerald-700" : "text-amber-700"}`}>
-                    {description.trim().length} huruf {description.trim().length < 99 ? `(kurang ${99 - description.trim().length})` : "✓ Lolos (≥99 huruf)"}
+                    {description.trim().length}/1000 {description.trim().length < 99 ? `(kurang ${99 - description.trim().length})` : "✓ Lolos (≥99 huruf)"}
                   </span>
                 </div>
                 <textarea
                   id="post-description-input"
                   value={description}
-                  maxLength={500}
+                  maxLength={1000}
                   rows={3}
-                  onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-                  placeholder="Ketik deskripsi kabar minimal 99 huruf agar dapat dibagikan..."
+                  onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
+                  placeholder="Ketik deskripsi kabar minimal 99 huruf (maks. 1000 huruf) agar dapat dibagikan..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none"
                   autoFocus
                 />
@@ -5337,7 +5337,7 @@ export default function KarebaFeedFinal() {
                   </div>
                 </button>
 
-                {/* 3. Tulis Teks Kabar Saja (Batas 500 Huruf) */}
+                {/* 3. Tulis Teks Kabar Saja (Batas 1000 Huruf) */}
                 <button
                   id="choice-text-btn"
                   type="button"
@@ -5368,7 +5368,7 @@ export default function KarebaFeedFinal() {
           </div>
         )}
 
-        {/* MODAL / PAPAN UNGGAH TEKS KABAR WARGA (BATAS 500 HURUF) */}
+        {/* MODAL / PAPAN UNGGAH TEKS KABAR WARGA (BATAS 1000 HURUF) */}
         {isTextPostModalOpen && (
           <div
             id="text-post-modal"
@@ -5417,7 +5417,7 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
 
-              {/* Kotak Textarea Papan Teks (Batas 500 Huruf) */}
+              {/* Kotak Textarea Papan Teks (Batas 1000 Huruf) */}
               <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white transition space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <label htmlFor="text-post-textarea" className="font-bold text-neutral-700 flex items-center gap-1.5">
@@ -5428,16 +5428,16 @@ export default function KarebaFeedFinal() {
                       ? "text-emerald-600 font-bold"
                       : "text-amber-600 font-semibold"
                   }`}>
-                    {textPostContent.trim().length}/500 {textPostContent.trim().length >= 99 ? "✓ (Minimal 99 tercapai)" : `(Kurang ${99 - textPostContent.trim().length} huruf)`}
+                    {textPostContent.trim().length}/1000 {textPostContent.trim().length >= 99 ? "✓ (Minimal 99 tercapai)" : `(Kurang ${99 - textPostContent.trim().length} huruf)`}
                   </span>
                 </div>
                 <textarea
                   id="text-post-textarea"
                   value={textPostContent}
-                  maxLength={500}
+                  maxLength={1000}
                   rows={5}
-                  onChange={(e) => setTextPostContent(e.target.value.slice(0, 500))}
-                  placeholder="Ketik kabar atau informasi warga sekitar hari ini..."
+                  onChange={(e) => setTextPostContent(e.target.value.slice(0, 1000))}
+                  placeholder="Ketik kabar atau informasi warga sekitar hari ini (maks. 1000 huruf)..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none leading-relaxed"
                   autoFocus
                 />
