@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "rea
 import {
   Heart,
   MessageCircle,
+  MessageSquare,
   Share2,
   Send,
   MapPin,
@@ -34,6 +35,8 @@ import {
   Clock,
   Plus,
   Edit3,
+  Gift,
+  Mail,
 } from "lucide-react";
 import { PostDetailModal } from "./components/PostDetailModal";
 import { RewardGiftModal } from "./components/RewardGiftModal";
@@ -242,7 +245,7 @@ export default function KarebaFeedFinal() {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
 
-  // State untuk Papan Unggah Teks Kabar Warga (maks. 1000 huruf)
+  // State untuk Papan Unggah Teks Kabar Warga (maks. 3000 huruf)
   const [isTextPostModalOpen, setIsTextPostModalOpen] = useState(false);
   const [textPostContent, setTextPostContent] = useState("");
   const [textPostLocation, setTextPostLocation] = useState("");
@@ -1093,6 +1096,10 @@ export default function KarebaFeedFinal() {
   const [activeCommentItem, setActiveCommentItem] = useState<FeedItem | null>(null);
   const [commentInputText, setCommentInputText] = useState("");
   const [activeSharePostId, setActiveSharePostId] = useState<string | null>(null);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
+  const seenRealtimeNotifIdsRef = useRef<Set<string>>(new Set());
+  const isNotifToastReadyRef = useRef(false);
 
   const handleProfileAvatarClick = () => {
     setNewUserNameInput(userName);
@@ -1477,6 +1484,142 @@ export default function KarebaFeedFinal() {
     return activePosts;
   }, [feed, hiddenPostIds]);
 
+  // Muat daftar ID komentar masuk yang sudah dibaca per akun
+  useEffect(() => {
+    seenRealtimeNotifIdsRef.current = new Set();
+    isNotifToastReadyRef.current = false;
+    if (!currentUser?.uid) {
+      setReadNotifIds([]);
+      return;
+    }
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(`karebata_read_comment_notifs_${currentUser.uid}`) || "[]"
+      );
+      setReadNotifIds(Array.isArray(saved) ? saved : []);
+    } catch {
+      setReadNotifIds([]);
+    }
+    const timer = window.setTimeout(() => {
+      isNotifToastReadyRef.current = true;
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [currentUser?.uid]);
+
+  // Daftar notifikasi komentar & balasan @nama masuk secara real-time
+  const incomingCommentNotifications = useMemo(() => {
+    if (!currentUser) return [];
+    const myNameLower = (userName || "").trim().toLowerCase();
+    const list: Array<{
+      id: string;
+      postId: string;
+      feedItem: FeedItem;
+      commentId: string;
+      commentUser: string;
+      commentText: string;
+      commentTime: string;
+      postPreview: string;
+      postImg?: string;
+      postThumbnail?: string;
+      postMediaType?: "image" | "video";
+      type: "post_comment" | "mention_reply";
+      timestampNum: number;
+    }> = [];
+
+    for (const f of feed) {
+      if (f.approvalStatus === "rejected" || f.isHidden) continue;
+      const owned = isMyPost(f);
+      const comments = f.comments || [];
+      for (const c of comments) {
+        const cUserLower = (c.user || "").trim().toLowerCase();
+        if (myNameLower && cUserLower === myNameLower) continue;
+        const isMention =
+          Boolean(myNameLower) &&
+          myNameLower !== "warga" &&
+          myNameLower !== "warga_kareba" &&
+          (c.text || "").toLowerCase().includes(`@${myNameLower}`);
+
+        if (owned || isMention) {
+          const tsNum = Number(String(c.id || "").replace(/^c-/, "")) || 0;
+          list.push({
+            id: `${f.id}::${c.id}`,
+            postId: f.id,
+            feedItem: f,
+            commentId: c.id,
+            commentUser: c.user || "warga",
+            commentText: c.text || "",
+            commentTime: c.time || "Baru saja",
+            postPreview: f.text || "Kabar Warga",
+            postImg: f.img,
+            postThumbnail: f.thumbnail,
+            postMediaType: f.mediaType,
+            type: owned ? "post_comment" : "mention_reply",
+            timestampNum: tsNum,
+          });
+        }
+      }
+    }
+
+    list.sort((a, b) => b.timestampNum - a.timestampNum);
+    return list.slice(0, 50);
+  }, [feed, currentUser, userName]);
+
+  const readNotifIdSet = useMemo(() => new Set(readNotifIds), [readNotifIds]);
+
+  const unreadCommentNotifCount = useMemo(
+    () => incomingCommentNotifications.filter((n) => !readNotifIdSet.has(n.id)).length,
+    [incomingCommentNotifications, readNotifIdSet]
+  );
+
+  const markNotifsAsRead = useCallback(
+    (ids: string[]) => {
+      if (!currentUser?.uid || ids.length === 0) return;
+      setReadNotifIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...ids])).slice(-300);
+        try {
+          localStorage.setItem(
+            `karebata_read_comment_notifs_${currentUser.uid}`,
+            JSON.stringify(merged)
+          );
+        } catch {}
+        return merged;
+      });
+    },
+    [currentUser?.uid]
+  );
+
+  // Otomatis tandai dibaca ketika pengguna membuka halaman komentar postingan terkait
+  useEffect(() => {
+    if (!activeCommentItem || !currentUser?.uid) return;
+    const idsForPost = incomingCommentNotifications
+      .filter((n) => n.postId === activeCommentItem.id && !readNotifIdSet.has(n.id))
+      .map((n) => n.id);
+    if (idsForPost.length > 0) {
+      markNotifsAsRead(idsForPost);
+    }
+  }, [activeCommentItem?.id, currentUser?.uid, incomingCommentNotifications, readNotifIdSet, markNotifsAsRead]);
+
+  // Tampilkan pesan kilat singkat jika ada komentar baru masuk saat aplikasi sedang dibuka
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!isNotifToastReadyRef.current) {
+      incomingCommentNotifications.forEach((n) => seenRealtimeNotifIdsRef.current.add(n.id));
+      return;
+    }
+    const newlyArrived = incomingCommentNotifications.filter(
+      (n) => !seenRealtimeNotifIdsRef.current.has(n.id) && !readNotifIdSet.has(n.id)
+    );
+    incomingCommentNotifications.forEach((n) => seenRealtimeNotifIdsRef.current.add(n.id));
+    if (newlyArrived.length > 0) {
+      const latest = newlyArrived[0];
+      const snippet =
+        latest.commentText.length > 42
+          ? `${latest.commentText.slice(0, 42)}...`
+          : latest.commentText;
+      showToast(`Pesan baru dari @${latest.commentUser}: "${snippet}"`);
+    }
+  }, [incomingCommentNotifications, currentUser, readNotifIdSet]);
+
   // Helper untuk menggulirkan layar langsung tertuju ke media postingan di feed
   const scrollToFeedMedia = (postId: string) => {
     // Cari elemen media langsung dari postingan di feed
@@ -1676,7 +1819,8 @@ export default function KarebaFeedFinal() {
       isLoginModalOpen ||
       videoDurationAlert?.isOpen ||
       Boolean(activeGiftPost) ||
-      isWalletSettingsOpen
+      isWalletSettingsOpen ||
+      isInboxOpen
     );
 
     if (isAnyModalOpen) {
@@ -1705,6 +1849,7 @@ export default function KarebaFeedFinal() {
     videoDurationAlert,
     activeGiftPost,
     isWalletSettingsOpen,
+    isInboxOpen,
   ]);
 
   // Efek penandaan postingan ketika kata pencarian cocok
@@ -2192,7 +2337,7 @@ export default function KarebaFeedFinal() {
     const initialMediaUrl = selectedImage;
     const initialThumbnailUrl = selectedThumbnail || (selectedMediaType === "image" ? selectedImage : undefined);
     const currentMediaType = selectedMediaType;
-    const finalDesc = description.trim().slice(0, 1000);
+    const finalDesc = description.trim().slice(0, 3000);
     const finalLoc = selectedLocation.trim().slice(0, 30);
     const postTitle = finalDesc.split("\n")[0].slice(0, 24) || "Momen Spesial";
     const feedId = `kareba-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -2393,7 +2538,7 @@ export default function KarebaFeedFinal() {
     })();
   };
 
-  // Handler Publikasi Papan Teks Kabar Warga (maks. 1000 huruf)
+  // Handler Publikasi Papan Teks Kabar Warga (maks. 3000 huruf)
   const handleCreateTextPost = async () => {
     if (currentBanStatus.isBanned) {
       showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
@@ -2405,7 +2550,7 @@ export default function KarebaFeedFinal() {
       return;
     }
 
-    const trimmedText = textPostContent.trim().slice(0, 1000);
+    const trimmedText = textPostContent.trim().slice(0, 3000);
     const trimmedLoc = textPostLocation.trim().slice(0, 30);
     if (!trimmedText) {
       showToast("Tulis kabar Anda terlebih dahulu!");
@@ -2728,7 +2873,7 @@ export default function KarebaFeedFinal() {
 
   const handleSavePostEdit = async () => {
     if (!editingPost) return;
-    const trimmed = editingPostText.trim();
+    const trimmed = editingPostText.trim().slice(0, 3000);
     if (!trimmed) {
       showToast("Teks kabar tidak boleh kosong");
       return;
@@ -3030,7 +3175,7 @@ export default function KarebaFeedFinal() {
                 >
                   <KarebaTaLogo compact={true} />
                 </button>
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
                   <button
                     id="header-search-trigger"
                     type="button"
@@ -3041,6 +3186,21 @@ export default function KarebaFeedFinal() {
                     aria-label="Cari"
                   >
                     <Search className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
+                  </button>
+
+                  <button
+                    id="header-inbox-trigger"
+                    type="button"
+                    onClick={() => setIsInboxOpen(true)}
+                    className="relative w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    aria-label="Komentar Masuk"
+                  >
+                    <Mail className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
+                    {unreadCommentNotifCount > 0 && (
+                      <span className="absolute top-0.5 right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white leading-none shadow-2xs">
+                        {unreadCommentNotifCount > 9 ? "9+" : unreadCommentNotifCount}
+                      </span>
+                    )}
                   </button>
                 </div>
               </>
@@ -3784,7 +3944,7 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
 
-              {/* KETIK DESKRIPSI KABAR (BATAS 1000 HURUF) */}
+              {/* KETIK DESKRIPSI KABAR (BATAS 3000 HURUF) */}
               <div className={`rounded-xl p-3 border transition space-y-1.5 ${
                 moderationWarning
                   ? "border-red-400 bg-red-50/40"
@@ -3795,16 +3955,16 @@ export default function KarebaFeedFinal() {
                     <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Deskripsi Kabar:
                   </label>
                   <span className={`text-[11px] font-semibold ${description.trim().length >= 99 ? "text-emerald-700" : "text-amber-700"}`}>
-                    {description.trim().length}/1000 {description.trim().length < 99 ? `(kurang ${99 - description.trim().length})` : "✓ Lolos (≥99 huruf)"}
+                    {description.trim().length}/3000 {description.trim().length < 99 ? `(kurang ${99 - description.trim().length})` : "✓ Lolos (≥99 huruf)"}
                   </span>
                 </div>
                 <textarea
                   id="post-description-input"
                   value={description}
-                  maxLength={1000}
+                  maxLength={3000}
                   rows={3}
-                  onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
-                  placeholder="Ketik deskripsi kabar minimal 99 huruf (maks. 1000 huruf) agar dapat dibagikan..."
+                  onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
+                  placeholder="Ketik deskripsi kabar minimal 99 huruf (maks. 3000 huruf) agar dapat dibagikan..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none"
                   autoFocus
                 />
@@ -4212,6 +4372,8 @@ export default function KarebaFeedFinal() {
                         avatar: f.avatar,
                         description: f.text,
                       }}
+                      showGiftButton={(f.like || 0) >= giftMinLikes}
+                      onOpenGift={() => setActiveGiftPost(f)}
                     />
                   </div>
                 ) : (
@@ -4241,6 +4403,23 @@ export default function KarebaFeedFinal() {
                             <span className="text-sm font-bold text-[#00632B] hover:text-[#004f22] mt-2 inline-block">
                               {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
                             </span>
+                          )}
+                          {(f.like || 0) >= giftMinLikes && (
+                            <div className="mt-3 flex items-center justify-start">
+                              <button
+                                id={`gift-btn-${f.id}`}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveGiftPost(f);
+                                }}
+                                className="px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white transition cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+                                aria-label="Pa'bere"
+                              >
+                                <Gift className="w-3.5 h-3.5 text-white shrink-0" />
+                                <span>Pa'bere</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       );
@@ -4281,39 +4460,79 @@ export default function KarebaFeedFinal() {
                   </div>
                 )}
 
-                {/* Baris Ringkasan Reaksi (Emoji & Total) - Dapat Diketuk untuk Melihat Rincian Angka per Emoji */}
-                {f.like > 0 && (
-                  <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500">
-                    <ReactionBadge
-                      postId={f.id}
-                      totalLikes={f.like}
-                      reactions={f.reactions}
-                    />
+                {/* Baris Ringkasan Reaksi (Kiri) & Jumlah Komentar (Kanan) */}
+                {(f.like > 0 || (f.comments?.length || 0) > 0) && (
+                  <div className="px-4 pb-1.5 flex items-center justify-between gap-2 text-xs text-neutral-500">
+                    <div className="min-w-0">
+                      {f.like > 0 && (
+                        <ReactionBadge
+                          postId={f.id}
+                          totalLikes={f.like}
+                          reactions={f.reactions}
+                        />
+                      )}
+                    </div>
+                    {(f.comments?.length || 0) > 0 && (
+                      <button
+                        id={`comment-count-${f.id}`}
+                        type="button"
+                        onClick={() => setActiveCommentItem(f)}
+                        className="text-xs font-medium text-neutral-500 hover:text-[#00632B] hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                      >
+                        {f.comments!.length.toLocaleString("id-ID")} Komentar
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {/* Post Actions: Suka / Reaksi, Komentar, Bagikan, Laporkan/Hapus, Dilihat (Ukuran Ramping & Profesional) */}
-                <div className="px-4 flex items-center gap-4 sm:gap-6 text-[clamp(12.5px,3.4vw,14px)] font-bold text-neutral-700">
-                  <ReactionButton
-                    postId={f.id}
-                    userReaction={userReactions[f.id] || f.userReaction}
-                    isLiked={f.isLiked || likedPostIds.includes(f.id)}
-                    onReact={handlePostReaction}
-                    variant="feed"
-                  />
+                {/* Post Actions: Suka / Reaksi, Komentar, Bagikan (Kiri) & Jumlah Share (Kanan Sejajar Icon Share) */}
+                <div className="px-4 flex items-center justify-between gap-2 text-[clamp(12.5px,3.4vw,14px)] font-bold text-neutral-700">
+                  <div className="flex items-center gap-3.5 sm:gap-6 min-w-0">
+                    <ReactionButton
+                      postId={f.id}
+                      userReaction={userReactions[f.id] || f.userReaction}
+                      isLiked={f.isLiked || likedPostIds.includes(f.id)}
+                      onReact={handlePostReaction}
+                      variant="feed"
+                    />
 
-                  <button
-                    id={`share-btn-${f.id}`}
-                    type="button"
-                    onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
-                    className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition ${
-                      activeSharePostId === f.id ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
-                    }`}
-                    aria-label="Bagikan"
-                  >
-                    <Share2 className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
-                    <span className="whitespace-nowrap font-bold">Bagikan</span>
-                  </button>
+                    <button
+                      id={`comment-btn-${f.id}`}
+                      type="button"
+                      onClick={() => setActiveCommentItem(f)}
+                      className="flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition hover:text-[#00632B] text-neutral-600"
+                      aria-label="Komentar"
+                    >
+                      <MessageSquare className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
+                      <span className="whitespace-nowrap font-bold">Komentar</span>
+                    </button>
+
+                    <button
+                      id={`share-btn-${f.id}`}
+                      type="button"
+                      onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
+                      className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition ${
+                        activeSharePostId === f.id ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
+                      }`}
+                      aria-label="Bagikan"
+                    >
+                      <Share2 className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
+                      <span className="whitespace-nowrap font-bold">Bagikan</span>
+                    </button>
+                  </div>
+
+                  {(f.shares || 0) > 0 && (
+                    <button
+                      id={`share-count-${f.id}`}
+                      type="button"
+                      onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
+                      className="text-xs font-medium text-neutral-500 hover:text-emerald-600 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                      aria-label={`Dibagikan ${f.shares!.toLocaleString("id-ID")} kali`}
+                      title={`Dibagikan ${f.shares!.toLocaleString("id-ID")} kali`}
+                    >
+                      {f.shares!.toLocaleString("id-ID")}
+                    </button>
+                  )}
                 </div>
 
                 {/* Bar Bagikan Interaktif (FB, WA, Salin) */}
@@ -4511,12 +4730,12 @@ export default function KarebaFeedFinal() {
                     onChange={(e) => setEditingPostText(e.target.value)}
                     placeholder="Tuliskan perbaikan teks kabar Anda..."
                     disabled={isSavingPostEdit}
-                    maxLength={1000}
+                    maxLength={3000}
                     className="w-full p-3.5 text-sm text-neutral-800 bg-neutral-50/80 rounded-2xl border border-neutral-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#00632B] focus:border-transparent transition-all placeholder:text-neutral-400 resize-none"
                     autoFocus
                   />
                   <div className="flex justify-end pr-1 text-[11px] text-neutral-400 font-medium">
-                    <span>{editingPostText.length} / 1000 karakter</span>
+                    <span>{editingPostText.length} / 3000 karakter</span>
                   </div>
                 </div>
               </div>
@@ -4955,7 +5174,7 @@ export default function KarebaFeedFinal() {
         {activeCommentItem && (
           <div
             id="comments-fullscreen-page"
-            className="fixed inset-0 z-50 bg-white flex flex-col w-full h-full overflow-hidden animate-fade-in"
+            className="fixed inset-0 z-[60] bg-white flex flex-col w-full h-full overflow-hidden animate-fade-in"
           >
             {/* Header Halaman Komentar Layar Penuh */}
             <header className="px-4 py-3 sm:py-3.5 border-b border-neutral-200 bg-white flex items-center justify-between sticky top-0 z-10 shrink-0">
@@ -5039,7 +5258,7 @@ export default function KarebaFeedFinal() {
               ) : (
                 <div className="py-20 flex flex-col items-center justify-center text-center text-neutral-400">
                   <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
-                    <MessageCircle className="w-6 h-6" />
+                    <MessageSquare className="w-6 h-6" />
                   </div>
                   <p className="text-sm font-medium text-neutral-600">Belum ada komentar</p>
                   <p className="text-xs text-neutral-400 mt-1">Jadilah yang pertama memberikan tanggapan!</p>
@@ -5103,6 +5322,172 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* KOTAK SURAT KOMENTAR & BALASAN MASUK */}
+        {isInboxOpen && (
+          <div
+            id="comment-inbox-modal"
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-2xs flex items-end sm:items-center justify-center animate-fade-in"
+            onClick={() => setIsInboxOpen(false)}
+          >
+            <div
+              className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-neutral-200 flex flex-col max-h-[85vh] overflow-hidden animate-slide-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header Kotak Surat */}
+              <div className="px-4 py-3.5 border-b border-neutral-200 flex items-center justify-between gap-2 bg-white shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-[#00632B] flex items-center justify-center shrink-0">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-bold text-base text-neutral-900 leading-tight truncate">
+                        Komentar Masuk
+                      </h2>
+                      {unreadCommentNotifCount > 0 && (
+                        <span className="px-2 py-0.5 text-[11px] font-bold bg-rose-600 text-white rounded-full shrink-0">
+                          {unreadCommentNotifCount} Baru
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-neutral-500 truncate">
+                      Tanggapan warga pada kabarmu & balasan nama
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {unreadCommentNotifCount > 0 && (
+                    <button
+                      id="mark-all-inbox-read-btn"
+                      type="button"
+                      onClick={() => markNotifsAsRead(incomingCommentNotifications.map((n) => n.id))}
+                      className="text-[11px] font-bold text-[#00632B] hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                    >
+                      Tandai dibaca
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsInboxOpen(false)}
+                    className="p-1.5 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition cursor-pointer"
+                    aria-label="Tutup"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Isi Daftar Komentar Masuk */}
+              <div className="flex-1 overflow-y-auto divide-y divide-neutral-100 bg-neutral-50/40">
+                {!currentUser ? (
+                  <div className="py-14 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
+                      <Mail className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-bold text-neutral-800">
+                      Masuk untuk melihat pesan komentar
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-1 max-w-[260px] leading-relaxed">
+                      Notifikasi komentar baru pada kabar Anda dan balasan @nama akan tampil di sini.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsInboxOpen(false);
+                        setLoginRedirectMessage("Masuk dengan Akun Google untuk melihat komentar & balasan masuk.");
+                        setIsLoginModalOpen(true);
+                      }}
+                      className="mt-4 px-4 py-2 bg-[#00632B] hover:bg-[#004f22] text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Masuk dengan Google</span>
+                    </button>
+                  </div>
+                ) : incomingCommentNotifications.length === 0 ? (
+                  <div className="py-16 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
+                      <Mail className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-semibold text-neutral-700">
+                      Belum ada komentar masuk
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-1 max-w-[260px] leading-relaxed">
+                      Jika ada warga mengomentari kabarmu atau membalas namamu, pesannya akan langsung muncul di sini.
+                    </p>
+                  </div>
+                ) : (
+                  incomingCommentNotifications.map((notif) => {
+                    const isUnread = !readNotifIdSet.has(notif.id);
+                    return (
+                      <button
+                        key={notif.id}
+                        type="button"
+                        onClick={() => {
+                          markNotifsAsRead([notif.id]);
+                          setIsInboxOpen(false);
+                          setActiveCommentItem(notif.feedItem);
+                        }}
+                        className={`w-full px-4 py-3 text-left flex items-start gap-3 transition cursor-pointer ${
+                          isUnread
+                            ? "bg-emerald-50/70 hover:bg-emerald-50"
+                            : "bg-white hover:bg-neutral-50"
+                        }`}
+                      >
+                        <div className="relative shrink-0 mt-0.5">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border-2 border-[#E5A000] text-white text-xs font-bold flex items-center justify-center select-none">
+                            {(notif.commentUser.replace(/^@/, "")[0] || "W").toUpperCase()}
+                          </div>
+                          {isUnread && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-rose-600 border-2 border-white" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs text-neutral-800 truncate">
+                              <span className="font-bold text-neutral-900">@{notif.commentUser.replace(/^@/, "")}</span>{" "}
+                              <span className="text-neutral-500">
+                                {notif.type === "post_comment" ? "mengomentari kabarmu" : "membalas kamu"}
+                              </span>
+                            </p>
+                            <span className="text-[10px] text-neutral-400 shrink-0 whitespace-nowrap">
+                              {notif.commentTime}
+                            </span>
+                          </div>
+
+                          <p className="text-xs font-medium text-neutral-800 mt-1 line-clamp-2 leading-relaxed">
+                            "{notif.commentText}"
+                          </p>
+                          <p className="text-[11px] text-neutral-400 truncate mt-1">
+                            Pada: {notif.postPreview}
+                          </p>
+                        </div>
+
+                        {notif.postImg && notif.postImg.trim() && (
+                          <div className="w-11 h-11 rounded-lg overflow-hidden bg-neutral-200 border border-neutral-200 shrink-0 self-center">
+                            {notif.postMediaType === "video" ? (
+                              notif.postThumbnail ? (
+                                <img src={notif.postThumbnail} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-white">
+                                  <Video className="w-4 h-4 text-emerald-400" />
+                                </div>
+                              )
+                            ) : (
+                              <img src={notif.postImg} alt="" className="w-full h-full object-cover" />
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -5193,6 +5578,22 @@ export default function KarebaFeedFinal() {
               const targetFeedItem = feed.find((f) => f.id === activeDetailPost.id);
               if (targetFeedItem) {
                 setActiveCommentItem(targetFeedItem);
+              } else {
+                setActiveCommentItem({
+                  id: activeDetailPost.id,
+                  user: activeDetailPost.user || "warga",
+                  name: activeDetailPost.name,
+                  init: activeDetailPost.init || "W",
+                  location: activeDetailPost.loc || "Kawasan Sekitar",
+                  time: activeDetailPost.createdAt || "Baru saja",
+                  img: activeDetailPost.img || "",
+                  thumbnail: activeDetailPost.thumbnail,
+                  mediaType: activeDetailPost.mediaType,
+                  text: activeDetailPost.caption || activeDetailPost.title || "",
+                  like: activeDetailPost.views || 0,
+                  isLiked: false,
+                  comments: [],
+                });
               }
             }}
             onReport={(id, user) => {
@@ -5337,7 +5738,7 @@ export default function KarebaFeedFinal() {
                   </div>
                 </button>
 
-                {/* 3. Tulis Teks Kabar Saja (Batas 1000 Huruf) */}
+                {/* 3. Tulis Teks Kabar Saja (Batas 3000 Huruf) */}
                 <button
                   id="choice-text-btn"
                   type="button"
@@ -5368,7 +5769,7 @@ export default function KarebaFeedFinal() {
           </div>
         )}
 
-        {/* MODAL / PAPAN UNGGAH TEKS KABAR WARGA (BATAS 1000 HURUF) */}
+        {/* MODAL / PAPAN UNGGAH TEKS KABAR WARGA (BATAS 3000 HURUF) */}
         {isTextPostModalOpen && (
           <div
             id="text-post-modal"
@@ -5417,7 +5818,7 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
 
-              {/* Kotak Textarea Papan Teks (Batas 1000 Huruf) */}
+              {/* Kotak Textarea Papan Teks (Batas 3000 Huruf) */}
               <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white transition space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <label htmlFor="text-post-textarea" className="font-bold text-neutral-700 flex items-center gap-1.5">
@@ -5428,16 +5829,16 @@ export default function KarebaFeedFinal() {
                       ? "text-emerald-600 font-bold"
                       : "text-amber-600 font-semibold"
                   }`}>
-                    {textPostContent.trim().length}/1000 {textPostContent.trim().length >= 99 ? "✓ (Minimal 99 tercapai)" : `(Kurang ${99 - textPostContent.trim().length} huruf)`}
+                    {textPostContent.trim().length}/3000 {textPostContent.trim().length >= 99 ? "✓ (Minimal 99 tercapai)" : `(Kurang ${99 - textPostContent.trim().length} huruf)`}
                   </span>
                 </div>
                 <textarea
                   id="text-post-textarea"
                   value={textPostContent}
-                  maxLength={1000}
+                  maxLength={3000}
                   rows={5}
-                  onChange={(e) => setTextPostContent(e.target.value.slice(0, 1000))}
-                  placeholder="Ketik kabar atau informasi warga sekitar hari ini (maks. 1000 huruf)..."
+                  onChange={(e) => setTextPostContent(e.target.value.slice(0, 3000))}
+                  placeholder="Ketik kabar atau informasi warga sekitar hari ini (maks. 3000 huruf)..."
                   className="bg-transparent w-full outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none leading-relaxed"
                   autoFocus
                 />

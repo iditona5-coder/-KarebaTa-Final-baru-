@@ -13,6 +13,7 @@ import {
   Clock,
   RefreshCw,
   WifiOff,
+  Gift,
 } from "lucide-react";
 import { extractVideoThumbnail } from "../utils/thumbnail";
 import { isMediaCached, markMediaCached, preloadImage } from "../utils/mediaPreloader";
@@ -38,6 +39,8 @@ interface FeedMediaProps {
   mediaType?: "image" | "video";
   className?: string;
   author?: MediaAuthorInfo;
+  showGiftButton?: boolean;
+  onOpenGift?: () => void;
 }
 
 export const FeedMedia: React.FC<FeedMediaProps> = ({
@@ -48,6 +51,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   mediaType,
   className = "",
   author,
+  showGiftButton = false,
+  onOpenGift,
 }) => {
   // Jika src kosong atau tidak valid, jangan render elemen img/video sama sekali
   if (!src || !src.trim()) {
@@ -718,6 +723,24 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
 
+          {/* Tombol Pa'bere di Bawah Sudut Kiri Media */}
+          {showGiftButton && onOpenGift && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenGift();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              className="absolute bottom-3 left-3 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition z-10 cursor-pointer shadow-md pointer-events-auto flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+              aria-label="Pa'bere"
+            >
+              <Gift className="w-3.5 h-3.5 text-white shrink-0" />
+              <span>Pa'bere</span>
+            </button>
+          )}
+
           {/* Tombol Icon Layar Penuh di Atas Kiri */}
           <button
             id="open-video-fullscreen-btn"
@@ -774,6 +797,24 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
           className="w-full h-full object-cover object-center block select-none pointer-events-none"
           style={{ width: "100%", height: "100%", WebkitTouchCallout: "none", touchAction: "pan-y" }}
         />
+
+        {/* Tombol Pa'bere di Bawah Sudut Kiri Media */}
+        {showGiftButton && onOpenGift && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenGift();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            className="absolute bottom-3 left-3 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition z-10 cursor-pointer shadow-md pointer-events-auto flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+            aria-label="Pa'bere"
+          >
+            <Gift className="w-3.5 h-3.5 text-white shrink-0" />
+            <span>Pa'bere</span>
+          </button>
+        )}
 
         {/* Tombol Icon Layar Penuh di Atas Kiri */}
         <button

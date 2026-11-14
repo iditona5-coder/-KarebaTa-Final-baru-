@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   Edit3,
   Trash2,
+  MessageSquare,
+  Gift,
 } from "lucide-react";
 import { PostItem, FeedItem, ReactionType } from "../types";
 import { FeedMedia } from "./FeedMedia";
@@ -78,6 +80,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const postViews = views ?? feedItem?.views ?? post.views ?? 0;
+  const postShares = feedItem?.shares ?? post.shares ?? 0;
 
   const isVid =
     post.mediaType === "video" ||
@@ -326,6 +329,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   avatar: post.avatar,
                   description: postText,
                 }}
+                showGiftButton={Boolean(onOpenGift) && likeCount >= minLikes}
+                onOpenGift={onOpenGift ? () => onOpenGift(feedItem || post) : undefined}
               />
             </div>
           ) : (
@@ -334,6 +339,22 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                 <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text">
                   {postText}
                 </p>
+                {onOpenGift && likeCount >= minLikes && (
+                  <div className="mt-3 flex items-center justify-start">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenGift(feedItem || post);
+                      }}
+                      className="px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white transition cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+                      aria-label="Pa'bere"
+                    >
+                      <Gift className="w-3.5 h-3.5 text-white shrink-0" />
+                      <span>Pa'bere</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -371,49 +392,91 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           </div>
           )}
 
-          {/* Baris Ringkasan Reaksi (Emoji & Total) - Dapat Diketuk untuk Melihat Rincian Angka per Emoji */}
-          {likeCount > 0 && (
-            <div className="px-4 pb-1.5 flex items-center justify-between text-xs text-neutral-500">
-              <ReactionBadge
-                postId={post.id}
-                totalLikes={likeCount}
-                reactions={reactions}
-              />
+          {/* Baris Ringkasan Reaksi (Kiri) & Jumlah Komentar (Kanan) */}
+          {(likeCount > 0 || commentsCount > 0) && (
+            <div className="px-4 pb-1.5 flex items-center justify-between gap-2 text-xs text-neutral-500">
+              <div className="min-w-0">
+                {likeCount > 0 && (
+                  <ReactionBadge
+                    postId={post.id}
+                    totalLikes={likeCount}
+                    reactions={reactions}
+                  />
+                )}
+              </div>
+              {commentsCount > 0 && (
+                <button
+                  id={`comment-detail-count-${post.id}`}
+                  type="button"
+                  onClick={() => onOpenComments?.()}
+                  className="text-xs font-medium text-neutral-500 hover:text-[#00632B] hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                >
+                  {commentsCount.toLocaleString("id-ID")} Komentar
+                </button>
+              )}
             </div>
           )}
 
-          {/* Post Actions: Suka / Reaksi, Bagikan, Laporkan / Hapus (Persis seperti di feed, bersih tanpa icon X) */}
-          <div className="px-4 flex items-center gap-6 text-xs font-semibold text-neutral-600">
-            {onReact ? (
-              <ReactionButton
-                postId={post.id}
-                userReaction={userReaction}
-                isLiked={isLiked}
-                onReact={onReact}
-                variant="detail"
-              />
-            ) : onToggleLike ? (
-              <ReactionButton
-                postId={post.id}
-                userReaction={userReaction}
-                isLiked={isLiked}
-                onReact={(pid) => onToggleLike(pid)}
-                variant="detail"
-              />
-            ) : null}
+          {/* Post Actions: Suka / Reaksi, Komentar, Bagikan (Kiri) & Jumlah Share (Kanan Sejajar Icon Share) */}
+          <div className="px-4 flex items-center justify-between gap-2 text-xs font-semibold text-neutral-600">
+            <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+              {onReact ? (
+                <ReactionButton
+                  postId={post.id}
+                  userReaction={userReaction}
+                  isLiked={isLiked}
+                  onReact={onReact}
+                  variant="detail"
+                />
+              ) : onToggleLike ? (
+                <ReactionButton
+                  postId={post.id}
+                  userReaction={userReaction}
+                  isLiked={isLiked}
+                  onReact={(pid) => onToggleLike(pid)}
+                  variant="detail"
+                />
+              ) : null}
 
-            <button
-              id={`share-detail-btn-${post.id}`}
-              type="button"
-              onClick={() => setIsShareOpen((prev) => !prev)}
-              className={`flex items-center gap-1.5 py-1 transition cursor-pointer ${
-                isShareOpen ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
-              }`}
-              aria-label="Bagikan"
-            >
-              <Share2 className="w-4 h-4" />
-              <span>Bagikan</span>
-            </button>
+              {onOpenComments && (
+                <button
+                  id={`comment-detail-btn-${post.id}`}
+                  type="button"
+                  onClick={onOpenComments}
+                  className="flex items-center gap-1.5 py-1 transition cursor-pointer hover:text-[#00632B] text-neutral-600"
+                  aria-label="Komentar"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Komentar</span>
+                </button>
+              )}
+
+              <button
+                id={`share-detail-btn-${post.id}`}
+                type="button"
+                onClick={() => setIsShareOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 py-1 transition cursor-pointer ${
+                  isShareOpen ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
+                }`}
+                aria-label="Bagikan"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Bagikan</span>
+              </button>
+            </div>
+
+            {postShares > 0 && (
+              <button
+                id={`share-detail-count-${post.id}`}
+                type="button"
+                onClick={() => setIsShareOpen((prev) => !prev)}
+                className="text-xs font-medium text-neutral-500 hover:text-emerald-600 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                aria-label={`Dibagikan ${postShares.toLocaleString("id-ID")} kali`}
+                title={`Dibagikan ${postShares.toLocaleString("id-ID")} kali`}
+              >
+                {postShares.toLocaleString("id-ID")}
+              </button>
+            )}
           </div>
 
           {/* Bar Bagikan Interaktif (FB, WA, Salin) - Persis seperti di Feed */}
