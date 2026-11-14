@@ -98,6 +98,9 @@ const FORBIDDEN_WORDS = [
   "telaso",
   "telasoe",
   "tlso",
+  "laso",
+  "combi",
+  "lessi",
   "sundala",
   "sundala'",
   "sndla",
@@ -135,20 +138,6 @@ function normalizeText(input: string): string {
   return cleaned;
 }
 
-/**
- * Buat versi teks tanpa spasi dan tanda baca untuk mendeteksi penyamaran seperti "k.o.n.t.o.l" atau "b o k e p"
- */
-function stripSeparators(input: string): string {
-  return input.replace(/[^a-z0-9]/g, "");
-}
-
-/**
- * Kompres huruf yang berulang lebih dari 2 kali (misal "booooookeeep" -> "bookeep")
- */
-function collapseRepeatedChars(input: string): string {
-  return input.replace(/(.)\1{2,}/g, "$1$1");
-}
-
 export interface ModerationResult {
   isClean: boolean;
   flaggedWord?: string;
@@ -166,15 +155,18 @@ export function checkContentModeration(rawText: string): ModerationResult {
 
   const rawLower = rawText.toLowerCase();
   const normalized = normalizeText(rawText);
-  const collapsed = collapseRepeatedChars(normalized);
-  const noSeparators = stripSeparators(collapsed);
 
   for (const word of FORBIDDEN_WORDS) {
     const wordPattern = word.toLowerCase();
+    const repeatedPattern = wordPattern
+      .split("")
+      .map((ch) => (/[a-z0-9]/.test(ch) ? `${escapeRegExp(ch)}+` : ch === " " ? "\\s+" : escapeRegExp(ch)))
+      .join("");
 
-    // 1. Cek langsung dengan boundary kata (misal di kalimat utuh)
-    const regexWord = new RegExp(`\\b${escapeRegExp(wordPattern)}\\b`, "i");
-    if (regexWord.test(rawLower) || regexWord.test(normalized) || regexWord.test(collapsed)) {
+    // 1. Cek kata utuh menggunakan word boundary (\b) termasuk huruf dipanjangkan (misal "leeeesssssi", "laaaaso", "coooombi")
+    // Kata normal seperti "kasih sudah", "termasuk", "masuk", "kasus" tetap LOLOS
+    const regexWord = new RegExp(`\\b${repeatedPattern}\\b`, "i");
+    if (regexWord.test(rawLower) || regexWord.test(normalized)) {
       return {
         isClean: false,
         flaggedWord: word,
@@ -182,11 +174,13 @@ export function checkContentModeration(rawText: string): ModerationResult {
       };
     }
 
-    // 2. Cek apakah ada di dalam teks tanpa spasi/tanda baca (contoh: "b.o.k.e.p", "v-c-s", "open_bo")
-    // Hanya untuk kata dengan panjang >= 3 agar tidak salah tangkap (false positive) kata pendek wajar
-    if (wordPattern.length >= 3) {
-      const cleanWord = stripSeparators(wordPattern);
-      if (cleanWord.length >= 3 && noSeparators.includes(cleanWord)) {
+    // 2. Cek penyamaran huruf berjeda tanda baca/spasi (contoh: "a.s.u", "c.o.m.b.i", "l.e.s.s.i")
+    // Menggunakan batas non-alfanumerik di awal & akhir sehingga tidak pernah memotong kata normal lain
+    const cleanChars = wordPattern.replace(/[^a-z0-9]/g, "").split("");
+    if (cleanChars.length >= 3) {
+      const obfuscatedPattern = cleanChars.map((c) => `${escapeRegExp(c)}+`).join("[\\s._*\\-]+");
+      const regexObfuscated = new RegExp(`(?<![a-z0-9])${obfuscatedPattern}(?![a-z0-9])`, "i");
+      if (regexObfuscated.test(rawLower) || regexObfuscated.test(normalized)) {
         return {
           isClean: false,
           flaggedWord: word,

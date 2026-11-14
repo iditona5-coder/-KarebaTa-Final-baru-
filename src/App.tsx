@@ -152,7 +152,10 @@ export default function KarebaFeedFinal() {
     } catch {}
     return "";
   });
-  const userEmail = currentUser?.email || "";
+  const cachedActiveEmail =
+    typeof window !== "undefined" ? localStorage.getItem("karebata_active_email") || "" : "";
+  const userEmail = currentUser?.email || cachedActiveEmail || "";
+  const isCurrentUserAdmin = isUserAdmin(userEmail);
   // Nama pengguna selalu bersumber dari ketikan user (maks 13 huruf), BUKAN alamat email
   const userDisplayName = userName;
   const initial = (userName.replace(/^@/, "").trim()[0] || currentUser?.displayName?.replace(/^@/, "").trim()[0] || "W").toUpperCase();
@@ -3246,16 +3249,16 @@ export default function KarebaFeedFinal() {
               </h2>
               <p
                 className="text-[clamp(12px,3.4vw,13.5px)] text-neutral-500 font-normal mt-0.5 truncate max-w-[170px] sm:max-w-[240px]"
-                title={currentUser?.email || `@${userName.replace(/^@/, "").toLowerCase()}`}
+                title={userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
               >
-                {currentUser?.email || `@${userName.replace(/^@/, "").toLowerCase()}`}
+                {userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
-            {/* Icon Dasbor Admin HANYA Muncul di Akun Admin Khusus (iditona5@gmail.com) */}
-            {isUserAdmin(currentUser?.email) && (
+            {/* Tombol Dasbor Admin HANYA Muncul di Akun Admin Berizin */}
+            {isCurrentUserAdmin && (
               <button
                 id="profile-admin-dashboard-btn"
                 type="button"
@@ -3265,11 +3268,12 @@ export default function KarebaFeedFinal() {
                   }
                   setViewMode("admin");
                 }}
-                className="w-8 h-8 rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-90 cursor-pointer shadow-2xs flex items-center justify-center"
-                title="Dasbor Admin"
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-95 cursor-pointer shadow-2xs"
+                title="Buka Dasbor Admin"
                 aria-label="Dasbor Admin"
               >
-                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Admin</span>
               </button>
             )}
             <button
