@@ -336,7 +336,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           ) : (
             <div className="w-full px-4 pt-1 pb-2">
               <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs">
-                <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text">
+                <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap break-words select-text">
                   {postText}
                 </p>
                 {onOpenGift && likeCount >= minLikes && (
@@ -375,7 +375,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
                 >
                   <h3
-                    className={`text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight leading-snug transition-all ${
+                    className={`text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight leading-snug whitespace-pre-wrap break-words transition-all ${
                       isLong && !isExpanded ? "line-clamp-2" : ""
                     }`}
                   >

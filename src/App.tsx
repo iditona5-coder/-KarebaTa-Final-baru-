@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Fragment } from "react";
 import {
   Heart,
   MessageCircle,
@@ -1972,6 +1972,7 @@ export default function KarebaFeedFinal() {
 
   // State untuk melipat / membuka deskripsi panjang yang dipotong
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+  const pendingCollapseScrollRef = useRef<Array<{ postId: string; prevHeight: number }>>([]);
 
   const toggleExpandPost = (id: string) => {
     const isCurrentlyExpanded = !!expandedPosts[id];
@@ -1985,7 +1986,9 @@ export default function KarebaFeedFinal() {
     // Pastikan posisi layar tetap pas di postingan ini agar tidak melompat ke postingan lain
     if (isCurrentlyExpanded) {
       setTimeout(() => {
-        const targetPost = document.getElementById(`post-card-${id}`);
+        const targetPost =
+          document.getElementById(`feed-post-${id}`) ||
+          document.getElementById(`post-card-${id}`);
         if (!targetPost) return;
 
         const header = document.getElementById("karebata-feed-header");
@@ -2004,6 +2007,78 @@ export default function KarebaFeedFinal() {
       }, 40);
     }
   };
+
+  const expandedPostIdsKey = useMemo(
+    () => Object.keys(expandedPosts).filter((id) => expandedPosts[id]).join(","),
+    [expandedPosts]
+  );
+
+  // Kompensasi posisi scroll tepat sebelum browser menggambar frame ketika postingan di atas layar dilipat otomatis
+  useLayoutEffect(() => {
+    if (pendingCollapseScrollRef.current.length === 0) return;
+    const pending = pendingCollapseScrollRef.current;
+    pendingCollapseScrollRef.current = [];
+    let totalDelta = 0;
+    for (const item of pending) {
+      const el = document.getElementById(`feed-post-${item.postId}`);
+      if (!el) continue;
+      const newHeight = el.getBoundingClientRect().height;
+      const delta = item.prevHeight - newHeight;
+      if (delta > 0) {
+        totalDelta += delta;
+      }
+    }
+    if (totalDelta > 0) {
+      window.scrollBy(0, -totalDelta);
+    }
+  }, [expandedPosts]);
+
+  // Otomatis tutup kembali deskripsi panjang menjadi pendek saat pengguna scroll ke media/postingan lain
+  useEffect(() => {
+    const expandedIds = expandedPostIdsKey ? expandedPostIdsKey.split(",") : [];
+    if (expandedIds.length === 0) return;
+    if (activeDetailPost || activeCommentItem || isSearchOpen) return;
+
+    const header = document.getElementById("karebata-feed-header");
+    const headerH = header ? header.offsetHeight : 54;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            const el = entry.target as HTMLElement;
+            const postId = el.dataset.postId;
+            if (!postId) return;
+
+            const prevHeight = el.getBoundingClientRect().height;
+            const exitedTop = entry.boundingClientRect.bottom <= headerH + 4;
+            if (exitedTop && prevHeight > 0) {
+              pendingCollapseScrollRef.current.push({ postId, prevHeight });
+            }
+
+            setExpandedPosts((prev) => {
+              if (!prev[postId]) return prev;
+              const next = { ...prev };
+              delete next[postId];
+              return next;
+            });
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: `-${headerH}px 0px 0px 0px`,
+        threshold: 0,
+      }
+    );
+
+    expandedIds.forEach((id) => {
+      const el = document.getElementById(`feed-post-${id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [expandedPostIdsKey, activeDetailPost, activeCommentItem, isSearchOpen]);
 
   // Menangani Reaksi Emoji Warga (❤️, 😆, 🥲, 😱, 😡)
   const handlePostReaction = (id: string, reaction: ReactionType | null) => {
@@ -4393,7 +4468,7 @@ export default function KarebaFeedFinal() {
                           }`}
                         >
                           <p
-                            className={`text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap select-text ${
+                            className={`text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap break-words select-text ${
                               isLong && !expandedPosts[f.id] ? "line-clamp-3" : ""
                             }`}
                           >
@@ -4443,7 +4518,7 @@ export default function KarebaFeedFinal() {
                           className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
                         >
                           <h3
-                            className={`text-[clamp(18px,5vw,22px)] font-bold text-neutral-900 tracking-tight leading-snug transition-all ${
+                            className={`text-[clamp(18px,5vw,22px)] font-bold text-neutral-900 tracking-tight leading-snug whitespace-pre-wrap break-words transition-all ${
                               isLong && !expandedPosts[f.id] ? "line-clamp-2" : ""
                             }`}
                           >
@@ -5241,7 +5316,7 @@ export default function KarebaFeedFinal() {
                           {c.time}
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-700 mt-1 leading-relaxed">{c.text}</p>
+                      <p className="text-xs text-neutral-700 mt-1 leading-relaxed whitespace-pre-wrap break-words">{c.text}</p>
 
                       {/* Aksi Komentar (Like, Balas, Hapus) */}
                       <CommentActions
