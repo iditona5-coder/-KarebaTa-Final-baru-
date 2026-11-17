@@ -32,13 +32,13 @@ export const PWAInstallBanner: React.FC = () => {
   // Tampilan Default untuk Android / Desktop Web (Jika belum standalone)
   return (
     <>
-      <div className="mx-3.5 my-2.5 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-amber-50/40 to-white border border-emerald-300 shadow-sm flex items-center justify-between gap-3 animate-fade-in">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="mx-3 sm:mx-3.5 my-2.5 p-3 sm:p-3.5 box-border rounded-2xl bg-gradient-to-r from-emerald-50 via-amber-50/40 to-white border border-emerald-300 shadow-sm flex items-center flex-wrap justify-between gap-2.5 sm:gap-3 animate-fade-in">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-[175px] flex-1">
           <div className="w-10 h-10 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-center shrink-0">
             <KarebaPinIcon size={26} />
           </div>
-          <div className="min-w-0 text-left">
-            <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1 text-left">
+            <div className="flex items-center flex-wrap gap-1.5">
               <h4 className="text-xs sm:text-sm font-extrabold text-[#00632B] truncate">
                 Pasang Aplikasi Kareba'Ta
               </h4>
@@ -52,7 +52,7 @@ export const PWAInstallBanner: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           <button
             type="button"
             onClick={isIOS ? () => setShowIOSModal(true) : handleInstallClick}
@@ -80,7 +80,7 @@ export const PWAInstallBanner: React.FC = () => {
       {/* Modal Panduan Pasang Android jika browser butuh langkah manual */}
       {showAndroidModal && (
         <div className="fixed inset-0 z-[999999] bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl text-left animate-in zoom-in-95">
+          <div className="w-full max-w-[500px] mx-auto box-border bg-white rounded-2xl p-4 sm:p-5 shadow-2xl text-left animate-in zoom-in-95 max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-3">
               <KarebaPinIcon size={32} />
               <div>
@@ -121,7 +121,7 @@ export const PWAInstallBanner: React.FC = () => {
       {/* Modal Panduan Pasang iOS Safari */}
       {showIOSModal && (
         <div className="fixed inset-0 z-[999999] bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl text-left animate-in zoom-in-95">
+          <div className="w-full max-w-[500px] mx-auto box-border bg-white rounded-2xl p-4 sm:p-5 shadow-2xl text-left animate-in zoom-in-95 max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-3">
               <KarebaPinIcon size={32} />
               <div>

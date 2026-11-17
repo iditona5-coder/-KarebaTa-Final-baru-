@@ -226,19 +226,19 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
       {isListOpen && (
         <div
           id="running-text-bulletin-modal"
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 max-w-md mx-auto animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in"
           onClick={() => setIsListOpen(false)}
         >
           <div
-            className="bg-white border border-neutral-200 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl overflow-hidden"
+            className="bg-white border border-neutral-200 rounded-2xl w-full box-border p-4 sm:p-5 space-y-4 shadow-2xl overflow-hidden max-h-[85dvh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+            <div className="flex items-center flex-wrap justify-between gap-2 border-b border-neutral-100 pb-3 shrink-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                   <Megaphone className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-bold text-sm sm:text-base text-neutral-900 leading-tight">
                     Info & Warta Terkini
                   </h3>
@@ -248,14 +248,14 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsListOpen(false)}
-                className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer"
+                className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer shrink-0"
                 aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto divide-y divide-neutral-100 space-y-1">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-100 space-y-1">
               {items.map((b) => (
                 <div
                   key={`bulletin-modal-${b.id}`}
@@ -265,12 +265,12 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
                   }}
                   className="py-3 px-1 hover:bg-neutral-50 rounded-xl transition cursor-pointer group"
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center flex-wrap justify-between gap-2 mb-1">
                     <span className="text-[10px] font-bold text-red-600 uppercase tracking-wide bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
                       {b.category}
                     </span>
                     {b.time && (
-                      <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                      <span className="text-[10px] text-neutral-400 flex items-center gap-1 shrink-0">
                         <Clock className="w-3 h-3" />
                         <span>{b.time}</span>
                       </span>

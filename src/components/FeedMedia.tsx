@@ -444,15 +444,15 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
         }}
       >
         {/* Header Layar Penuh: Info Penulis, Lokasi & Waktu Bersih */}
-        <header className="px-4 py-3.5 bg-gradient-to-b from-black/85 via-black/50 to-transparent flex items-center justify-between z-20 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0 pr-3">
+        <header className="w-full max-w-[500px] mx-auto box-border px-3.5 sm:px-4 py-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/85 via-black/50 to-transparent flex items-center flex-wrap justify-between gap-2 z-20 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
             {/* Ikon Profil Penulis: Selalu Huruf Pertama Nama Pengguna */}
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] flex items-center justify-center text-xs font-bold text-white shrink-0 border border-white/20 shadow-xs select-none">
               {(authorDisplayName.replace(/^@/, "").trim()[0] || author?.initials || "K").toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               {/* Baris Atas: Nama Pengguna & Waktu di Sebelah Kanannya */}
-              <div className="flex items-center gap-1.5 flex-nowrap">
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
                 <p className="font-bold text-sm text-white truncate leading-tight">{authorDisplayName}</p>
                 {author?.time && (
                   <>
@@ -534,8 +534,8 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
 
         {/* Kontrol Bawah Video (Hanya tampil jika video) */}
         {isVideo && (
-          <footer className="p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-20 shrink-0">
-            <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10">
+          <footer className="w-full max-w-[500px] mx-auto box-border p-3.5 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/90 via-black/60 to-transparent z-20 shrink-0">
+            <div className="flex items-center flex-wrap gap-2 sm:gap-3 bg-black/60 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-2xl border border-white/10">
               <button
                 type="button"
                 onClick={(e) => {
@@ -549,13 +549,13 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
                     setFsIsPlaying(false);
                   }
                 }}
-                className="text-white hover:text-emerald-400 transition cursor-pointer p-1"
+                className="text-white hover:text-emerald-400 transition cursor-pointer p-1 shrink-0"
                 aria-label={fsIsPlaying ? "Jeda" : "Putar"}
               >
                 {fsIsPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
               </button>
 
-              <div className="flex-1 flex items-center gap-2">
+              <div className="flex-1 min-w-[120px] flex items-center gap-2">
                 <input
                   type="range"
                   min={0}
@@ -569,7 +569,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
                       fullscreenVideoRef.current.currentTime = newTime;
                     }
                   }}
-                  className="flex-1 accent-emerald-500 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+                  className="flex-1 min-w-0 accent-emerald-500 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
                 />
                 <span className="text-[10px] text-neutral-300 font-mono shrink-0">
                   {formatTime(fsCurrentTime)} / {formatTime(fsDuration)}
@@ -585,7 +585,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
                   fullscreenVideoRef.current.muted = newMute;
                   setFsIsMuted(newMute);
                 }}
-                className="text-white hover:text-emerald-400 transition cursor-pointer p-1"
+                className="text-white hover:text-emerald-400 transition cursor-pointer p-1 shrink-0"
                 aria-label={fsIsMuted ? "Aktifkan Suara" : "Bisukan"}
               >
                 {fsIsMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}

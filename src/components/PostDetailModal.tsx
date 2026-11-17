@@ -104,10 +104,11 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
     >
       <div
         id="post-fullscreen-modal"
-        className="w-full h-full max-w-md bg-white flex flex-col relative overflow-hidden"
+        className="w-full h-full max-w-[500px] mx-auto box-border bg-white flex flex-col relative overflow-hidden"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {/* Sticky Header Navigasi (Bersih tanpa icon X) */}
-        <header className="sticky top-0 z-40 bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-2xs shrink-0">
+        <header className="sticky top-0 z-40 bg-white border-b border-neutral-200 px-3.5 sm:px-4 py-3 flex items-center justify-between shadow-2xs shrink-0">
           <button
             id="close-post-fullscreen-btn"
             type="button"
@@ -129,9 +130,9 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             id={`feed-post-${post.id}`}
             className="w-full bg-white space-y-3 pt-3.5 pb-6"
           >
-          {/* Post Header: Nama & Waktu tetap satu baris, tidak turun ke bawah */}
-          <div className="px-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
+          {/* Post Header: Responsif & rapih di semua ukuran layar */}
+          <div className="px-3.5 sm:px-4 flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {/* Ikon Profil: Selalu Huruf Pertama Nama Pengguna */}
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
                 {isOwner
@@ -139,9 +140,9 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   : ((post.user || "").replace(/^@/, "").trim()[0] || authorInit || "K").toUpperCase()}
               </div>
 
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
-                  <span className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-[150px] sm:max-w-[200px]">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-x-1.5 gap-y-0.5 min-w-0 flex-wrap">
+                  <span className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-full">
                     {authorName.startsWith("@") ? authorName : `@${authorName}`}
                   </span>
                   <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
@@ -155,7 +156,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   )}
                 </div>
                 {postLocation && (
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-0.5">
+                  <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-0.5 min-w-0">
                     <MapPin className="w-3 h-3 text-yellow-500 shrink-0 inline" />
                     <span className="truncate">{postLocation}</span>
                   </div>
@@ -164,7 +165,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             </div>
 
             {/* Icon Titik 3 di Atas Sudut Kanan Postingan */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 id={`detail-menu-btn-${post.id}`}
                 type="button"
@@ -183,7 +184,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                     onClick={() => setIsMenuOpen(false)}
                   />
                   <div
-                    className="absolute right-0 top-9 z-40 w-52 bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                    className="absolute right-0 top-9 z-40 w-52 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
                   >
                     {/* 1. Opsi Simpan Kabar */}
                     {onToggleSave && (
@@ -394,7 +395,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           {/* Baris Ringkasan Reaksi (Kiri) & Jumlah Komentar (Kanan) */}
           {(likeCount > 0 || commentsCount > 0) && (
-            <div className="px-4 pb-1.5 flex items-center justify-between gap-2 text-xs text-neutral-500">
+            <div className="px-3.5 sm:px-4 pb-1.5 flex items-center flex-wrap justify-between gap-2 text-xs text-neutral-500">
               <div className="min-w-0">
                 {likeCount > 0 && (
                   <ReactionBadge
@@ -418,8 +419,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           )}
 
           {/* Post Actions: Suka / Reaksi, Komentar, Bagikan (Kiri) & Jumlah Share (Kanan Sejajar Icon Share) */}
-          <div className="px-4 flex items-center justify-between gap-2 text-xs font-semibold text-neutral-600">
-            <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+          <div className="px-3.5 sm:px-4 flex items-center flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold text-neutral-600">
+            <div className="flex items-center flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 min-w-0">
               {onReact ? (
                 <ReactionButton
                   postId={post.id}
@@ -481,7 +482,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           {/* Bar Bagikan Interaktif (FB, WA, Salin) - Persis seperti di Feed */}
           {isShareOpen && (
-            <div className="mx-4 mt-2.5 px-3 py-1 bg-neutral-50 rounded-2xl border border-neutral-200 flex items-center justify-between animate-fade-in">
+            <div className="mx-3.5 sm:mx-4 mt-2.5 px-3 py-1 bg-neutral-50 rounded-2xl border border-neutral-200 flex items-center flex-wrap justify-between gap-2 animate-fade-in">
               <ShareBar
                 newsUrl={window.location.href}
                 title={postText}

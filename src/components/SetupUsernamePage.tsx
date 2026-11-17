@@ -58,7 +58,7 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
 
   return (
     <div
-      className="fixed inset-0 w-full max-w-full h-full h-[100dvh] max-h-[100dvh] bg-white text-neutral-900 flex flex-col justify-between overflow-y-auto overflow-x-hidden overscroll-none selection:bg-[#E5A000] selection:text-neutral-900"
+      className="fixed inset-0 w-full max-w-full h-[100dvh] max-h-[100dvh] bg-white text-neutral-900 flex flex-col justify-between overflow-y-auto overflow-x-hidden overscroll-none selection:bg-[#E5A000] selection:text-neutral-900 box-border"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
@@ -66,17 +66,17 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
     >
       {/* Header Atas Full Width (Tanpa tombol ganti akun) */}
       <header className="w-full border-b border-neutral-100 bg-white sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-5 py-3.5 flex items-center justify-between">
+        <div className="w-full max-w-[500px] mx-auto box-border px-4 sm:px-5 py-3.5 flex items-center flex-wrap justify-between gap-2">
           <KarebaTaLogo showSubtitle={true} />
         </div>
       </header>
 
       {/* Main Content Area - Full Screen Seamless Flow */}
-      <main className="w-full max-w-lg mx-auto px-5 sm:px-6 py-6 flex-1 flex flex-col justify-center space-y-6">
+      <main className="w-full max-w-[500px] mx-auto box-border px-4 sm:px-5 py-6 flex-1 flex flex-col justify-center space-y-6">
           {/* Info Status Akun Google Terhubung */}
           {currentUser && (
-            <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center flex-wrap justify-between gap-2.5 p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] text-white font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-[#E5A000] select-none">
                   {(usernameInput.trim().replace(/^@/, "")[0] || userInitial || "W").toUpperCase()}
                 </div>
@@ -94,7 +94,7 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1.5 rounded-xl transition active:scale-95 shrink-0 ml-2 cursor-pointer shadow-2xs"
+                  className="flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1.5 rounded-xl transition active:scale-95 shrink-0 cursor-pointer shadow-2xs"
                   title="Ganti ke akun Google yang lain"
                 >
                   <LogOut className="w-3 h-3 text-rose-600" />
@@ -116,8 +116,8 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
 
           {/* Form Input Nama Pengguna (Tanpa Cincin / Bayangan Ring) */}
           <div className="space-y-2">
-            <div className="relative flex items-center bg-neutral-50 rounded-2xl border-2 border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all">
-              <span className="pl-4 text-base sm:text-lg font-semibold select-none text-neutral-400">
+            <div className="relative flex items-center bg-neutral-50 rounded-2xl border-2 border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all min-w-0">
+              <span className="pl-4 text-base sm:text-lg font-semibold select-none text-neutral-400 shrink-0">
                 @
               </span>
               <input
@@ -133,9 +133,9 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
                   }
                 }}
                 placeholder="nama_kamu"
-                className="w-full py-3.5 pl-0.5 pr-4 bg-transparent text-base sm:text-lg font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
+                className="flex-1 min-w-0 w-full py-3.5 pl-0.5 pr-2 bg-transparent text-base sm:text-lg font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
               />
-              <span className={`pr-4 text-xs font-semibold ${usernameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
+              <span className={`pr-4 text-xs font-semibold shrink-0 ${usernameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
                 {usernameInput.length}/13
               </span>
             </div>
@@ -148,25 +148,25 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
             )}
           </div>
 
-          {/* Tombol Simpan - Selalu Horizontal 1 Baris di Semua Layar HP */}
+          {/* Tombol Simpan - Responsif penuh di semua ukuran HP */}
           <button
             id="submit-username-btn"
             type="button"
             onClick={handleSave}
             disabled={!isReady}
-            className={`w-full py-3.5 px-3 sm:px-5 font-bold text-[clamp(13px,3.8vw,15.5px)] rounded-2xl flex items-center justify-center gap-2 transition-all whitespace-nowrap select-none ${
+            className={`w-full py-3.5 px-4 sm:px-5 font-bold text-[clamp(13px,3.8vw,15.5px)] rounded-2xl flex flex-wrap items-center justify-center gap-2 text-center transition-all select-none ${
               isReady
                 ? "bg-[#00632B] hover:bg-[#004f22] text-white shadow-lg shadow-emerald-950/20 active:scale-[0.98] cursor-pointer"
                 : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
             }`}
           >
-            <span className="whitespace-nowrap truncate">Simpan & Masuk ke Beranda</span>
+            <span>Simpan & Masuk ke Beranda</span>
             <ArrowRight className={`w-4 h-4 shrink-0 ${isReady ? "text-white" : "text-neutral-400"}`} />
           </button>
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-neutral-100 py-3.5 text-center bg-white">
+      <footer className="w-full max-w-[500px] mx-auto box-border border-t border-neutral-100 py-3.5 px-4 text-center bg-white">
         <p className="text-[11px] text-neutral-500">
           © {new Date().getFullYear()} Kareba'Ta — Beritamu, Suaramu
         </p>

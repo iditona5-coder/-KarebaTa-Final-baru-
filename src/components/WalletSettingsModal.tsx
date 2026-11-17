@@ -117,12 +117,12 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up"
+        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
-        <div className="bg-gradient-to-r from-[#00632B] via-emerald-700 to-[#00632B] p-4 sm:p-5 text-white flex items-center justify-between relative shadow-sm shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+        <div className="bg-gradient-to-r from-[#00632B] via-emerald-700 to-[#00632B] p-4 sm:p-5 text-white flex items-center flex-wrap justify-between gap-2 relative shadow-sm shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xs border border-white/20 shrink-0">
               {payoutMethod === "bank" ? (
                 <Building2 className="w-5 h-5 text-white" />
@@ -132,11 +132,11 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                 <QrCode className="w-5 h-5 text-white" />
               )}
             </div>
-            <div className="min-w-0">
-              <h3 className="font-extrabold text-sm sm:text-base leading-tight truncate">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-extrabold text-sm sm:text-base leading-tight">
                 Pengaturan Hadiah (Pa'bere)
               </h3>
-              <p className="text-[11px] text-emerald-100 font-medium truncate mt-0.5">
+              <p className="text-[11px] text-emerald-100 font-medium mt-0.5 break-words">
                 Pilih Rekening Bank, DANA, atau QRIS untuk menerima hadiah
               </p>
             </div>
@@ -165,11 +165,11 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
             <label className="text-xs font-bold text-neutral-800 block">
               Pilih Saluran Penerimaan Hadiah Anda:
             </label>
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200 box-border">
               <button
                 type="button"
                 onClick={() => setPayoutMethod("bank")}
-                className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                className={`flex-1 min-w-[90px] py-2 px-1.5 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                   payoutMethod === "bank"
                     ? "bg-white text-emerald-800 shadow-xs ring-1 ring-emerald-600"
                     : "text-neutral-600 hover:text-neutral-900"
@@ -182,7 +182,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => setPayoutMethod("dana")}
-                className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                className={`flex-1 min-w-[90px] py-2 px-1.5 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                   payoutMethod === "dana"
                     ? "bg-white text-[#118EEA] shadow-xs ring-1 ring-[#118EEA]"
                     : "text-neutral-600 hover:text-neutral-900"
@@ -195,7 +195,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => setPayoutMethod("qris")}
-                className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                className={`flex-1 min-w-[90px] py-2 px-1.5 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                   payoutMethod === "qris"
                     ? "bg-white text-amber-700 shadow-xs ring-1 ring-amber-600"
                     : "text-neutral-600 hover:text-neutral-900"
@@ -326,21 +326,21 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
             </div>
           )}
 
-          <div className="pt-2 flex items-center gap-2">
+          <div className="pt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="w-1/3 py-3 rounded-xl border border-neutral-300 text-neutral-700 font-bold text-xs hover:bg-neutral-100 transition cursor-pointer"
+              className="flex-1 min-w-[88px] py-3 px-3 rounded-xl border border-neutral-300 text-neutral-700 font-bold text-xs hover:bg-neutral-100 transition cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 py-3 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-98"
+              className="flex-[2] min-w-[180px] py-3 px-4 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-xs sm:text-sm flex flex-wrap items-center justify-center gap-2 text-center shadow-md transition cursor-pointer active:scale-98"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4 shrink-0" />
               <span>{isSaving ? "Menyimpan..." : "Simpan Pengaturan Hadiah"}</span>
             </button>
           </div>

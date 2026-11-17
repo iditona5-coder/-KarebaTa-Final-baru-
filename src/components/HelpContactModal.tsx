@@ -80,31 +80,31 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
       className="fixed inset-0 z-[99999] bg-neutral-100 flex justify-center w-full h-full overflow-hidden select-none animate-fade-in"
     >
       {/* Kolom Halaman Mandiri Penuh (Solid Opaque, Beranda Belakang 100% Tertutup) */}
-      <div className="w-full max-w-md bg-neutral-50 h-full flex flex-col shadow-2xl overflow-hidden relative">
+      <div className="w-full max-w-[500px] mx-auto box-border bg-neutral-50 h-full flex flex-col shadow-2xl overflow-hidden relative pb-[env(safe-area-inset-bottom,0px)]">
         {/* TOP APP BAR (Sticky Header) */}
-        <header className="bg-gradient-to-r from-[#00632B] via-[#004d22] to-[#003818] text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between shadow-md shrink-0 border-b border-emerald-900/50 z-20">
-          <div className="flex items-center gap-3">
+        <header className="bg-gradient-to-r from-[#00632B] via-[#004d22] to-[#003818] text-white px-3.5 sm:px-6 py-3.5 sm:py-4 pt-[max(0.875rem,env(safe-area-inset-top))] flex items-center flex-wrap justify-between gap-2 shadow-md shrink-0 border-b border-emerald-900/50 z-20">
+          <div className="flex items-center flex-wrap gap-2.5 sm:gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={onClose}
-              className="p-2 -ml-1 text-white/90 hover:text-white hover:bg-white/10 active:scale-95 rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm font-semibold"
+              className="p-2 -ml-1 text-white/90 hover:text-white hover:bg-white/10 active:scale-95 rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm font-semibold shrink-0"
               aria-label="Kembali ke Beranda"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Kembali</span>
             </button>
 
-            <div className="h-6 w-px bg-white/20" />
+            <div className="h-6 w-px bg-white/20 shrink-0" />
 
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-400/20 backdrop-blur-xs border border-amber-300/40 flex items-center justify-center shadow-inner">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="w-8 h-8 rounded-xl bg-amber-400/20 backdrop-blur-xs border border-amber-300/40 flex items-center justify-center shadow-inner shrink-0">
                 <Megaphone className="w-4 h-4 text-[#E5A000]" />
               </div>
-              <div>
-                <h1 id="help-page-title" className="text-sm font-extrabold tracking-tight leading-tight">
+              <div className="min-w-0">
+                <h1 id="help-page-title" className="text-sm font-extrabold tracking-tight leading-tight truncate">
                   Pasang Iklan Sponsor
                 </h1>
-                <p className="text-[10px] text-emerald-200 font-medium">
+                <p className="text-[10px] text-emerald-200 font-medium truncate">
                   {settings.adminName || "Admin Resmi Kareba'Ta"}
                 </p>
               </div>
@@ -113,8 +113,8 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
         </header>
 
         {/* MAIN BODY (Scrollable Standalone Content) */}
-        <main className="flex-1 overflow-y-auto px-4 py-6 sm:py-8 bg-neutral-50">
-          <div className="max-w-xl mx-auto space-y-5">
+        <main className="flex-1 overflow-y-auto px-3.5 sm:px-4 py-6 sm:py-8 bg-neutral-50 box-border">
+          <div className="w-full max-w-[500px] mx-auto space-y-5 box-border">
             {/* BADGE HERO KEMITRAAN */}
             <div className="text-center space-y-2 pb-1">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
@@ -142,16 +142,16 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
             </div>
 
             {/* KARTU JAM RESPON ADMIN */}
-            <div className="bg-white border border-neutral-200/90 rounded-3xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5 min-w-0">
+            <div className="bg-white border border-neutral-200/90 rounded-3xl p-4 sm:p-5 shadow-xs flex items-center flex-wrap justify-between gap-3 sm:gap-4 box-border">
+              <div className="flex items-center gap-3.5 min-w-[180px] flex-1">
                 <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/60 flex items-center justify-center shrink-0 shadow-2xs">
                   <Clock className="w-5 h-5" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <span className="text-[11px] uppercase font-bold text-neutral-400 block tracking-wider">
                     Jam Respon Admin:
                   </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-neutral-800 block truncate">
+                  <span className="text-xs sm:text-sm font-extrabold text-neutral-800 block break-words">
                     {settings.workingHours || "Setiap Hari: 08.00 - 21.00 WITA"}
                   </span>
                 </div>
@@ -164,10 +164,10 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
             </div>
 
             {/* TOMBOL UTAMA WHATSAPP: HANYA TOMBOL SAJA (TANPA NOMOR HP MUNCUL) */}
-            <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 text-center space-y-4 shadow-sm">
+            <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-6 text-center space-y-4 shadow-sm box-border">
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-[11px] font-black uppercase tracking-wider">
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-700" />
+                <div className="inline-flex items-center flex-wrap justify-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-[11px] font-black uppercase tracking-wider">
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                   <span>Layanan Pasang Iklan Sponsor</span>
                 </div>
                 <h3 className="text-sm sm:text-base font-extrabold text-neutral-900">
@@ -182,7 +182,7 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
                 id="whatsapp-contact-admin-btn"
                 type="button"
                 onClick={handleOpenWhatsApp}
-                className="w-full py-4 px-6 bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-3 transition cursor-pointer"
+                className="w-full py-3.5 sm:py-4 px-4 sm:px-6 bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-600/30 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-center transition cursor-pointer"
               >
                 {/* WhatsApp SVG Logo */}
                 <svg
@@ -193,7 +193,7 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
                   <path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.979-.275-.1-.475-.15-.675.15-.2.301-.776.979-.951 1.179-.176.201-.351.226-.652.076-.301-.15-1.27-.468-2.42-1.493-.895-.798-1.5-1.783-1.676-2.084-.176-.3-.019-.462.132-.612.136-.135.301-.35.452-.525.15-.175.2-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.628-.925-2.228-.244-.585-.492-.505-.676-.514-.175-.009-.375-.011-.575-.011-.2 0-.525.075-.8.375-.276.301-1.052 1.028-1.052 2.507 0 1.48 1.077 2.91 1.228 3.111.15.201 2.119 3.236 5.134 4.54.717.311 1.278.496 1.715.635.722.23 1.379.197 1.899.12.58-.087 1.78-.727 2.03-1.428.25-.702.25-1.303.175-1.428-.075-.125-.275-.201-.576-.351zM12.04 2C6.54 2 2.08 6.46 2.08 11.96c0 1.98.58 3.82 1.6 5.37L2 22l4.82-1.57c1.48.91 3.22 1.44 5.22 1.44 5.5 0 9.96-4.46 9.96-9.96C22 6.46 17.54 2 12.04 2zm0 18.25c-1.74 0-3.35-.49-4.73-1.35l-.34-.21-2.86.93.94-2.78-.23-.37a8.204 8.204 0 0 1-1.28-4.51c0-4.55 3.7-8.25 8.25-8.25s8.25 3.7 8.25 8.25-3.7 8.25-8.25 8.25z" />
                 </svg>
                 <span>Hubungi via WhatsApp</span>
-                <ExternalLink className="w-4 h-4 ml-1 opacity-90" />
+                <ExternalLink className="w-4 h-4 ml-1 opacity-90 shrink-0" />
               </button>
             </div>
 

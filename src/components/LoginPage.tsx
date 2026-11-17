@@ -69,26 +69,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   return (
     <div
-      className="fixed inset-0 w-full h-full h-[100dvh] max-h-[100dvh] bg-white text-neutral-900 flex flex-col justify-between overflow-hidden touch-none select-none overscroll-none selection:bg-[#E5A000] selection:text-neutral-900"
+      className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-white text-neutral-900 flex flex-col justify-between overflow-y-auto overflow-x-hidden touch-pan-y select-none overscroll-y-contain selection:bg-[#E5A000] selection:text-neutral-900 box-border"
       style={{
-        paddingTop: "env(safe-area-inset-top, 0px)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))",
+        paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
       }}
     >
       {/* Spacer Header */}
       <div className="h-2 sm:h-4 shrink-0" />
 
       {/* Main Content Area */}
-      <main className="w-full max-w-sm sm:max-w-md mx-auto px-4 sm:px-6 py-2 my-auto flex flex-col justify-center shrink-0">
+      <main className="w-full max-w-[500px] mx-auto box-border px-4 sm:px-6 py-2 my-auto flex flex-col justify-center shrink-0">
         {/* Logo Showcase: Icon Lokasi Berada di Kiri Tulisan Kareba'Ta */}
         <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
-          <div className="flex items-center justify-center gap-3 sm:gap-3.5 mb-2">
+          <div className="flex items-center flex-wrap justify-center gap-3 sm:gap-3.5 mb-2">
             <div className="shrink-0 flex items-center justify-center filter drop-shadow-sm">
-              <KarebaPinIcon size="clamp(46px, 12vw, 58px)" />
+              <KarebaPinIcon size="clamp(44px, 12vw, 58px)" />
             </div>
-            <div className="flex flex-col text-left justify-center">
+            <div className="flex flex-col text-left justify-center min-w-0">
               <h1
-                className="text-[clamp(28px,7.5vw,36px)] font-[900] tracking-tight leading-none"
+                className="text-[clamp(26px,7.5vw,36px)] font-[900] tracking-tight leading-none"
                 style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
               >
                 <span className="text-[#00632B]">Kareba'</span>
@@ -127,8 +127,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </p>
 
             {/* Box Salin Domain */}
-            <div className="flex items-center gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
-              <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 px-1">
+            <div className="flex items-center flex-wrap gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
+              <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 min-w-[140px] px-1">
                 {currentHost}
               </span>
               <button
@@ -148,18 +148,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         ) : null}
 
         {/* TOMBOL UTAMA: MASUK DENGAN GOOGLE (RESPONSIF & BEBAS PATAH TEKS) */}
-        <div className="space-y-3.5">
+        <div className="space-y-3.5 w-full">
           <button
             id="login-google-btn"
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full py-3.5 sm:py-4 px-4 sm:px-5 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-xl font-bold text-[clamp(13px,3.8vw,15.5px)] flex items-center justify-center gap-2.5 sm:gap-3 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-60"
+            className="w-full py-3.5 sm:py-4 px-4 sm:px-5 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-xl font-bold text-[clamp(13px,3.8vw,15.5px)] flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-60"
           >
             {isLoading ? (
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
                 <div className="w-5 h-5 rounded-full border-2 border-neutral-400 border-t-[#00632B] animate-spin shrink-0" />
-                <span className="text-neutral-700 text-xs sm:text-sm font-semibold whitespace-nowrap">Menghubungkan Akun Google...</span>
+                <span className="text-neutral-700 text-xs sm:text-sm font-semibold">Menghubungkan Akun Google...</span>
               </div>
             ) : (
               <>
@@ -182,7 +182,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span className="whitespace-nowrap font-bold tracking-tight">Masuk dengan Google</span>
+                <span className="font-bold tracking-tight">Masuk dengan Google</span>
               </>
             )}
           </button>
@@ -190,7 +190,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       </main>
 
       {/* Footer Bersih */}
-      <footer className="w-full max-w-md mx-auto px-6 py-3 text-center shrink-0">
+      <footer className="w-full max-w-[500px] mx-auto box-border px-4 sm:px-6 py-3 text-center shrink-0">
         <p className="text-[11px] text-neutral-500">
           © {new Date().getFullYear()} Kareba'Ta — Beritamu, Suaramu
         </p>

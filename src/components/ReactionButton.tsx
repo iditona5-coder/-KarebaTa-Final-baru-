@@ -111,7 +111,7 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
       {/* GELEMBUNG PILIHAN REAKSI EMOJI (LONG-PRESS / HOVER POP-UP) */}
       {showPicker && (
         <div
-          className="absolute bottom-full left-0 mb-2 z-50 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-neutral-200/90 animate-in fade-in zoom-in-95 duration-150 select-none"
+          className="absolute bottom-full left-0 mb-2 z-50 flex items-center flex-wrap gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 max-w-[calc(100vw-24px)] box-border bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-neutral-200/90 animate-in fade-in zoom-in-95 duration-150 select-none"
           style={{ boxShadow: "0 10px 25px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
           role="toolbar"
           aria-label="Pilih Reaksi Emoji"

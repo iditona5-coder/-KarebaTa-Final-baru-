@@ -140,24 +140,22 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
       }}
     >
       <div
-        className={`w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[78vh] sm:max-h-[82vh] my-auto animate-in zoom-in-95 duration-200 transition-all ${
-          isVerticalMedia ? "max-w-[320px] sm:max-w-[350px]" : "max-w-[360px] sm:max-w-md"
-        }`}
+        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[82vh] my-auto animate-in zoom-in-95 duration-200 transition-all"
         onClick={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
         {/* TOP BAR / HEADER MODAL POP-UP */}
-        <div className="px-4 py-3 bg-gradient-to-r from-amber-500/10 via-amber-50 to-white border-b border-amber-100 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="px-3.5 sm:px-4 py-3 bg-gradient-to-r from-amber-500/10 via-amber-50 to-white border-b border-amber-100 flex items-center flex-wrap justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs border border-amber-300">
               {initialLetter}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center flex-wrap gap-1.5">
                 <span className="font-bold text-xs text-neutral-900 truncate">
                   {ad.advertiserName}
                 </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold uppercase bg-amber-500 text-slate-950 shadow-2xs">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold uppercase bg-amber-500 text-slate-950 shadow-2xs shrink-0">
                   <Sparkles className="w-2.5 h-2.5" />
                   <span>{ad.badgeText || "Promo Pop-up"}</span>
                 </span>
@@ -288,7 +286,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 id="popup-ad-cta-btn"
                 type="button"
                 onClick={handleActionClick}
-                className={`w-full py-2.5 px-3 sm:px-4 rounded-xl font-extrabold text-[clamp(12px,3.4vw,14px)] text-white flex items-center justify-center gap-2 shadow-md transition active:scale-98 cursor-pointer whitespace-nowrap select-none ${
+                className={`w-full py-2.5 px-3 sm:px-4 rounded-xl font-extrabold text-[clamp(12px,3.4vw,14px)] text-white flex flex-wrap items-center justify-center gap-2 text-center shadow-md transition active:scale-98 cursor-pointer select-none ${
                   ad.actionType === "whatsapp"
                     ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-600/25"
                     : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-600/25"
@@ -297,12 +295,12 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 {ad.actionType === "whatsapp" ? (
                   <>
                     <MessageCircle className="w-4 h-4 fill-white shrink-0" />
-                    <span className="whitespace-nowrap truncate">{ad.actionButtonText || "Hubungi via WhatsApp"}</span>
+                    <span className="break-words">{ad.actionButtonText || "Hubungi via WhatsApp"}</span>
                   </>
                 ) : (
                   <>
                     <ExternalLink className="w-4 h-4 shrink-0" />
-                    <span className="whitespace-nowrap truncate">{ad.actionButtonText || "Kunjungi Website Resmi"}</span>
+                    <span className="break-words">{ad.actionButtonText || "Kunjungi Website Resmi"}</span>
                   </>
                 )}
               </button>

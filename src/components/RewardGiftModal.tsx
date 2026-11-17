@@ -77,18 +77,18 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up"
+        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
-        <div className="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 p-4 sm:p-5 text-slate-950 flex items-center justify-between relative shadow-sm shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+        <div className="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 p-4 sm:p-5 text-slate-950 flex items-center flex-wrap justify-between gap-2 relative shadow-sm shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
             <div className="w-10 h-10 rounded-2xl bg-white/30 backdrop-blur-md flex items-center justify-center shadow-xs border border-white/40 shrink-0">
               <Gift className="w-5 h-5 text-slate-950 animate-bounce" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h3 className="font-extrabold text-sm sm:text-base leading-tight truncate">
+                <h3 className="font-extrabold text-sm sm:text-base leading-tight">
                   Beri Pa'bere Apresiasi
                 </h3>
                 <span className="text-[10px] bg-slate-950 text-amber-300 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -133,13 +133,13 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
             <label className="text-xs font-bold text-neutral-700 block mb-2">
               Pilih Rencana Nominal Pa'bere:
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-wrap gap-2">
               {activeNominals.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setSelectedNominal(opt.value)}
-                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                  className={`flex-1 min-w-[125px] box-border p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                     selectedNominal === opt.value
                       ? "border-[#00632B] bg-emerald-50/70 shadow-xs ring-1 ring-[#00632B]"
                       : "border-neutral-200 hover:border-neutral-300 bg-white"
@@ -154,18 +154,18 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
 
           {/* Tab Pilihan Saluran Pembayaran (Jika kreator punya lebih dari 1 metode) */}
           {availableMethodsCount > 1 && (
-            <div className="flex rounded-xl bg-neutral-100 p-1 gap-1">
+            <div className="flex flex-wrap rounded-xl bg-neutral-100 p-1 gap-1 box-border">
               {hasBank && (
                 <button
                   type="button"
                   onClick={() => setActiveTab("bank")}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-w-[96px] py-1.5 px-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === "bank"
                       ? "bg-white text-emerald-800 shadow-xs ring-1 ring-emerald-600/30"
                       : "text-neutral-500 hover:text-neutral-800"
                   }`}
                 >
-                  <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+                  <Building2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                   <span>Rekening Bank</span>
                 </button>
               )}
@@ -174,13 +174,13 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab("dana")}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-w-[80px] py-1.5 px-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === "dana"
                       ? "bg-white text-[#118EEA] shadow-xs ring-1 ring-[#118EEA]/30"
                       : "text-neutral-500 hover:text-neutral-800"
                   }`}
                 >
-                  <Smartphone className="w-3.5 h-3.5 text-[#118EEA]" />
+                  <Smartphone className="w-3.5 h-3.5 text-[#118EEA] shrink-0" />
                   <span>DANA</span>
                 </button>
               )}
@@ -189,13 +189,13 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab("qris")}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-w-[80px] py-1.5 px-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === "qris"
                       ? "bg-white text-amber-800 shadow-xs ring-1 ring-amber-600/30"
                       : "text-neutral-500 hover:text-neutral-800"
                   }`}
                 >
-                  <QrCode className="w-3.5 h-3.5 text-amber-600" />
+                  <QrCode className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                   <span>QRIS</span>
                 </button>
               )}
@@ -207,21 +207,21 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
           {/* ============================================================== */}
           {activeTab === "bank" && (
             <div className="bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border border-emerald-300/80 rounded-2xl p-4 space-y-3.5 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+              <div className="flex items-center flex-wrap justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
                     <Building2 className="w-4 h-4" />
                   </div>
-                  <div>
-                    <span className="text-xs font-extrabold text-emerald-900 block">
+                  <div className="min-w-0">
+                    <span className="text-xs font-extrabold text-emerald-900 block break-words">
                       {bankName}
                     </span>
-                    <span className="text-xs font-bold text-neutral-800">
+                    <span className="text-xs font-bold text-neutral-800 break-words">
                       a.n. {bankOwner}
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
                   Rekening Resmi
                 </span>
               </div>
@@ -229,12 +229,12 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
               {bankNumber ? (
                 <>
                   {/* Kotak Nomor Rekening yang siap disalin */}
-                  <div className="bg-white border-2 border-dashed border-emerald-500/50 rounded-xl p-3 flex items-center justify-between gap-2 shadow-2xs">
-                    <div className="min-w-0">
+                  <div className="bg-white border-2 border-dashed border-emerald-500/50 rounded-xl p-3 flex items-center flex-wrap justify-between gap-2 shadow-2xs">
+                    <div className="min-w-[140px] flex-1">
                       <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
                         Nomor Rekening:
                       </span>
-                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-900 select-all">
+                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-900 select-all break-all">
                         {bankNumber}
                       </span>
                     </div>
@@ -284,21 +284,21 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
           {/* ============================================================== */}
           {activeTab === "dana" && (
             <div className="bg-gradient-to-br from-[#118EEA]/10 via-sky-50 to-white border border-[#118EEA]/30 rounded-2xl p-4 space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#118EEA] text-white flex items-center justify-center font-black text-xs shadow-xs">
+              <div className="flex items-center flex-wrap justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-7 h-7 rounded-lg bg-[#118EEA] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
                     D
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-xs font-extrabold text-[#118EEA] block">
                       Akun DANA Pembuat Berita:
                     </span>
-                    <span className="text-xs font-bold text-neutral-900">
+                    <span className="text-xs font-bold text-neutral-900 break-words">
                       a.n. {danaOwner}
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
                   Resmi
                 </span>
               </div>
@@ -306,12 +306,12 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
               {danaNumber ? (
                 <>
                   {/* Kotak Nomor DANA yang siap disalin */}
-                  <div className="bg-white border-2 border-dashed border-[#118EEA]/40 rounded-xl p-3 flex items-center justify-between gap-2 shadow-2xs">
-                    <div className="min-w-0">
+                  <div className="bg-white border-2 border-dashed border-[#118EEA]/40 rounded-xl p-3 flex items-center flex-wrap justify-between gap-2 shadow-2xs">
+                    <div className="min-w-[140px] flex-1">
                       <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
                         Nomor HP DANA:
                       </span>
-                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-900 select-all">
+                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-900 select-all break-all">
                         {danaNumber}
                       </span>
                     </div>
@@ -334,9 +334,9 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   <button
                     type="button"
                     onClick={handleOpenDanaApp}
-                    className="w-full py-3 px-4 bg-[#118EEA] hover:bg-[#0c7acb] active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#118EEA]/20 transition cursor-pointer"
+                    className="w-full py-3 px-4 bg-[#118EEA] hover:bg-[#0c7acb] active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm flex flex-wrap items-center justify-center gap-2 text-center shadow-md shadow-[#118EEA]/20 transition cursor-pointer"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-4 h-4 shrink-0" />
                     <span>Kirim {selectedNominal.toLocaleString("id-ID")} via Aplikasi DANA</span>
                   </button>
                   <p className="text-[10px] text-center text-neutral-500 leading-tight">
@@ -382,7 +382,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
               </p>
               {qrisUrl ? (
                 <>
-                  <div className="w-52 h-52 bg-white p-2 border border-neutral-300 rounded-2xl shadow-sm flex items-center justify-center overflow-hidden">
+                  <div className="w-full max-w-[208px] aspect-square bg-white p-2 border border-neutral-300 rounded-2xl shadow-sm flex items-center justify-center overflow-hidden">
                     <img
                       src={qrisUrl}
                       alt="QRIS Hadiah Warga"

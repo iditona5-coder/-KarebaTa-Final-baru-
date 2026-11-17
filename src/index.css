@@ -4,6 +4,7 @@
 *,
 *::before,
 *::after {
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent !important;
   scrollbar-width: none !important; /* Firefox */
   -ms-overflow-style: none !important; /* IE dan Edge */
@@ -23,9 +24,9 @@
   outline: none !important;
 }
 
-/* SISTEM SKALA RESPONSIF FLUID ALA APLIKASI BESAR (INSTAGRAM, TIKTOK, TWITTER) */
+/* SISTEM SKALA RESPONSIF FLUID GLOBAL (SEMUA UKURAN LAYAR HP) */
 :root {
-  --app-max-width: 448px;
+  --app-max-width: 500px;
   --fluid-icon-sm: clamp(16px, 4.4vw, 18px);
   --fluid-icon-md: clamp(19px, 5.2vw, 22px);
   --fluid-icon-lg: clamp(22px, 6vw, 26px);
@@ -38,6 +39,7 @@
 html {
   max-width: 100%;
   width: 100%;
+  box-sizing: border-box;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-overflow-scrolling: touch;
   -webkit-user-select: none;
@@ -57,6 +59,7 @@ body {
   width: 100%;
   min-height: 100vh;
   position: relative;
+  box-sizing: border-box;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-overflow-scrolling: touch;
   -webkit-text-size-adjust: 100% !important;
@@ -76,26 +79,56 @@ body {
   width: 100%;
   min-height: 100%;
   position: relative;
+  box-sizing: border-box;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Izinkan seleksi & pengetikan teks hanya pada kolom formulir (input & textarea) */
-input, textarea, select, [contenteditable="true"] {
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  user-select: text !important;
-  -webkit-touch-callout: default !important;
-  touch-action: manipulation !important;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  border-radius: 0;
-  /* Aturan mutlak anti auto-zoom browser HP (iOS Safari & Android Chrome):
-     Font-size minimal 16px mutlak diperlukan agar layar tidak ter-zoom otomatis saat pengguna mengetuk kolom input */
-  font-size: 16px !important;
+/* Aturan dasar global agar form input, tombol, dan media tidak pernah terpotong di layar sempit */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  input, textarea, select, [contenteditable="true"] {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+    touch-action: manipulation !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    /* Aturan mutlak anti auto-zoom browser HP (iOS Safari & Android Chrome):
+       Font-size minimal 16px mutlak diperlukan agar layar tidak ter-zoom otomatis saat pengguna mengetuk kolom input */
+    font-size: 16px !important;
+  }
+
+  button, a {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  img, video {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Wadah global standar responsif (width 100%, max-width 500px, margin auto, box-sizing border-box) */
+@layer components {
+  .karebata-container {
+    width: 100%;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
 }
 
 /* Pencegahan zoom layar tidak sengaja di seluruh viewport */
@@ -189,13 +222,16 @@ video {
   right: 0 !important;
   z-index: 40 !important;
   width: 100% !important;
-  max-width: 28rem !important;
+  max-width: 500px !important;
   margin-left: auto !important;
   margin-right: auto !important;
+  box-sizing: border-box !important;
   background-color: #ffffff !important;
   touch-action: pan-y !important;
   overscroll-behavior-x: none !important;
   padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-left: env(safe-area-inset-left, 0px) !important;
+  padding-right: env(safe-area-inset-right, 0px) !important;
 }
 
 #karebata-feed-header,
@@ -204,6 +240,7 @@ video {
   overscroll-behavior-x: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
+  box-sizing: border-box !important;
 }
 
 /* Animasi Papan Teks Berjalan (Running Text Marquee) */

@@ -111,20 +111,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
       <div 
-        className="w-full max-w-sm sm:max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-200 transform transition-all duration-200 animate-scale-up max-h-[92vh] flex flex-col"
+        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-200 transform transition-all duration-200 animate-scale-up max-h-[92dvh] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-modal-title"
       >
         {/* Header Modal dengan Logo Kareba'Ta & Tombol Tutup */}
-        <div className="relative px-6 pt-5 pb-3 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70 shrink-0">
+        <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-neutral-100 flex items-center flex-wrap justify-between gap-2 bg-neutral-50/70 shrink-0">
           <KarebaTaLogo showSubtitle={true} />
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-neutral-200/70 hover:bg-neutral-300 text-neutral-600 hover:text-neutral-900 transition flex items-center justify-center cursor-pointer active:scale-95"
+            className="w-9 h-9 rounded-full bg-neutral-200/70 hover:bg-neutral-300 text-neutral-600 hover:text-neutral-900 transition flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
             aria-label="Tutup jendela login"
           >
             <X className="w-5 h-5" />
@@ -132,7 +132,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Konten Utama */}
-        <div className="p-5 sm:p-6 text-center overflow-y-auto">
+        <div className="p-4 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center overflow-y-auto">
           {/* Ikon Contextual */}
           <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-3 text-[#E5A000] shadow-xs">
             {actionContext === "camera" ? (
@@ -157,7 +157,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </p>
 
           {/* Banner Informasi: Menonton Tetap Bebas */}
-          <div className="mt-3 py-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center gap-2 text-[11px] text-emerald-800 font-medium">
+          <div className="mt-3 py-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200/70 flex flex-wrap items-center justify-center gap-2 text-[11px] text-emerald-800 font-medium">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span>Menonton kabar warga tetap bebas tanpa perlu login</span>
           </div>
@@ -174,8 +174,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </p>
 
               {/* Box Salin Domain */}
-              <div className="flex items-center gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
-                <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 px-1">
+              <div className="flex items-center flex-wrap gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
+                <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 min-w-[140px] px-1">
                   {currentHost}
                 </span>
                 <button
@@ -193,9 +193,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleQuickPreviewLogin(false)}
-                  className="w-full py-2.5 px-3 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                  className="w-full py-2.5 px-3 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-xs flex flex-wrap items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
                 >
-                  <Users className="w-3.5 h-3.5" />
+                  <Users className="w-3.5 h-3.5 shrink-0" />
                   <span>Masuk Sebagai Warga (Mode Pratinjau)</span>
                 </button>
               </div>
@@ -208,8 +208,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
           {/* Papan Masuk Langsung dengan Nama Pengguna */}
           <form onSubmit={handleUsernameLogin} className="mt-4 space-y-2.5">
-            <div className="relative flex items-center bg-neutral-50 rounded-2xl border-2 border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all">
-              <span className="pl-4 text-sm sm:text-base font-semibold select-none text-neutral-400">
+            <div className="relative flex items-center bg-neutral-50 rounded-2xl border-2 border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all min-w-0">
+              <span className="pl-4 text-sm sm:text-base font-semibold select-none text-neutral-400 shrink-0">
                 @
               </span>
               <input
@@ -223,9 +223,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   if (errorMessage) setErrorMessage(null);
                 }}
                 placeholder="nama_kamu"
-                className="w-full py-3 pl-0.5 pr-3 bg-transparent text-sm sm:text-base font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
+                className="flex-1 min-w-0 w-full py-3 pl-0.5 pr-2 bg-transparent text-sm sm:text-base font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
               />
-              <span className={`pr-3 text-xs font-semibold ${usernameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
+              <span className={`pr-3 text-xs font-semibold shrink-0 ${usernameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
                 {usernameInput.length}/13
               </span>
             </div>
@@ -233,10 +233,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <button
               type="submit"
               disabled={!usernameInput.trim()}
-              className="w-full py-3 px-4 bg-[#00632B] hover:bg-[#004f22] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
+              className="w-full py-3 px-4 bg-[#00632B] hover:bg-[#004f22] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-bold text-xs sm:text-sm flex flex-wrap items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
             >
               <span>Masuk</span>
-              <ArrowRight className="w-4 h-4 text-white" />
+              <ArrowRight className="w-4 h-4 text-white shrink-0" />
             </button>
           </form>
 
@@ -254,11 +254,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full py-3 px-3 sm:px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-[clamp(12px,3.5vw,14px)] flex items-center justify-center gap-2.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 whitespace-nowrap select-none"
+              className="w-full py-3 px-3 sm:px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-[clamp(12px,3.5vw,14px)] flex flex-wrap items-center justify-center gap-2.5 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 select-none"
             >
               {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-[#E5A000] animate-spin" />
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-[#E5A000] animate-spin shrink-0" />
                   <span className="text-neutral-600">Menghubungkan Akun Google...</span>
                 </div>
               ) : (
@@ -282,7 +282,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                     />
                   </svg>
-                  <span className="whitespace-nowrap font-bold">Masuk dengan Google</span>
+                  <span className="font-bold">Masuk dengan Google</span>
                 </>
               )}
             </button>

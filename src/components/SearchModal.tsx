@@ -257,18 +257,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   return (
     <div
       id="search-page-overlay"
-      className="fixed inset-x-0 bottom-0 top-[52px] sm:top-[56px] z-50 bg-white flex flex-col max-w-md mx-auto shadow-2xl animate-fade-in overflow-hidden h-[calc(100dvh-52px)] sm:h-[calc(100dvh-56px)]"
+      className="fixed inset-x-0 bottom-0 top-[52px] sm:top-[56px] z-50 bg-white flex flex-col w-full max-w-[500px] mx-auto box-border shadow-2xl animate-fade-in overflow-hidden h-[calc(100dvh-52px)] sm:h-[calc(100dvh-56px)]"
       style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
     >
       {/* Konten Halaman Pencarian - Latar Solid 100% Opaque Anti Tembus Pandang */}
       <div
-        className="flex-1 overflow-y-auto p-4 space-y-4 bg-white pb-28 overscroll-contain"
+        className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-4 bg-white pb-[max(7rem,env(safe-area-inset-bottom))] overscroll-contain box-border"
         style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
       >
         {/* BANNER FILTER AKTIF JIKA MEMILIH AKUN / LOKASI TERTENTU */}
         {(selectedAccount || selectedLocation) && (
-          <div className="bg-white p-3 rounded-2xl border border-[#00632B]/30 shadow-xs flex items-center justify-between gap-3 animate-fade-in">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="bg-white p-3 rounded-2xl border border-[#00632B]/30 shadow-xs flex items-center flex-wrap justify-between gap-2.5 sm:gap-3 animate-fade-in box-border">
+            <div className="flex items-center gap-2.5 min-w-[160px] flex-1">
               {selectedAccount ? (
                 <div className="w-8 h-8 rounded-full bg-[#00632B] text-white flex items-center justify-center text-xs font-bold shrink-0">
                   <User className="w-4 h-4" />
@@ -278,7 +278,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   <MapPin className="w-4 h-4" />
                 </div>
               )}
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-neutral-900 truncate">
                   {selectedAccount ? `Postingan @${selectedAccount.replace(/^@+/, "")}` : `Lokasi: ${selectedLocation}`}
                 </p>
@@ -301,8 +301,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         )}
         {/* BILAH KONTROL HASIL PENCARIAN & TOMBOL HAPUS/BERSIHKAN PENCARIAN */}
         {(query.trim() !== "" || selectedAccount || selectedLocation) && (
-          <div className="bg-white p-3 rounded-2xl border border-neutral-200/90 shadow-2xs flex items-center justify-between gap-3 animate-fade-in">
-            <div className="min-w-0 flex items-center gap-2">
+          <div className="bg-white p-3 rounded-2xl border border-neutral-200/90 shadow-2xs flex items-center flex-wrap justify-between gap-2.5 sm:gap-3 animate-fade-in box-border">
+            <div className="min-w-[150px] flex-1 flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-[#00632B] flex items-center justify-center shrink-0">
                 <Search className="w-3.5 h-3.5 text-[#00632B]" />
               </div>
@@ -390,10 +390,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               <>
                 {/* 1. KELOMPOK NAMA AKUN WARGA */}
                 {showAccounts && matchedAccounts.length > 0 && (
-                  <section className="bg-white p-3.5 rounded-2xl border border-neutral-200 shadow-2xs space-y-2.5">
-                    <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
+                  <section className="bg-white p-3.5 rounded-2xl border border-neutral-200 shadow-2xs space-y-2.5 box-border">
+                    <div className="flex items-center flex-wrap justify-between gap-1.5 pb-1 border-b border-neutral-100">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 uppercase tracking-wider">
-                        <User className="w-3.5 h-3.5 text-[#00632B]" />
+                        <User className="w-3.5 h-3.5 text-[#00632B] shrink-0" />
                         <span>Akun Warga Cocok ({matchedAccounts.length})</span>
                       </div>
                       <span className="text-[10px] text-neutral-400">Klik untuk melihat postingannya</span>
@@ -407,21 +407,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                             setSelectedAccount(acc.user);
                             setSelectedLocation(null);
                           }}
-                          className="py-2.5 px-1.5 flex items-center justify-between hover:bg-neutral-50 rounded-xl transition cursor-pointer group"
+                          className="py-2.5 px-1.5 flex items-center flex-wrap justify-between gap-2 hover:bg-neutral-50 rounded-xl transition cursor-pointer group"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-[140px] flex-1">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border border-[#E5A000] text-white text-xs font-bold flex items-center justify-center shrink-0">
                               {acc.init}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs font-bold text-neutral-900 group-hover:text-[#00632B] transition truncate">
                                 @{acc.user}
                               </p>
                               <p className="text-[11px] text-neutral-500 truncate">{acc.name}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="text-[10px] font-semibold bg-[#00632B]/10 text-[#00632B] px-2 py-0.5 rounded-full whitespace-nowrap">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-semibold bg-[#00632B]/10 text-[#00632B] px-2 py-0.5 rounded-full">
                               {acc.postCount} postingan
                             </span>
                             <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition" />
@@ -434,10 +434,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
                 {/* 2. KELOMPOK LOKASI */}
                 {showLocations && matchedLocations.length > 0 && (
-                  <section className="bg-white p-3.5 rounded-2xl border border-neutral-200 shadow-2xs space-y-2.5">
-                    <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
+                  <section className="bg-white p-3.5 rounded-2xl border border-neutral-200 shadow-2xs space-y-2.5 box-border">
+                    <div className="flex items-center flex-wrap justify-between gap-1.5 pb-1 border-b border-neutral-100">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 uppercase tracking-wider">
-                        <MapPin className="w-3.5 h-3.5 text-yellow-500" />
+                        <MapPin className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
                         <span>Lokasi Cocok ({matchedLocations.length})</span>
                       </div>
                       <span className="text-[10px] text-neutral-400">Klik untuk melihat kabar di lokasi ini</span>
@@ -451,13 +451,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                             setSelectedLocation(locItem.loc);
                             setSelectedAccount(null);
                           }}
-                          className="py-2.5 px-1.5 flex items-center justify-between hover:bg-neutral-50 rounded-xl transition cursor-pointer group"
+                          className="py-2.5 px-1.5 flex items-center flex-wrap justify-between gap-2 hover:bg-neutral-50 rounded-xl transition cursor-pointer group"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-[140px] flex-1">
                             <div className="w-8 h-8 rounded-full bg-yellow-50 text-yellow-500 flex items-center justify-center shrink-0">
                               <MapPin className="w-4 h-4 text-yellow-500" />
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs font-bold text-neutral-900 group-hover:text-yellow-600 transition truncate">
                                 {locItem.loc}
                               </p>
@@ -466,8 +466,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full">
                               {locItem.count} kabar
                             </span>
                             <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition" />
@@ -481,9 +481,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 {/* 3. KELOMPOK POSTINGAN BERITA & KABAR WARGA */}
                 {showPosts && matchedPosts.length > 0 && (
                   <section className="space-y-2.5">
-                    <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center flex-wrap justify-between gap-1.5 px-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 uppercase tracking-wider">
-                        <Newspaper className="w-3.5 h-3.5 text-[#00632B]" />
+                        <Newspaper className="w-3.5 h-3.5 text-[#00632B] shrink-0" />
                         <span>Kabar Berita Cocok ({matchedPosts.length})</span>
                       </div>
                       <span className="text-[10px] text-neutral-400">Klik kartu untuk melihat rincian penuh</span>
@@ -531,8 +531,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                             {/* Konten & Rincian */}
                             <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                               <div>
-                                <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mb-1">
-                                  <span className="font-bold text-neutral-900 truncate max-w-[120px]">
+                                <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-[11px] text-neutral-500 mb-1">
+                                  <span className="font-bold text-neutral-900 truncate max-w-full">
                                     @{post.user?.replace(/^@+/, "")}
                                   </span>
                                   <span>•</span>
@@ -549,9 +549,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                                 </p>
                               </div>
 
-                              <div className="flex items-center justify-between text-[11px] text-neutral-400 mt-2 pt-1 border-t border-neutral-100">
+                              <div className="flex items-center flex-wrap justify-between gap-2 text-[11px] text-neutral-400 mt-2 pt-1 border-t border-neutral-100">
                                 {post.location ? (
-                                  <span className="flex items-center gap-0.5 text-neutral-500 font-medium truncate max-w-[140px]">
+                                  <span className="flex items-center gap-0.5 text-neutral-500 font-medium min-w-0 truncate flex-1">
                                     <MapPin className="w-3 h-3 text-yellow-500 shrink-0" />
                                     <span className="truncate">{post.location}</span>
                                   </span>

@@ -19,7 +19,7 @@ export function CommentActions({
   isOwner,
 }: CommentActionsProps) {
   return (
-    <div className="flex flex-row items-center gap-4 mt-1.5 select-none text-xs">
+    <div className="w-full box-border flex flex-row flex-wrap items-center gap-x-4 gap-y-1.5 mt-1.5 select-none text-xs">
       {/* Like */}
       <button
         type="button"

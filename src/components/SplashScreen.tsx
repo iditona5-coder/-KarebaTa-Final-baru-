@@ -19,24 +19,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     window.location.search.includes("source=pwa")
   );
 
-  const initialPct = isStandalone ? 70 : 20;
-  const effectiveDuration = isStandalone ? Math.min(durationMs, 450) : durationMs;
-  const [progress, setProgress] = useState(initialPct);
+  const effectiveDuration = isStandalone ? Math.min(durationMs, 650) : durationMs;
   const [isFading, setIsFading] = useState(false);
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
 
   useEffect(() => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const pct = Math.min(100, Math.round(initialPct + (elapsed / Math.max(1, effectiveDuration - 100)) * (100 - initialPct)));
-      setProgress(pct);
-      if (elapsed >= effectiveDuration - 100) {
-        clearInterval(interval);
-      }
-    }, 16);
-
     const fadeTimer = setTimeout(() => {
       setIsFading(true);
     }, Math.max(0, effectiveDuration - 150));
@@ -46,31 +34,28 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     }, effectiveDuration);
 
     return () => {
-      clearInterval(interval);
       clearTimeout(fadeTimer);
       clearTimeout(finishTimer);
     };
-  }, [effectiveDuration, initialPct]);
+  }, [effectiveDuration]);
 
   return (
     <div
       id="karebata-splash-screen"
-      className={`fixed inset-0 z-[999999] bg-white flex flex-col items-center justify-center p-6 select-none transition-opacity duration-300 ease-out ${
+      className={`fixed inset-0 z-[999999] w-full h-[100dvh] box-border bg-white flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] select-none transition-opacity duration-200 ease-out ${
         isFading ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       aria-label="Layar Pembuka Kareba'Ta"
     >
-      <div className="flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full max-w-[500px] mx-auto box-border flex flex-col items-center text-center">
         {/* Ikon Pin Emas Berhuruf K */}
-        <div
-          className="relative mb-4 drop-shadow-md"
-        >
-          <KarebaPinIcon size={84} />
+        <div className="relative mb-4 drop-shadow-md">
+          <KarebaPinIcon size="clamp(68px, 20vw, 84px)" />
         </div>
 
         {/* Nama Brand: Kareba'Ta */}
         <h1
-          className="text-4xl sm:text-5xl font-[900] tracking-tight leading-none mb-1.5 flex items-center justify-center"
+          className="text-[clamp(30px,9vw,48px)] font-[900] tracking-tight leading-none mb-1.5 flex items-center justify-center flex-wrap"
           style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
         >
           <span className="text-[#00632B]">Kareba'</span>
@@ -79,19 +64,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
         {/* Slogan Asli: BERITAMU, SUARAMU */}
         <p
-          className="text-xs sm:text-[13px] font-extrabold tracking-[0.16em] text-[#E5A000] uppercase mb-8"
+          className="text-xs sm:text-[13px] font-extrabold tracking-[0.16em] text-[#E5A000] uppercase"
           style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
         >
           BERITAMU, SUARAMU
         </p>
-
-        {/* Batang Pemuatan (Loading Bar) yang Berjalan Nyata */}
-        <div className="w-44 h-2.5 bg-neutral-100 rounded-full overflow-hidden shadow-inner border border-neutral-200/90 relative">
-          <div
-            className="h-full bg-gradient-to-r from-[#00632B] via-emerald-500 to-[#E5A000] rounded-full transition-all duration-75 ease-out shadow-xs"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
       </div>
     </div>
   );

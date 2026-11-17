@@ -176,10 +176,10 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
   return (
     <article
       id={`sponsor-ad-${ad.id}`}
-      className="w-full bg-gradient-to-b from-amber-50/40 via-white to-white border-y border-amber-200/70 sm:border sm:border-amber-200/80 sm:rounded-2xl sm:mb-5 shadow-xs overflow-hidden transition-all duration-200"
+      className="w-full box-border bg-gradient-to-b from-amber-50/40 via-white to-white border-y border-amber-200/70 sm:border sm:border-amber-200/80 sm:rounded-2xl sm:mb-5 shadow-xs overflow-hidden transition-all duration-200"
     >
       {/* HEADER SPONSOR */}
-      <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between">
+      <div className="px-3.5 sm:px-4 pt-3.5 pb-2.5 flex items-center flex-wrap justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Avatar Advertiser */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-600 to-amber-700 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-xs border border-amber-300">
@@ -331,8 +331,8 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
           })()}
         </div>
 
-        {/* TOMBOL AKSI UTAMA (CTA) - Selalu Horizontal 1 Baris di Semua Layar HP */}
-        <div className="pt-1 flex items-center justify-between gap-2 sm:gap-3">
+        {/* TOMBOL AKSI UTAMA (CTA) - Responsif dan Membungkus Otomatis di Layar Kecil */}
+        <div className="pt-1 flex items-center flex-wrap justify-between gap-2 sm:gap-3">
           {ad.actionType !== "none" && (
             <button
               type="button"
@@ -340,7 +340,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               onClick={handleActionClick}
-              className={`flex-1 min-w-0 py-2.5 px-3 sm:px-4 rounded-xl font-bold text-[clamp(11.5px,3.2vw,13.5px)] flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm transition active:scale-98 cursor-pointer whitespace-nowrap select-none ${
+              className={`flex-1 min-w-[175px] py-2.5 px-3 sm:px-4 rounded-xl font-bold text-[clamp(11.5px,3.2vw,13.5px)] flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-center shadow-sm transition active:scale-98 cursor-pointer select-none ${
                 ad.actionType === "whatsapp"
                   ? "bg-[#25D366] hover:bg-[#20ba59] text-white shadow-emerald-900/20"
                   : "bg-neutral-900 hover:bg-neutral-800 text-white shadow-neutral-900/20"
@@ -351,7 +351,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               ) : (
                 <ExternalLink className="w-4 h-4 shrink-0" />
               )}
-              <span className="whitespace-nowrap truncate">{ad.actionButtonText || (ad.actionType === "whatsapp" ? "Hubungi WhatsApp Toko" : "Kunjungi Website")}</span>
+              <span className="break-words">{ad.actionButtonText || (ad.actionType === "whatsapp" ? "Hubungi WhatsApp Toko" : "Kunjungi Website")}</span>
             </button>
           )}
 

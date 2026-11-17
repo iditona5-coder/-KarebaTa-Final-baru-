@@ -53,7 +53,7 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
   };
 
   return (
-    <div className="flex flex-row items-center gap-3 py-3 select-none">
+    <div className="w-full box-border flex flex-row flex-wrap items-center gap-2 sm:gap-3 py-3 select-none">
       <a
         href={fbUrl}
         target="_blank"
