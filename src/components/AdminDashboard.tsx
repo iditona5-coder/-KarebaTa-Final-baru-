@@ -52,8 +52,6 @@ import {
   Gift,
 } from "lucide-react";
 import {
-  loginAdminWithEmailPassword,
-  changeAdminPassword,
   listenToAdminAppConfig,
   saveAdminAppConfig,
   logAdminActivity,
@@ -145,6 +143,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return false;
   });
   const [pinInput, setPinInput] = useState<string>("");
+  const [showPinDigits, setShowPinDigits] = useState<boolean>(false);
   const [pinError, setPinError] = useState<string>("");
 
   // Menu Aktif (10 Menu Lengkap)
@@ -224,7 +223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adFormDuration, setAdFormDuration] = useState<number>(0); // 0 = Selamanya, 3, 7, 14, 30 hari
   const [previewPopupAd, setPreviewPopupAd] = useState<SponsorAd | null>(null);
 
-  // State Fitur Menu 8: Pengaturan & Ganti Password / Passcode
+  // State Fitur Menu 8: Pengaturan & Ganti Passcode
   const [settingsAppName, setSettingsAppName] = useState(appConfig.appName);
   const [settingsEmail, setSettingsEmail] = useState(appConfig.adminEmail);
   const [settingsWhatsapp, setSettingsWhatsapp] = useState(appConfig.adminWhatsapp);
@@ -232,9 +231,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [settingsPrivacy, setSettingsPrivacy] = useState(appConfig.privacyPolicyText);
   const [settingsTerms, setSettingsTerms] = useState(appConfig.termsOfServiceText);
   const [newAdminPasscode, setNewAdminPasscode] = useState("");
-  const [newAdminPassword, setNewAdminPassword] = useState("");
-  const [confirmAdminPassword, setConfirmAdminPassword] = useState("");
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [showNewAdminPasscode, setShowNewAdminPasscode] = useState(false);
 
   // State Pengaturan Jumlah Pa'bere (Hadiah) & Syarat Minimal Suka
   const [giftNominals, setGiftNominals] = useState<GiftNominalOption[]>(() => {
@@ -528,23 +525,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </p>
           </div>
 
-          {/* 6 Digit Display Indicators */}
-          <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2.5 py-1">
-            {[0, 1, 2, 3, 4, 5].map((idx) => {
-              const isFilled = pinInput.length > idx;
-              return (
-                <div
-                  key={idx}
-                  className={`w-[clamp(32px,11vw,42px)] h-11 sm:h-12 rounded-xl border flex items-center justify-center text-lg font-black transition-all duration-200 ${
-                    isFilled
-                      ? "border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-sm shadow-emerald-500/20 scale-105"
-                      : "border-neutral-700 bg-neutral-800/60 text-neutral-500"
-                  }`}
-                >
-                  {isFilled ? "●" : ""}
-                </div>
-              );
-            })}
+          {/* 6 Digit Display Indicators + Tombol Ikon Mata */}
+          <div className="flex flex-col items-center gap-2 py-1">
+            <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2">
+              {[0, 1, 2, 3, 4, 5].map((idx) => {
+                const isFilled = pinInput.length > idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`w-[clamp(28px,9.5vw,42px)] h-11 sm:h-12 rounded-xl border flex items-center justify-center text-lg font-black transition-all duration-200 ${
+                      isFilled
+                        ? "border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-sm shadow-emerald-500/20 scale-105"
+                        : "border-neutral-700 bg-neutral-800/60 text-neutral-500"
+                    }`}
+                  >
+                    {isFilled ? (showPinDigits ? pinInput[idx] : "●") : ""}
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setShowPinDigits((prev) => !prev)}
+                aria-label={showPinDigits ? "Sembunyikan PIN" : "Lihat PIN"}
+                title={showPinDigits ? "Sembunyikan PIN" : "Lihat PIN"}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-neutral-700/80 bg-neutral-800/70 hover:bg-neutral-700/80 text-neutral-300 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0"
+              >
+                {showPinDigits ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Pesan Kesalahan jika PIN salah */}
@@ -3573,7 +3581,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </form>
                 </div>
 
-                {/* 2. Keamanan Kunci Admin: Ganti Password & Passcode */}
+                {/* 2. Keamanan Kunci Admin: Passcode */}
                 <div className="space-y-6">
                   {/* Status & Ganti Kunci PIN Pengelola Admin */}
                   <div className="bg-white border border-neutral-200 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
@@ -3596,14 +3604,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           Ganti PIN Baru (6 Digit Angka)
                         </label>
                         <div className="flex flex-wrap gap-2">
-                          <input
-                            type="password"
-                            maxLength={6}
-                            value={newAdminPasscode}
-                            onChange={(e) => setNewAdminPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                            placeholder={`PIN saat ini: ${appConfig.adminPasscode || "123456"}`}
-                            className="flex-1 min-w-[150px] bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 font-mono tracking-widest box-border"
-                          />
+                          <div className="relative flex-1 min-w-[160px]">
+                            <input
+                              type={showNewAdminPasscode ? "text" : "password"}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={6}
+                              value={newAdminPasscode}
+                              onChange={(e) => setNewAdminPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                              placeholder={`PIN saat ini: ${appConfig.adminPasscode || "123456"}`}
+                              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-3 pr-10 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 font-mono tracking-widest box-border"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewAdminPasscode((prev) => !prev)}
+                              aria-label={showNewAdminPasscode ? "Sembunyikan PIN baru" : "Lihat PIN baru"}
+                              title={showNewAdminPasscode ? "Sembunyikan PIN baru" : "Lihat PIN baru"}
+                              className="absolute inset-y-0 right-2 flex items-center justify-center px-1 text-neutral-400 hover:text-neutral-700 transition cursor-pointer"
+                            >
+                              {showNewAdminPasscode ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
                           <button
                             type="button"
                             onClick={async () => {
@@ -3630,66 +3655,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           Default bawaan sistem: <span className="font-mono font-bold text-neutral-700">123456</span>
                         </p>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Ganti Password Akun Admin */}
-                  <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                    <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-emerald-600" />
-                      <span>Ganti Password Login Admin</span>
-                    </h3>
-
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-neutral-500 block mb-1">Password Baru</label>
-                        <input
-                          type="password"
-                          value={newAdminPassword}
-                          onChange={(e) => setNewAdminPassword(e.target.value)}
-                          placeholder="Minimal 6 karakter..."
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-neutral-500 block mb-1">Konfirmasi Password Baru</label>
-                        <input
-                          type="password"
-                          value={confirmAdminPassword}
-                          onChange={(e) => setConfirmAdminPassword(e.target.value)}
-                          placeholder="Ulangi password baru..."
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={isUpdatingPassword}
-                        onClick={async () => {
-                          if (newAdminPassword.length < 6) {
-                            showToast("Password minimal 6 karakter.");
-                            return;
-                          }
-                          if (newAdminPassword !== confirmAdminPassword) {
-                            showToast("Konfirmasi password tidak cocok!");
-                            return;
-                          }
-                          setIsUpdatingPassword(true);
-                          const res = await changeAdminPassword(newAdminPassword);
-                          setIsUpdatingPassword(false);
-                          if (res.success) {
-                            showToast("Password akun Admin berhasil diperbarui!");
-                            setNewAdminPassword("");
-                            setConfirmAdminPassword("");
-                          } else {
-                            showToast(res.error || "Gagal mengganti password.");
-                          }
-                        }}
-                        className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition"
-                      >
-                        {isUpdatingPassword ? "Menyimpan Password..." : "Simpan Password Baru"}
-                      </button>
                     </div>
                   </div>
                 </div>

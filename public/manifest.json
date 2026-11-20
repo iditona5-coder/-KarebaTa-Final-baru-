@@ -2,7 +2,7 @@
   "id": "/karebata-v4",
   "name": "Kareba'Ta — Beritamu Suaramu",
   "short_name": "Kareba'Ta",
-  "description": "Media sosial kabar dan momen warga terkini.",
+  "description": "Kareba'Ta - Semua cerita warga, dalam satu tempat.",
   "start_url": "/?source=pwa&v=4",
   "scope": "/",
   "display": "standalone",

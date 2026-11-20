@@ -1,6 +1,6 @@
 {
   "name": "Remix Remix Remix Remix Remix Remix Remix PaluFeed",
-  "description": "A local social feed app for sharing moments, photos, and updates within the community.",
+  "description": "Kareba'Ta - Semua cerita warga, dalam satu tempat.",
   "requestFramePermissions": [
     "camera"
   ],
