@@ -1,9 +1,9 @@
-const CACHE_NAME = 'karebata-v4';
+const CACHE_NAME = 'karebata-v5';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(['/', '/manifest.json?v=4']).catch(() => {});
+      return cache.addAll(['/', '/manifest.json?v=5']).catch(() => {});
     }).then(() => self.skipWaiting())
   );
 });

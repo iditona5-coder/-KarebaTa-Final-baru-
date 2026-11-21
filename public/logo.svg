@@ -26,13 +26,13 @@
     />
   </g>
 
-  <!-- Teks Brand: Kareba'Ta (Kareba Hijau Tua, Ta Kuning Emas) -->
-  <text x="256" y="357" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="900" font-size="62" letter-spacing="-1">
+  <!-- Teks Brand: Kareba'Ta (Font Poppins ExtraBold sama persis dengan logo asli Beranda) -->
+  <text x="256" y="357" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="800" font-size="60" letter-spacing="-1.5">
     <tspan fill="#00632B">Kareba&apos;</tspan><tspan fill="#E5A000">Ta</tspan>
   </text>
 
   <!-- Slogan Resmi: BERITAMU, SUARAMU -->
-  <text x="256" y="394" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="800" font-size="19" fill="#E5A000" letter-spacing="3.5">
+  <text x="256" y="394" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="800" font-size="18.5" fill="#E5A000" letter-spacing="2.8">
     BERITAMU, SUARAMU
   </text>
 </svg>

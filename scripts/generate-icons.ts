@@ -22,10 +22,10 @@ const svgMaskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 51
         fill="#ffffff"
       />
     </g>
-    <text x="256" y="357" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="900" font-size="62" letter-spacing="-1">
+    <text x="256" y="357" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="800" font-size="60" letter-spacing="-1.5">
       <tspan fill="#00632B">Kareba&apos;</tspan><tspan fill="#E5A000">Ta</tspan>
     </text>
-    <text x="256" y="394" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-weight="800" font-size="19" fill="#E5A000" letter-spacing="3.5">
+    <text x="256" y="394" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="800" font-size="18.5" fill="#E5A000" letter-spacing="2.8">
       BERITAMU, SUARAMU
     </text>
   </g>
