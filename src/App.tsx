@@ -58,6 +58,8 @@ import {
   getVideoDuration,
   formatDuration,
   MAX_VIDEO_DURATION_SECONDS,
+  MAX_VIDEO_FILE_SIZE_MB,
+  MAX_VIDEO_FILE_SIZE_BYTES,
 } from "./utils/thumbnail";
 import { compressImageFile } from "./utils/compressor";
 import { uploadToImageKit, deleteFromImageKit } from "./services/imagekit";
@@ -112,6 +114,22 @@ let hasSplashPlayedThisLaunch = false;
 export default function KarebaFeedFinal() {
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined" || hasSplashPlayedThisLaunch) return false;
+
+    const isStandalonePwa =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches ||
+      window.matchMedia("(display-mode: minimal-ui)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+      document.referrer.includes("android-app://") ||
+      window.location.search.includes("source=pwa");
+
+    if (isStandalonePwa) {
+      hasSplashPlayedThisLaunch = true;
+      try {
+        sessionStorage.setItem("karebata_splash_shown", "true");
+      } catch {}
+      return false;
+    }
 
     try {
       const alreadyShown = sessionStorage.getItem("karebata_splash_shown") === "true";
@@ -169,7 +187,12 @@ export default function KarebaFeedFinal() {
   const [isExtractingThumbnail, setIsExtractingThumbnail] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState<"image" | "video">("image");
   const [selectedVideoDuration, setSelectedVideoDuration] = useState<number | null>(null);
-  const [videoDurationAlert, setVideoDurationAlert] = useState<{ isOpen: boolean; duration: number } | null>(null);
+  const [videoDurationAlert, setVideoDurationAlert] = useState<{
+    isOpen: boolean;
+    reason: "duration" | "size";
+    duration?: number;
+    fileSizeBytes?: number;
+  } | null>(null);
   const [description, setDescription] = useState("");
 
   // State Pengaturan Aplikasi dari Admin (Konfigurasi Hadiah Pa'bere & Syarat Like)
@@ -1128,13 +1151,18 @@ export default function KarebaFeedFinal() {
       const isVid = file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|3gp|avi)$/i.test(file.name);
       
       if (isVid) {
+        if (file.size > MAX_VIDEO_FILE_SIZE_BYTES) {
+          setVideoDurationAlert({ isOpen: true, reason: "size", fileSizeBytes: file.size });
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
         setIsExtractingThumbnail(true);
         try {
-          // Validasi durasi video: batas maksimal 60 detik (1 menit) sangat pas untuk kabar warga
+          // Validasi durasi video: batas maksimal 30 detik agar cepat & hemat kuota ImageKit
           const dur = await getVideoDuration(file);
           if (dur > MAX_VIDEO_DURATION_SECONDS) {
             setIsExtractingThumbnail(false);
-            setVideoDurationAlert({ isOpen: true, duration: dur });
+            setVideoDurationAlert({ isOpen: true, reason: "duration", duration: dur });
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
           }
@@ -2411,8 +2439,13 @@ export default function KarebaFeedFinal() {
       return;
     }
 
-    // Ambil snapshot data form saat tombol diklik
-    const mediaToUpload = selectedFile || selectedImage;
+    // Ambil snapshot data form saat tombol diklik (gunakan hasil kompresi jika bertipe foto)
+    const mediaToUpload =
+      selectedMediaType === "image" &&
+      typeof selectedImage === "string" &&
+      selectedImage.startsWith("data:")
+        ? selectedImage
+        : selectedFile || selectedImage;
     const initialMediaUrl = selectedImage;
     const initialThumbnailUrl = selectedThumbnail || (selectedMediaType === "image" ? selectedImage : undefined);
     const currentMediaType = selectedMediaType;
@@ -5700,7 +5733,7 @@ export default function KarebaFeedFinal() {
           />
         )}
 
-        {/* MODAL PERINGATAN DURASI VIDEO LEBIH DARI 60 DETIK (1 MENIT) */}
+        {/* MODAL PERINGATAN BATAS DURASI (30 DETIK) ATAU UKURAN VIDEO (20 MB) */}
         {videoDurationAlert?.isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
             <div className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl p-4 sm:p-5 shadow-2xl border border-neutral-200 text-center space-y-4 max-h-[90dvh] overflow-y-auto">
@@ -5710,25 +5743,42 @@ export default function KarebaFeedFinal() {
 
               <div className="space-y-1.5">
                 <h3 className="text-base font-extrabold text-neutral-900">
-                  Durasi Video Terlalu Panjang
+                  {videoDurationAlert.reason === "size"
+                    ? "Ukuran Video Terlalu Besar"
+                    : "Durasi Video Terlalu Panjang"}
                 </h3>
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  Video yang Anda pilih berdurasi{" "}
-                  <span className="font-bold text-amber-600 font-mono">
-                    {formatDuration(videoDurationAlert.duration)}
-                  </span>
-                  . Batas durasi maksimal di Kareba&apos;Ta adalah{" "}
-                  <span className="font-bold text-[#00632B]">60 detik (1 menit)</span>.
-                </p>
+                {videoDurationAlert.reason === "size" ? (
+                  <p className="text-xs text-neutral-600 leading-relaxed">
+                    Video yang Anda pilih berukuran{" "}
+                    <span className="font-bold text-amber-600 font-mono">
+                      {((videoDurationAlert.fileSizeBytes || 0) / (1024 * 1024)).toFixed(1)} MB
+                    </span>
+                    . Batas ukuran maksimal video di Kareba&apos;Ta adalah{" "}
+                    <span className="font-bold text-[#00632B]">{MAX_VIDEO_FILE_SIZE_MB} MB</span>.
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-600 leading-relaxed">
+                    Video yang Anda pilih berdurasi{" "}
+                    <span className="font-bold text-amber-600 font-mono">
+                      {formatDuration(videoDurationAlert.duration || 0)}
+                    </span>
+                    . Batas durasi maksimal di Kareba&apos;Ta adalah{" "}
+                    <span className="font-bold text-[#00632B]">{MAX_VIDEO_DURATION_SECONDS} detik</span>.
+                  </p>
+                )}
               </div>
 
               <div className="bg-neutral-50 rounded-2xl p-3 border border-neutral-200 text-left space-y-1.5">
                 <p className="text-[11px] font-bold text-neutral-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#00632B] shrink-0" />
-                  <span>Kenapa dibatasi 60 detik?</span>
+                  <span>
+                    {videoDurationAlert.reason === "size"
+                      ? `Kenapa dibatasi ${MAX_VIDEO_FILE_SIZE_MB} MB?`
+                      : `Kenapa dibatasi ${MAX_VIDEO_DURATION_SECONDS} detik?`}
+                  </span>
                 </p>
                 <p className="text-[11px] text-neutral-500 leading-normal">
-                  Agar kabar warga tetap padat &amp; to the point, cepat diunggah di HP, serta hemat kuota dan tidak membuat warga lain *buffering* saat menonton di beranda.
+                  Agar kabar warga tetap padat dan jelas, cepat diunggah di HP, serta hemat kuota dan tidak membuat warga lain buffering saat menonton di beranda.
                 </p>
               </div>
 
@@ -5741,7 +5791,7 @@ export default function KarebaFeedFinal() {
                   }}
                   className="w-full py-2.5 px-4 bg-[#00632B] hover:bg-[#004f22] active:scale-98 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                 >
-                  Pilih Video Lain (&lt; 60 Detik)
+                  Pilih Video Lain (Maks. {MAX_VIDEO_DURATION_SECONDS} Detik / {MAX_VIDEO_FILE_SIZE_MB} MB)
                 </button>
                 <button
                   type="button"

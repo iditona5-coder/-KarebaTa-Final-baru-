@@ -102,6 +102,13 @@ import {
 import { BulletinItem } from "./RunningTextBar";
 import { deleteFromImageKit, uploadToImageKit } from "../services/imagekit";
 import { compressImageFile } from "../utils/compressor";
+import {
+  getVideoDuration,
+  formatDuration,
+  MAX_VIDEO_DURATION_SECONDS,
+  MAX_VIDEO_FILE_SIZE_MB,
+  MAX_VIDEO_FILE_SIZE_BYTES,
+} from "../utils/thumbnail";
 import { SponsorPopupModal } from "./SponsorPopupModal";
 
 export type AdminMenuKey =
@@ -228,8 +235,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [settingsEmail, setSettingsEmail] = useState(appConfig.adminEmail);
   const [settingsWhatsapp, setSettingsWhatsapp] = useState(appConfig.adminWhatsapp);
   const [settingsWorkingHours, setSettingsWorkingHours] = useState(appConfig.adminWorkingHours || "Setiap Hari: 08.00 - 21.00 WITA");
-  const [settingsPrivacy, setSettingsPrivacy] = useState(appConfig.privacyPolicyText);
-  const [settingsTerms, setSettingsTerms] = useState(appConfig.termsOfServiceText);
   const [newAdminPasscode, setNewAdminPasscode] = useState("");
   const [showNewAdminPasscode, setShowNewAdminPasscode] = useState(false);
 
@@ -286,8 +291,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setSettingsEmail(cfg.adminEmail);
       setSettingsWhatsapp(cfg.adminWhatsapp);
       setSettingsWorkingHours(cfg.adminWorkingHours || "Setiap Hari: 08.00 - 21.00 WITA");
-      setSettingsPrivacy(cfg.privacyPolicyText);
-      setSettingsTerms(cfg.termsOfServiceText);
       if (Array.isArray(cfg.giftNominals) && cfg.giftNominals.length > 0) {
         setGiftNominals(cfg.giftNominals);
       }
@@ -2726,19 +2729,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
+                            const isVideoFile =
+                              file.type.startsWith("video/") ||
+                              /\.(mp4|mov|webm|mkv|3gp|avi|m4v)$/i.test(file.name);
+
+                            if (isVideoFile) {
+                              if (file.size > MAX_VIDEO_FILE_SIZE_BYTES) {
+                                showToast(
+                                  `Ukuran video terlalu besar (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maksimal ${MAX_VIDEO_FILE_SIZE_MB} MB.`
+                                );
+                                if (adFileInputRef.current) adFileInputRef.current.value = "";
+                                return;
+                              }
+                              const dur = await getVideoDuration(file);
+                              if (dur > MAX_VIDEO_DURATION_SECONDS) {
+                                showToast(
+                                  `Durasi video terlalu panjang (${formatDuration(dur)}). Maksimal ${MAX_VIDEO_DURATION_SECONDS} detik.`
+                                );
+                                if (adFileInputRef.current) adFileInputRef.current.value = "";
+                                return;
+                              }
+                            }
+
                             try {
                               setIsAdMediaUploading(true);
-                              showToast(`Mengambil ${adFormMediaType === "video" ? "video" : "foto"} dari galeri HP...`);
-                              
+                              showToast(`Mengambil ${isVideoFile ? "video" : "foto"} dari galeri HP...`);
+
                               let mediaFile: File | string = file;
                               if (file.type.startsWith("image/")) {
                                 try {
                                   mediaFile = await compressImageFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.90 });
                                 } catch {}
                               }
-                              
+
                               const res = await uploadToImageKit(mediaFile, `ad_${Date.now()}_${file.name}`);
                               if (res && res.url) {
+                                if (isVideoFile && adFormMediaType !== "video") {
+                                  setAdFormMediaType("video");
+                                }
                                 setAdFormImg(res.url);
                                 showToast("Berhasil diambil dari galeri!");
                               }
@@ -2772,7 +2800,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 : `Ketuk untuk Memilih ${adFormMediaType === "video" ? "Video (MP4)" : "Foto"} dari Galeri HP`}
                             </p>
                             <p className="text-[11px] text-neutral-500 mt-1 font-medium">
-                              Membuka album foto &amp; video di HP Anda secara otomatis (tidak perlu ketik link)
+                              {adFormMediaType === "video"
+                                ? `Maksimal durasi ${MAX_VIDEO_DURATION_SECONDS} detik & ukuran ${MAX_VIDEO_FILE_SIZE_MB} MB agar cepat diputar di semua HP`
+                                : "Membuka album foto & video di HP Anda secara otomatis (maks. 30 detik / 20 MB untuk video)"}
                             </p>
                             <span className="inline-flex mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-black rounded-xl shadow-xs transition items-center gap-1.5 cursor-pointer">
                               <Upload className="w-3.5 h-3.5" />
@@ -3515,8 +3545,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         appName: settingsAppName.trim(),
                         adminEmail: settingsEmail.trim(),
                         adminWhatsapp: settingsWhatsapp.trim(),
-                        privacyPolicyText: settingsPrivacy.trim(),
-                        termsOfServiceText: settingsTerms.trim(),
                       });
                       showToast("Pengaturan aplikasi berhasil disimpan ke Firestore!");
                     }}
@@ -3548,26 +3576,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="email"
                         value={settingsEmail}
                         onChange={(e) => setSettingsEmail(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-neutral-600 block mb-1">Kebijakan Privasi</label>
-                      <textarea
-                        rows={3}
-                        value={settingsPrivacy}
-                        onChange={(e) => setSettingsPrivacy(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-neutral-600 block mb-1">Syarat & Ketentuan</label>
-                      <textarea
-                        rows={3}
-                        value={settingsTerms}
-                        onChange={(e) => setSettingsTerms(e.target.value)}
                         className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
                       />
                     </div>

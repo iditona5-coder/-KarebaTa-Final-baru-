@@ -79,10 +79,12 @@ export function extractVideoThumbnail(source: string | File, seekTime = 0.8): Pr
 }
 
 /**
- * Batas durasi maksimal video untuk aplikasi Kareba'Ta (Kabar Warga Cepat)
- * 60 detik (1 menit) sangat ideal: hemat kuota ImageKit, upload instan di HP, kabar padat to-the-point.
+ * Batas durasi & ukuran maksimal video untuk aplikasi Kareba'Ta (Kabar Warga Cepat)
+ * 30 detik & maksimal 20 MB: cukup untuk kabar warga/UMKM, cepat diunggah, dan hemat kuota ImageKit.
  */
-export const MAX_VIDEO_DURATION_SECONDS = 60;
+export const MAX_VIDEO_DURATION_SECONDS = 30;
+export const MAX_VIDEO_FILE_SIZE_MB = 20;
+export const MAX_VIDEO_FILE_SIZE_BYTES = MAX_VIDEO_FILE_SIZE_MB * 1024 * 1024;
 
 /**
  * Mendapatkan durasi video dalam satuan detik

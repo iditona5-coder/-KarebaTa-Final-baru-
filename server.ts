@@ -158,6 +158,10 @@ async function startServer() {
     app.get('*', (_req, res) => {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
     });
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server listening on http://0.0.0.0:${PORT}`);
+    });
   } else {
     // In dev mode, route /admin and /admin/* to /admin.html
     app.use((req, _res, next) => {
@@ -168,17 +172,27 @@ async function startServer() {
       }
       next();
     });
-    const { createServer } = await import('vite');
-    const vite = await createServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server listening on http://0.0.0.0:${PORT}`);
-  });
+    const vitePromise = import('vite').then(({ createServer }) =>
+      createServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      })
+    );
+
+    app.use(async (req, res, next) => {
+      try {
+        const vite = await vitePromise;
+        vite.middlewares(req, res, next);
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server listening on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 startServer();
