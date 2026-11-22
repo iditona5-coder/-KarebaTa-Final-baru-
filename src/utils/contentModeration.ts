@@ -123,19 +123,37 @@ const LEET_MAP: Record<string, string> = {
 };
 
 /**
- * Normalisasi teks untuk mendeteksi penyamaran kata (leetspeak, spasi/titik antar huruf)
+ * Normalisasi teks untuk mendeteksi penyamaran kata (leetspeak, angka pengganti huruf)
+ * sambil menjaga tanda baca akhir kalimat (mis. "Kareba'Ta!") dan angka murni (mis. nomor HP/tanggal)
+ * agar tidak memicu salah deteksi.
  */
 function normalizeText(input: string): string {
   if (!input) return "";
 
-  let cleaned = input.toLowerCase();
+  return input
+    .toLowerCase()
+    .split(/(\s+)/)
+    .map((segment) => {
+      if (/^\s+$/.test(segment)) return segment;
 
-  // Ubah leet char ke huruf biasa
-  for (const [leet, char] of Object.entries(LEET_MAP)) {
-    cleaned = cleaned.replaceAll(leet, char);
-  }
+      // Pisahkan tanda baca di awal & akhir kata (misal "Kareba'Ta!" -> core="kareba'ta", trail="!")
+      const match = segment.match(/^([^a-z0-9@$_'-]*)(.*?)([!?.:,;"')\]}]*)$/i);
+      const lead = match?.[1] || "";
+      const core = match?.[2] || segment;
+      const trail = match?.[3] || "";
 
-  return cleaned;
+      // Jangan ubah angka murni (nomor HP, tanggal, harga) menjadi huruf leetspeak
+      if (!/[a-z]/i.test(core)) {
+        return segment;
+      }
+
+      let converted = core;
+      for (const [leet, char] of Object.entries(LEET_MAP)) {
+        converted = converted.replaceAll(leet, char);
+      }
+      return `${lead}${converted}${trail}`;
+    })
+    .join("");
 }
 
 export interface ModerationResult {
@@ -163,9 +181,9 @@ export function checkContentModeration(rawText: string): ModerationResult {
       .map((ch) => (/[a-z0-9]/.test(ch) ? `${escapeRegExp(ch)}+` : ch === " " ? "\\s+" : escapeRegExp(ch)))
       .join("");
 
-    // 1. Cek kata utuh menggunakan word boundary (\b) termasuk huruf dipanjangkan (misal "leeeesssssi", "laaaaso", "coooombi")
-    // Kata normal seperti "kasih sudah", "termasuk", "masuk", "kasus" tetap LOLOS
-    const regexWord = new RegExp(`\\b${repeatedPattern}\\b`, "i");
+    // 1. Cek kata utuh dengan batas non-alfanumerik & non-apostrof agar kata berapostrof (misal "Kareba'Ta" / "Kareba’Ta")
+    // tidak terpecah menjadi dua kata terpisah
+    const regexWord = new RegExp(`(?<![a-z0-9'’‘])${repeatedPattern}(?![a-z0-9'’‘])`, "i");
     if (regexWord.test(rawLower) || regexWord.test(normalized)) {
       return {
         isClean: false,
@@ -175,11 +193,10 @@ export function checkContentModeration(rawText: string): ModerationResult {
     }
 
     // 2. Cek penyamaran huruf berjeda tanda baca/spasi (contoh: "a.s.u", "c.o.m.b.i", "l.e.s.s.i")
-    // Menggunakan batas non-alfanumerik di awal & akhir sehingga tidak pernah memotong kata normal lain
     const cleanChars = wordPattern.replace(/[^a-z0-9]/g, "").split("");
     if (cleanChars.length >= 3) {
       const obfuscatedPattern = cleanChars.map((c) => `${escapeRegExp(c)}+`).join("[\\s._*\\-]+");
-      const regexObfuscated = new RegExp(`(?<![a-z0-9])${obfuscatedPattern}(?![a-z0-9])`, "i");
+      const regexObfuscated = new RegExp(`(?<![a-z0-9'’‘])${obfuscatedPattern}(?![a-z0-9'’‘])`, "i");
       if (regexObfuscated.test(rawLower) || regexObfuscated.test(normalized)) {
         return {
           isClean: false,

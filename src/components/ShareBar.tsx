@@ -1,5 +1,5 @@
 import React from "react";
-import { Link2, Share2 } from "lucide-react";
+import { Link2 } from "lucide-react";
 
 // Official Facebook Brand Icon
 function FacebookIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -30,7 +30,6 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
   const [copied, setCopied] = React.useState(false);
 
   const cleanTitle = (title || "Kabar Warga Kareba'Ta").trim().slice(0, 140);
-  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const isStandalonePwa =
     typeof window !== "undefined" &&
     (window.matchMedia("(display-mode: standalone)").matches ||
@@ -38,22 +37,6 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
 
   const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(newsUrl)}`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(`${cleanTitle}\n${newsUrl}`)}`;
-
-  const handleNativeShare = async () => {
-    if (!canNativeShare) return;
-    try {
-      await navigator.share({
-        title: "Kareba'Ta",
-        text: cleanTitle,
-        url: newsUrl,
-      });
-      onShared?.();
-    } catch (err: any) {
-      if (err?.name !== "AbortError" && onShowToast) {
-        onShowToast("Gagal membuka menu bagikan perangkat.");
-      }
-    }
-  };
 
   const copyLink = async () => {
     try {
@@ -77,17 +60,6 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
 
   return (
     <div className="w-full box-border flex flex-row flex-wrap items-center gap-2 sm:gap-2.5 py-3 select-none">
-      {canNativeShare && (
-        <button
-          type="button"
-          onClick={handleNativeShare}
-          className="flex flex-row items-center gap-1.5 bg-[#00632B] hover:bg-[#004f22] text-white px-3.5 py-2 rounded-full transition active:scale-95 cursor-pointer shadow-2xs"
-          aria-label="Kirim lewat Menu Bagikan HP"
-        >
-          <Share2 size={14} className="text-white" />
-          <span className="text-xs font-semibold leading-none">Kirim</span>
-        </button>
-      )}
 
       <a
         href={fbUrl}
