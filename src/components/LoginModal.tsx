@@ -1,13 +1,40 @@
 import React, { useState } from "react";
-import { X, ShieldCheck, Video, Camera, Copy, Check, ShieldAlert, ArrowRight, UserCheck, Users } from "lucide-react";
+import {
+  X,
+  ShieldCheck,
+  Video,
+  Camera,
+  Copy,
+  Check,
+  ShieldAlert,
+  Heart,
+  MessageSquare,
+  PenLine,
+  Bookmark,
+  Flag,
+  Mail,
+} from "lucide-react";
 import { KarebaTaLogo } from "./KarebaTaLogo";
-import { loginWithGoogle, loginAsSimulatedUser, PRIMARY_ADMIN_EMAIL } from "../services/firebase";
+import { loginWithGoogle } from "../services/firebase";
+
+export type LoginActionContext =
+  | "camera"
+  | "gallery"
+  | "text_post"
+  | "reaction"
+  | "comment"
+  | "save"
+  | "report"
+  | "inbox"
+  | "general"
+  | null;
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (user?: any) => void;
-  actionContext?: "camera" | "gallery" | "general" | null;
+  actionContext?: LoginActionContext;
+  customMessage?: string | null;
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -15,8 +42,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onClose,
   onSuccess,
   actionContext = "general",
+  customMessage = null,
 }) => {
-  const [usernameInput, setUsernameInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDomainError, setIsDomainError] = useState(false);
@@ -34,41 +61,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  const handleUsernameLogin = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const clean = usernameInput.trim().replace(/^@/, "").replace(/\s+/g, "_").slice(0, 13);
-    if (!clean) {
-      setErrorMessage("Silakan ketik nama pengguna Anda");
-      return;
-    }
-    const lower = clean.toLowerCase();
-    if (lower === "iditona" || lower === "iditona5" || lower.startsWith("iditona") || lower === "admin" || lower === "pengelola") {
-      setErrorMessage("Nama pengguna ini diproteksi khusus untuk Pemilik / Admin Utama.");
-      return;
-    }
-    sessionStorage.setItem("karebata_active_session", "true");
-    loginAsSimulatedUser(`${clean.toLowerCase()}@warga.karebata`);
-    localStorage.setItem("karebata_username", clean);
-    onSuccess();
-  };
-
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMessage(null);
     setIsDomainError(false);
     try {
       sessionStorage.setItem("karebata_active_session", "true");
+      sessionStorage.setItem("karebata_session_active", "true");
       const res = await loginWithGoogle();
       if (res.user) {
         onSuccess(res.user);
       } else if (res.error) {
         sessionStorage.removeItem("karebata_active_session");
+        sessionStorage.removeItem("karebata_session_active");
         if (res.error.includes("popup-closed-by-user")) {
-          setErrorMessage("Jendela login Google ditutup. Silakan coba lagi.");
+          setErrorMessage("Jendela masuk Google ditutup. Silakan coba kembali.");
         } else if (res.error.includes("unauthorized-domain") || res.error.includes("auth/unauthorized-domain")) {
           setIsDomainError(true);
           setErrorMessage(
-            `Domain pratinjau "${currentHost}" belum didaftarkan di Firebase Console > Authentication > Settings > Authorized domains.`
+            `Domain "${currentHost}" belum dimasukkan ke Authorized Domains Firebase Authentication Console.`
           );
         } else {
           setErrorMessage(res.error || "Gagal masuk dengan akun Google.");
@@ -78,45 +89,97 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       if (err?.message?.includes("unauthorized-domain") || err?.code === "auth/unauthorized-domain") {
         setIsDomainError(true);
         setErrorMessage(
-          `Domain pratinjau "${currentHost}" belum didaftarkan di Firebase Console > Authentication > Settings > Authorized domains.`
+          `Domain "${currentHost}" belum dimasukkan ke Authorized Domains Firebase Authentication Console.`
         );
       } else {
-        setErrorMessage(err?.message || "Terjadi kesalahan saat menghubungi server Google.");
+        setErrorMessage(err?.message || "Terjadi kendala saat menghubungkan ke akun Google.");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleQuickPreviewLogin = (asAdmin: boolean = false) => {
-    sessionStorage.setItem("karebata_active_session", "true");
-    const simulated = loginAsSimulatedUser(asAdmin ? PRIMARY_ADMIN_EMAIL : "warga.kareba@gmail.com");
-    onSuccess(simulated);
-  };
-
   const getActionTitle = () => {
-    if (actionContext === "camera") return "Ambil Foto & Bagikan Kabar";
-    if (actionContext === "gallery") return "Unggah Media dari Galeri";
-    return "Masuk ke Kareba'Ta";
+    switch (actionContext) {
+      case "camera":
+        return "Ambil Foto & Bagikan Kabar";
+      case "gallery":
+        return "Unggah Foto atau Video";
+      case "text_post":
+        return "Tulis Kabar Warga";
+      case "reaction":
+        return "Beri Reaksi Kabar";
+      case "comment":
+        return "Ikut Berkomentar";
+      case "save":
+        return "Simpan Kabar";
+      case "report":
+        return "Laporkan Kabar";
+      case "inbox":
+        return "Komentar Masuk";
+      default:
+        return "Masuk ke Kareba'Ta";
+    }
   };
 
   const getActionSubtitle = () => {
-    if (actionContext === "camera") {
-      return "Silakan masuk dengan Akun Google Anda untuk menggunakan kamera dan membagikan momen warga secara langsung.";
+    if (customMessage && customMessage.trim()) return customMessage;
+    switch (actionContext) {
+      case "camera":
+        return "Masuk dengan Akun Google untuk menggunakan kamera dan membagikan momen warga secara langsung.";
+      case "gallery":
+        return "Masuk dengan Akun Google untuk memilih dan menerbitkan foto atau video dari galeri HP.";
+      case "text_post":
+        return "Masuk dengan Akun Google untuk menulis dan menerbitkan kabar teks warga.";
+      case "reaction":
+        return "Masuk dengan Akun Google untuk menyukai atau memberikan reaksi pada kabar warga.";
+      case "comment":
+        return "Masuk dengan Akun Google untuk mengirim, membalas, atau menyukai komentar.";
+      case "save":
+        return "Masuk dengan Akun Google agar kabar pilihan tersimpan ke akun Anda.";
+      case "report":
+        return "Masuk dengan Akun Google untuk mengirim laporan pelanggaran konten.";
+      case "inbox":
+        return "Masuk dengan Akun Google untuk melihat komentar dan balasan masuk.";
+      default:
+        return "Masuk dengan Akun Google untuk berbagi kabar, memberi reaksi, dan ikut berkomentar.";
     }
-    if (actionContext === "gallery") {
-      return "Silakan masuk dengan Akun Google Anda untuk memilih dan mempublikasikan foto atau video dari galeri HP.";
+  };
+
+  const renderContextIcon = () => {
+    switch (actionContext) {
+      case "camera":
+        return <Camera className="w-7 h-7" />;
+      case "gallery":
+        return <Video className="w-7 h-7" />;
+      case "text_post":
+        return <PenLine className="w-7 h-7" />;
+      case "reaction":
+        return <Heart className="w-7 h-7" />;
+      case "comment":
+        return <MessageSquare className="w-7 h-7" />;
+      case "save":
+        return <Bookmark className="w-7 h-7" />;
+      case "report":
+        return <Flag className="w-7 h-7" />;
+      case "inbox":
+        return <Mail className="w-7 h-7" />;
+      default:
+        return <ShieldCheck className="w-7 h-7" />;
     }
-    return "Silakan masuk dengan Akun Google Anda untuk berbagi kabar, foto, dan video warga terkini.";
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
-      <div 
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none"
+      onClick={onClose}
+    >
+      <div
         className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-200 transform transition-all duration-200 animate-scale-up max-h-[92dvh] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-modal-title"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal dengan Logo Kareba'Ta & Tombol Tutup */}
         <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-neutral-100 flex items-center flex-wrap justify-between gap-2 bg-neutral-50/70 shrink-0">
@@ -133,33 +196,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
         {/* Konten Utama */}
         <div className="p-4 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center overflow-y-auto">
-          {/* Ikon Contextual */}
+          {/* Ikon Kontekstual */}
           <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-3 text-[#E5A000] shadow-xs">
-            {actionContext === "camera" ? (
-              <Camera className="w-7 h-7" />
-            ) : actionContext === "gallery" ? (
-              <Video className="w-7 h-7" />
-            ) : (
-              <ShieldCheck className="w-7 h-7" />
-            )}
+            {renderContextIcon()}
           </div>
 
           <h2
             id="login-modal-title"
-            className="text-lg sm:text-xl font-black text-neutral-900 tracking-tight"
+            className="text-lg sm:text-xl font-extrabold text-neutral-900 tracking-tight"
             style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
           >
             {getActionTitle()}
           </h2>
 
-          <p className="text-xs sm:text-sm text-neutral-600 mt-1.5 leading-relaxed">
+          <p className="text-xs sm:text-sm text-neutral-600 mt-1.5 leading-relaxed max-w-sm mx-auto">
             {getActionSubtitle()}
           </p>
 
-          {/* Banner Informasi: Menonton Tetap Bebas */}
-          <div className="mt-3 py-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200/70 flex flex-wrap items-center justify-center gap-2 text-[11px] text-emerald-800 font-medium">
+          {/* Banner Informasi: Membaca Tetap Bebas */}
+          <div className="mt-3.5 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-200/70 flex flex-wrap items-center justify-center gap-2 text-[11px] text-emerald-800 font-medium">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Menonton kabar warga tetap bebas tanpa perlu login</span>
+            <span>Membaca & menonton kabar warga tetap bebas tanpa login</span>
           </div>
 
           {/* Pesan Error / Bantuan Khusus Unauthorized Domain */}
@@ -167,13 +224,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <div className="mt-4 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 text-left text-xs space-y-2.5">
               <div className="flex items-start gap-2 text-amber-900 font-semibold">
                 <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                <span>Domain pratinjau belum diotorisasi di Firebase Console</span>
+                <span>Domain belum diizinkan di Firebase Console</span>
               </div>
               <p className="text-neutral-700 text-[11px] leading-relaxed">
-                Google membatasi login pop-up di domain ini. Anda dapat menyalin domain ini ke Firebase Console, atau langsung masuk menggunakan <b>Mode Pratinjau Cepat</b> di bawah:
+                Google membatasi autentikasi di domain ini. Silakan salin nama domain berikut dan tambahkan ke <b>Authorized Domains</b> di Firebase Console:
               </p>
 
-              {/* Box Salin Domain */}
               <div className="flex items-center flex-wrap gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
                 <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 min-w-[140px] px-1">
                   {currentHost}
@@ -187,84 +243,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <span>{copiedDomain ? "Tersalin!" : "Salin"}</span>
                 </button>
               </div>
-
-              {/* Tombol Masuk Cepat Sebagai Warga */}
-              <div className="pt-1 flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickPreviewLogin(false)}
-                  className="w-full py-2.5 px-3 bg-[#00632B] hover:bg-[#004f22] text-white rounded-xl font-bold text-xs flex flex-wrap items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
-                >
-                  <Users className="w-3.5 h-3.5 shrink-0" />
-                  <span>Masuk Sebagai Warga (Mode Pratinjau)</span>
-                </button>
-              </div>
             </div>
           ) : errorMessage ? (
-            <div className="mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium text-left">
+            <div className="mt-3.5 p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium text-left">
               {errorMessage}
             </div>
           ) : null}
 
-          {/* Papan Masuk Langsung dengan Nama Pengguna */}
-          <form onSubmit={handleUsernameLogin} className="mt-4 space-y-2.5">
-            <div className="relative flex items-center bg-neutral-50 rounded-2xl border-2 border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all min-w-0">
-              <span className="pl-4 text-sm sm:text-base font-semibold select-none text-neutral-400 shrink-0">
-                @
-              </span>
-              <input
-                id="modal-username-input"
-                type="text"
-                maxLength={13}
-                value={usernameInput}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/^@/, "").replace(/\s+/g, "_").slice(0, 13);
-                  setUsernameInput(val);
-                  if (errorMessage) setErrorMessage(null);
-                }}
-                placeholder="nama_kamu"
-                className="flex-1 min-w-0 w-full py-3 pl-0.5 pr-2 bg-transparent text-sm sm:text-base font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
-              />
-              <span className={`pr-3 text-xs font-semibold shrink-0 ${usernameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
-                {usernameInput.length}/13
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={!usernameInput.trim()}
-              className="w-full py-3 px-4 bg-[#00632B] hover:bg-[#004f22] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-bold text-xs sm:text-sm flex flex-wrap items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
-            >
-              <span>Masuk</span>
-              <ArrowRight className="w-4 h-4 text-white shrink-0" />
-            </button>
-          </form>
-
-          <div className="relative flex items-center justify-center my-3">
-            <div className="border-t border-neutral-200 w-full" />
-            <span className="bg-white px-2.5 text-[10px] text-neutral-400 uppercase tracking-wider font-semibold shrink-0">
-              atau
-            </span>
-            <div className="border-t border-neutral-200 w-full" />
-          </div>
-
           {/* Tombol Utama: Masuk dengan Google */}
-          <div className="space-y-2.5">
+          <div className="mt-5 space-y-2.5">
             <button
+              id="login-modal-google-btn"
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full py-3 px-3 sm:px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-[clamp(12px,3.5vw,14px)] flex flex-wrap items-center justify-center gap-2.5 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 select-none"
+              className="w-full py-3.5 px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-[clamp(13px,3.6vw,15px)] flex flex-wrap items-center justify-center gap-2.5 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 select-none"
             >
               {isLoading ? (
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-[#E5A000] animate-spin shrink-0" />
+                  <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-[#00632B] animate-spin shrink-0" />
                   <span className="text-neutral-600">Menghubungkan Akun Google...</span>
                 </div>
               ) : (
                 <>
-                  {/* Ikon Resmi Google G */}
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -287,13 +289,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               )}
             </button>
 
-            {/* Tombol Batal / Kembali ke Beranda Menonton */}
             <button
               type="button"
               onClick={onClose}
               className="w-full py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition cursor-pointer"
             >
-              Nanti Saja, Kembali Menonton Kabar
+              Nanti Saja, Lanjut Baca Kabar
             </button>
           </div>
         </div>

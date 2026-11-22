@@ -103,7 +103,7 @@ import { CardCarousel } from "./components/CardCarousel";
 import { PullToRefresh } from "./components/PullToRefresh";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { preloadFeedMedia } from "./utils/mediaPreloader";
-import { LoginModal } from "./components/LoginModal";
+import { LoginModal, LoginActionContext } from "./components/LoginModal";
 import { LoginPage } from "./components/LoginPage";
 import { SetupUsernamePage } from "./components/SetupUsernamePage";
 import { SplashScreen } from "./components/SplashScreen";
@@ -145,7 +145,7 @@ export default function KarebaFeedFinal() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
-  const [pendingUploadAction, setPendingUploadAction] = useState<"camera" | "gallery" | null>(null);
+  const [pendingUploadAction, setPendingUploadAction] = useState<LoginActionContext>(null);
   const [loginRedirectMessage, setLoginRedirectMessage] = useState<string | null>(null);
 
   const [userName, setUserName] = useState<string>(() => {
@@ -402,22 +402,8 @@ export default function KarebaFeedFinal() {
 
   const [viewMode, setViewMode] = useState<"login" | "set_name" | "feed" | "admin">(() => {
     if (isDedicatedAdminRoute()) return "admin";
-    try {
-      if (typeof window !== "undefined") {
-        const isLoggedIn = localStorage.getItem("karebata_is_logged_in") === "true";
-        const activeEmail = (localStorage.getItem("karebata_active_email") || "").toLowerCase();
-        const activeUid = localStorage.getItem("karebata_active_uid");
-        // HANYA gunakan nama yang terikat khusus ke akun yang aktif (email atau UID)
-        const cachedName =
-          (activeEmail ? localStorage.getItem(`karebata_registered_${activeEmail}`) : null) ||
-          (activeUid ? localStorage.getItem(`karebata_custom_username_${activeUid}`) : null);
-
-        if (isLoggedIn && cachedName && cachedName.trim() && cachedName.trim() !== "warga_kareba") {
-          return "feed";
-        }
-      }
-    } catch {}
-    return "login";
+    if (typeof window !== "undefined" && window.location.hash === "#login") return "login";
+    return "feed";
   });
 
   // Pantau perpindahan rute URL (/admin, #/admin, #feed, #login)
@@ -435,19 +421,18 @@ export default function KarebaFeedFinal() {
         const isLoggedIn = typeof window !== "undefined" && localStorage.getItem("karebata_is_logged_in") === "true";
         const activeEmail = typeof window !== "undefined" ? (localStorage.getItem("karebata_active_email") || "").toLowerCase() : "";
         const activeUid = typeof window !== "undefined" ? localStorage.getItem("karebata_active_uid") : null;
-        // Hanya baca nama yang terikat spesifik ke akun aktif
         const existingName =
           (activeEmail ? localStorage.getItem(`karebata_registered_${activeEmail}`) : null) ||
           (activeUid ? localStorage.getItem(`karebata_custom_username_${activeUid}`) : null) ||
           (currentUser ? userName : null);
 
-        if ((currentUser || isLoggedIn) && existingName && existingName !== "warga_kareba") {
-          if (!userName && existingName) setUserName(existingName.slice(0, 13));
-          setViewMode("feed");
-        } else if ((currentUser || isLoggedIn) && !existingName) {
+        if ((currentUser || isLoggedIn) && !existingName) {
           setViewMode("set_name");
         } else {
-          setViewMode("login");
+          if (!userName && existingName && existingName !== "warga_kareba") {
+            setUserName(existingName.slice(0, 13));
+          }
+          setViewMode("feed");
         }
       } else if (window.location.hash === "#login") {
         setViewMode("login");
@@ -610,12 +595,13 @@ export default function KarebaFeedFinal() {
           }
         }
       } else {
-        // User null: jika status lokal masih login (sedang pemulihan token saat refresh), jangan langsung hapus
+        // Pengunjung tamu bebas membaca beranda; status tetap di feed kecuali sedang di halaman admin
         const wasLoggedIn = typeof window !== "undefined" && localStorage.getItem("karebata_is_logged_in") === "true";
         if (!wasLoggedIn) {
           setCurrentUser(null);
           setUserName("");
-          setViewMode((prev) => (prev === "admin" ? "admin" : "login"));
+          setSavedPostIds([]);
+          setViewMode((prev) => (prev === "admin" ? "admin" : "feed"));
         }
       }
     });
@@ -709,6 +695,17 @@ export default function KarebaFeedFinal() {
       uid: currentUser?.uid,
     });
   }, [bannedUsers, currentUser, userName]);
+
+  // Helper wajib login sebelum aksi interaktif (posting, reaksi/like, komentar, simpan, lapor)
+  const requireLogin = (context: LoginActionContext, message: string): boolean => {
+    if (currentUserRef.current || currentUser || auth.currentUser) {
+      return true;
+    }
+    setPendingUploadAction(context);
+    setLoginRedirectMessage(message);
+    setIsLoginModalOpen(true);
+    return false;
+  };
 
   // Handler klik kamera di header (harus login terlebih dahulu)
   const handleCameraClick = () => {
@@ -842,6 +839,15 @@ export default function KarebaFeedFinal() {
 
         setViewMode("feed");
         showToast(`Selamat datang kembali, @${clean}!`);
+        const pendingAct = pendingUploadAction;
+        setPendingUploadAction(null);
+        if (pendingAct === "camera") {
+          setTimeout(() => openCamera(), 350);
+        } else if (pendingAct === "gallery") {
+          setTimeout(() => openCustomGallery(), 350);
+        } else if (pendingAct === "text_post") {
+          setTimeout(() => setIsTextPostModalOpen(true), 350);
+        }
       } else {
         // Cek fallback lokal khusus akun Google ini sebelum mengarahkan ke form nama
         const localFallback =
@@ -853,6 +859,15 @@ export default function KarebaFeedFinal() {
           userNameRef.current = clean;
           setViewMode("feed");
           showToast(`Selamat datang kembali, @${clean}!`);
+          const pendingAct = pendingUploadAction;
+          setPendingUploadAction(null);
+          if (pendingAct === "camera") {
+            setTimeout(() => openCamera(), 350);
+          } else if (pendingAct === "gallery") {
+            setTimeout(() => openCustomGallery(), 350);
+          } else if (pendingAct === "text_post") {
+            setTimeout(() => setIsTextPostModalOpen(true), 350);
+          }
         } else {
           // 2. AKUN BARU ATAU BELUM PERNAH ISI NAMA PENGGUNA: WAJIB MASUK HALAMAN PENGETIKAN NAMA
           setUserName("");
@@ -950,6 +965,10 @@ export default function KarebaFeedFinal() {
       setTimeout(() => {
         openCustomGallery();
       }, 400);
+    } else if (action === "text_post") {
+      setTimeout(() => {
+        setIsTextPostModalOpen(true);
+      }, 400);
     }
   };
 
@@ -964,6 +983,8 @@ export default function KarebaFeedFinal() {
     setUserName("");
     userNameRef.current = "";
     setPosts([]);
+    setLikedPostIds([]);
+    setUserReactions({});
     setMyPayoutMethod("bank");
     setMyBankName("Bank BRI (Bank Rakyat Indonesia)");
     setMyBankAccountNumber("");
@@ -980,6 +1001,8 @@ export default function KarebaFeedFinal() {
       localStorage.removeItem("karebata_last_registered_username");
       localStorage.removeItem("karebata_active_uid");
       localStorage.removeItem("karebata_active_email");
+      localStorage.removeItem("karebata_liked_posts");
+      localStorage.removeItem("karebata_user_reactions");
       localStorage.removeItem("karebata_my_payout_method");
       localStorage.removeItem("karebata_my_bank_name");
       localStorage.removeItem("karebata_my_bank_account_number");
@@ -990,8 +1013,8 @@ export default function KarebaFeedFinal() {
       localStorage.removeItem("karebata_user_posts");
       localStorage.removeItem("karebata_saved_posts");
     } catch {}
-    setViewMode("login");
-    showToast("Berhasil keluar dari akun. Sesi diamankan.");
+    setViewMode("feed");
+    showToast("Berhasil keluar dari akun. Anda tetap dapat membaca kabar warga.");
   };
 
   // Fungsi Tarik Layar ke Bawah untuk Memperbarui (Pull-to-Refresh)
@@ -1467,6 +1490,9 @@ export default function KarebaFeedFinal() {
   // - Menambahkan / mengurangi jumlah saves pada postingan tersebut
   // - Angka Simpan di profil atas HANYA bertambah jika kabar yang disimpan adalah milik Anda sendiri!
   const handleToggleSave = (postId: string) => {
+    if (!requireLogin("save", "Masuk dengan Akun Google untuk menyimpan kabar ke koleksi akun Anda.")) {
+      return;
+    }
     const isCurrentlySaved = savedPostIds.includes(postId);
     const willBeSaved = !isCurrentlySaved;
 
@@ -2168,8 +2194,11 @@ export default function KarebaFeedFinal() {
     return () => observer.disconnect();
   }, [expandedPostIdsKey, activeDetailPost, activeCommentItem, isSearchOpen]);
 
-  // Menangani Reaksi Emoji Warga (❤️, 😆, 🥲, 😱, 😡)
+  // Menangani Reaksi Emoji Warga (❤️, 😆, 🥲, 😱, 😡) — Wajib Login Google
   const handlePostReaction = (id: string, reaction: ReactionType | null) => {
+    if (!requireLogin("reaction", "Masuk dengan Akun Google terlebih dahulu untuk memberi reaksi atau menyukai kabar warga.")) {
+      return;
+    }
     const targetItem = feed.find((item) => item.id === id);
     if (!targetItem) return;
 
@@ -2285,9 +2314,12 @@ export default function KarebaFeedFinal() {
       .filter((item): item is PostItem => item !== null);
   }, [savedPostIds, feed, posts]);
 
-  // Handler Like pada Komentar
+  // Handler Like pada Komentar (Wajib Login Google)
   const handleLikeComment = (commentId: string) => {
     if (!activeCommentItem) return;
+    if (!requireLogin("comment", "Masuk dengan Akun Google terlebih dahulu untuk menyukai komentar warga.")) {
+      return;
+    }
     setFeed((prevFeed) =>
       prevFeed.map((item) => {
         if (item.id === activeCommentItem.id) {
@@ -2335,8 +2367,11 @@ export default function KarebaFeedFinal() {
     updatePostCommentsInFirestore(activeCommentItem.id, updatedComments);
   };
 
-  // Handler Balas Komentar
+  // Handler Balas Komentar (Wajib Login Google)
   const handleReplyComment = (commentUser: string) => {
+    if (!requireLogin("comment", "Masuk dengan Akun Google terlebih dahulu untuk membalas komentar warga.")) {
+      return;
+    }
     setCommentInputText(`@${commentUser} `);
     const inputEl = document.getElementById("comment-input-field");
     if (inputEl) {
@@ -2384,9 +2419,7 @@ export default function KarebaFeedFinal() {
       showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
       return;
     }
-    if (!currentUser) {
-      setLoginRedirectMessage("Masuk dengan Akun Google terlebih dahulu untuk mengirim komentar.");
-      setIsLoginModalOpen(true);
+    if (!requireLogin("comment", "Masuk dengan Akun Google terlebih dahulu untuk mengirim komentar.")) {
       return;
     }
     if (!commentInputText.trim() || !activeCommentItem) return;
@@ -2880,8 +2913,11 @@ export default function KarebaFeedFinal() {
     }
   };
 
-  // Laporkan postingan - Membuka modal pelaporan interaktif ala aplikasi modern
+  // Laporkan postingan - Wajib Login Google
   const handleReportPost = (postId: string, user: string, text?: string) => {
+    if (!requireLogin("report", "Masuk dengan Akun Google terlebih dahulu untuk melaporkan kabar ini.")) {
+      return;
+    }
     setReportPostData({ id: postId, user, text });
     setReportReason("");
     setReportDetails("");
@@ -3197,8 +3233,8 @@ export default function KarebaFeedFinal() {
     />
   ) : null;
 
-  // JIKA BELUM LOGIN: WAJIB MASUK HALAMAN LOGIN TERLEBIH DAHULU (TIDAK ADA HALAMAN PENGUNJUNG TANPA LOGIN)
-  if (viewMode === "login" || (!currentUser && typeof window !== "undefined" && !localStorage.getItem("karebata_is_logged_in"))) {
+  // Halaman Login terpisah hanya dibuka jika rute secara eksplisit mengarah ke #login
+  if (viewMode === "login") {
     return (
       <>
         <LoginPage
@@ -3564,31 +3600,44 @@ export default function KarebaFeedFinal() {
 
         {/* FITUR TARIK/GESER KE BAWAH UNTUK MEMPERBARUI (PULL-TO-REFRESH KUSTOM DENGAN KONTEN TETAP KOKOH TANPA TERGESER TURUN) */}
         <PullToRefresh onRefresh={handlePullRefresh}>
-          {/* PROFIL WARGA - Jarak atas lebih lega agar icon profil tidak terlalu mepet ke papan teks berjalan */}
+          {/* PROFIL WARGA - Pengunjung bisa membaca bebas dan masuk Google saat ingin berinteraksi */}
           <section id="profile-section" className="w-full box-border pt-6 pb-4 px-3 sm:px-4 flex items-center flex-wrap justify-between gap-2.5 bg-white border-b border-neutral-100">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            {/* Ikon Profil: Selalu menampilkan huruf pertama nama pengguna */}
+            {/* Ikon Profil: Huruf Pertama Nama Pengguna (atau P untuk Pengunjung) */}
             <div className="shrink-0">
               <div className="w-[clamp(46px,13vw,56px)] h-[clamp(46px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-[clamp(19px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
-                {initial}
+                {currentUser ? initial : "P"}
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate">
-                {userName.startsWith("@") ? userName.replace(/^@/, "") : userName}
-              </h2>
-              <p
-                className="text-[clamp(12px,3.4vw,13.5px)] text-neutral-500 font-normal mt-0.5 truncate"
-                title={userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
-              >
-                {userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
-              </p>
+              {currentUser ? (
+                <>
+                  <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate">
+                    {userName ? (userName.startsWith("@") ? userName.replace(/^@/, "") : userName) : "Warga Kareba'Ta"}
+                  </h2>
+                  <p
+                    className="text-[clamp(12px,3.4vw,13.5px)] text-neutral-500 font-normal mt-0.5 truncate"
+                    title={userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
+                  >
+                    {userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate">
+                    Pengunjung
+                  </h2>
+                  <p className="text-[clamp(11.5px,3.2vw,13px)] text-neutral-500 font-normal mt-0.5 truncate">
+                    Masuk Google untuk posting, reaksi &amp; komentar
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 shrink-0">
 
             {/* Tombol Dasbor Admin HANYA Muncul di Akun Admin Berizin */}
-            {isCurrentUserAdmin && (
+            {currentUser && isCurrentUserAdmin && (
               <button
                 id="profile-admin-dashboard-btn"
                 type="button"
@@ -3606,15 +3655,32 @@ export default function KarebaFeedFinal() {
                 <span>Admin</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition active:scale-95 cursor-pointer shadow-2xs"
-              aria-label="Keluar akun Google"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Keluar</span>
-            </button>
+            {currentUser ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition active:scale-95 cursor-pointer shadow-2xs"
+                aria-label="Keluar akun Google"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar</span>
+              </button>
+            ) : (
+              <button
+                id="guest-header-login-btn"
+                type="button"
+                onClick={() => {
+                  setPendingUploadAction("general");
+                  setLoginRedirectMessage(null);
+                  setIsLoginModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#004f22] rounded-xl transition active:scale-95 cursor-pointer shadow-xs"
+                aria-label="Masuk dengan Akun Google"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Masuk</span>
+              </button>
+            )}
           </div>
         </section>
 
@@ -3661,9 +3727,7 @@ export default function KarebaFeedFinal() {
                 showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
                 return;
               }
-              if (!currentUser) {
-                setLoginRedirectMessage("Masuk dengan Akun Google untuk menulis kabar warga.");
-                setIsLoginModalOpen(true);
+              if (!requireLogin("text_post", "Masuk dengan Akun Google terlebih dahulu untuk menulis kabar warga.")) {
                 return;
               }
               setIsTextPostModalOpen(true);
@@ -5404,7 +5468,7 @@ export default function KarebaFeedFinal() {
                 activeCommentItem.comments.map((c) => (
                   <div key={c.id} className="flex items-start gap-2.5 bg-white p-3.5 rounded-xl border border-neutral-200 shadow-2xs">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border-2 border-[#E5A000] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs select-none">
-                      {c.user[0].toUpperCase()}
+                      {c.user?.[0] ? c.user[0].toUpperCase() : "W"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center flex-wrap justify-between gap-1.5 min-w-0">
@@ -5424,7 +5488,7 @@ export default function KarebaFeedFinal() {
                         onLike={() => handleLikeComment(c.id)}
                         onReply={() => handleReplyComment(c.user)}
                         onDelete={() => handleDeleteComment(c.id)}
-                        isOwner={c.user === userName}
+                        isOwner={Boolean(currentUser && c.user === userName)}
                       />
                     </div>
                   </div>
@@ -5441,7 +5505,28 @@ export default function KarebaFeedFinal() {
             </div>
 
             {/* Input komentar baru di bagian bawah layar penuh */}
-            {currentBanStatus.isBanned ? (
+            {!currentUser ? (
+              <div className="px-3 py-3 sm:p-4 border-t border-neutral-200 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <button
+                  id="guest-comment-login-btn"
+                  type="button"
+                  onClick={() => {
+                    setPendingUploadAction("comment");
+                    setLoginRedirectMessage("Masuk dengan Akun Google terlebih dahulu untuk menulis dan membalas komentar.");
+                    setIsLoginModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-neutral-100 hover:bg-neutral-200/70 border border-neutral-300 text-left transition cursor-pointer"
+                >
+                  <span className="text-xs sm:text-sm text-neutral-500 font-medium truncate">
+                    Masuk dengan Google untuk berkomentar...
+                  </span>
+                  <span className="px-3 py-1 bg-[#00632B] text-white text-xs font-bold rounded-full shrink-0 flex items-center gap-1.5">
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Masuk</span>
+                  </span>
+                </button>
+              </div>
+            ) : currentBanStatus.isBanned ? (
               <div className="p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-rose-200 bg-rose-50 flex items-center flex-wrap justify-between gap-2.5 shrink-0 text-xs text-rose-900">
                 <span className="font-semibold flex-1 min-w-[160px]">
                   Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.
@@ -5464,7 +5549,7 @@ export default function KarebaFeedFinal() {
                 )}
                 <div className="flex items-end flex-wrap gap-2 min-w-0 w-full box-border">
                   <div className="w-8 h-8 mb-1 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border-2 border-[#E5A000] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs select-none">
-                    {userName[0].toUpperCase()}
+                    {(userName?.[0] || "W").toUpperCase()}
                   </div>
                   <textarea
                     ref={commentTextareaRef}
@@ -5718,9 +5803,11 @@ export default function KarebaFeedFinal() {
           onClose={() => {
             setIsLoginModalOpen(false);
             setPendingUploadAction(null);
+            setLoginRedirectMessage(null);
           }}
           onSuccess={handleLoginSuccess}
           actionContext={pendingUploadAction}
+          customMessage={loginRedirectMessage}
         />
 
         {/* MODAL / TAMPILAN DETAIL KABAR LAYAR PENUH (FULL SCREEN) UNTUK KARTU KABAR KAMU & KARTU TERSIMPAN */}
