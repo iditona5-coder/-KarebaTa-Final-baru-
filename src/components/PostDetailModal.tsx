@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ArrowLeft,
   MapPin,
@@ -73,11 +73,13 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onOpenGift,
   minLikes = 500,
 }) => {
-  if (!post) return null;
-
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const shareOpenScrollTopRef = useRef<number>(0);
+
+  if (!post) return null;
 
   const postViews = views ?? feedItem?.views ?? post.views ?? 0;
   const postShares = feedItem?.shares ?? post.shares ?? 0;
@@ -123,6 +125,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
         {/* Konten Postingan: TAMPILAN PERSIS SAMA SEPERTI DI FEED */}
         <div
+          ref={scrollContainerRef}
+          onScroll={(e) => {
+            if (
+              isShareOpen &&
+              Math.abs(e.currentTarget.scrollTop - shareOpenScrollTopRef.current) > 10
+            ) {
+              setIsShareOpen(false);
+            }
+          }}
           className="flex-1 bg-white overflow-y-auto overscroll-contain"
           style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
@@ -455,7 +466,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <button
                 id={`share-detail-btn-${post.id}`}
                 type="button"
-                onClick={() => setIsShareOpen((prev) => !prev)}
+                onClick={() => {
+                  shareOpenScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
+                  setIsShareOpen((prev) => !prev);
+                }}
                 className={`flex items-center gap-1.5 py-1 transition cursor-pointer ${
                   isShareOpen ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
                 }`}
@@ -470,7 +484,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <button
                 id={`share-detail-count-${post.id}`}
                 type="button"
-                onClick={() => setIsShareOpen((prev) => !prev)}
+                onClick={() => {
+                  shareOpenScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
+                  setIsShareOpen((prev) => !prev);
+                }}
                 className="text-xs font-medium text-neutral-500 hover:text-emerald-600 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
                 aria-label={`Dibagikan ${postShares.toLocaleString("id-ID")} kali`}
                 title={`Dibagikan ${postShares.toLocaleString("id-ID")} kali`}

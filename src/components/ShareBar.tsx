@@ -1,5 +1,5 @@
 import React from "react";
-import { Link2 } from "lucide-react";
+import { Link2, Share2 } from "lucide-react";
 
 // Official Facebook Brand Icon
 function FacebookIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -29,8 +29,31 @@ interface ShareBarProps {
 export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProps) {
   const [copied, setCopied] = React.useState(false);
 
+  const cleanTitle = (title || "Kabar Warga Kareba'Ta").trim().slice(0, 140);
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const isStandalonePwa =
+    typeof window !== "undefined" &&
+    (window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true);
+
   const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(newsUrl)}`;
-  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} - ${newsUrl}`)}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(`${cleanTitle}\n${newsUrl}`)}`;
+
+  const handleNativeShare = async () => {
+    if (!canNativeShare) return;
+    try {
+      await navigator.share({
+        title: "Kareba'Ta",
+        text: cleanTitle,
+        url: newsUrl,
+      });
+      onShared?.();
+    } catch (err: any) {
+      if (err?.name !== "AbortError" && onShowToast) {
+        onShowToast("Gagal membuka menu bagikan perangkat.");
+      }
+    }
+  };
 
   const copyLink = async () => {
     try {
@@ -53,13 +76,25 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
   };
 
   return (
-    <div className="w-full box-border flex flex-row flex-wrap items-center gap-2 sm:gap-3 py-3 select-none">
+    <div className="w-full box-border flex flex-row flex-wrap items-center gap-2 sm:gap-2.5 py-3 select-none">
+      {canNativeShare && (
+        <button
+          type="button"
+          onClick={handleNativeShare}
+          className="flex flex-row items-center gap-1.5 bg-[#00632B] hover:bg-[#004f22] text-white px-3.5 py-2 rounded-full transition active:scale-95 cursor-pointer shadow-2xs"
+          aria-label="Kirim lewat Menu Bagikan HP"
+        >
+          <Share2 size={14} className="text-white" />
+          <span className="text-xs font-semibold leading-none">Kirim</span>
+        </button>
+      )}
+
       <a
         href={fbUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={isStandalonePwa ? undefined : "_blank"}
+        rel={isStandalonePwa ? undefined : "noopener noreferrer"}
         onClick={() => onShared?.()}
-        className="flex flex-row items-center gap-1.5 bg-[#1877F2] hover:bg-[#166fe5] text-white px-4 py-2 rounded-full transition active:scale-95 cursor-pointer shadow-2xs"
+        className="flex flex-row items-center gap-1.5 bg-[#1877F2] hover:bg-[#166fe5] text-white px-3.5 py-2 rounded-full transition active:scale-95 cursor-pointer shadow-2xs"
         aria-label="Bagikan ke Facebook"
       >
         <FacebookIcon className="w-4 h-4 text-white" />
@@ -68,10 +103,10 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
 
       <a
         href={waUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={isStandalonePwa ? undefined : "_blank"}
+        rel={isStandalonePwa ? undefined : "noopener noreferrer"}
         onClick={() => onShared?.()}
-        className="flex flex-row items-center gap-1.5 bg-[#25D366] hover:bg-[#22bf5b] text-white px-4 py-2 rounded-full transition active:scale-95 cursor-pointer shadow-2xs"
+        className="flex flex-row items-center gap-1.5 bg-[#25D366] hover:bg-[#22bf5b] text-white px-3.5 py-2 rounded-full transition active:scale-95 cursor-pointer shadow-2xs"
         aria-label="Bagikan ke WhatsApp"
       >
         <WhatsAppIcon className="w-4 h-4 text-white" />
@@ -81,14 +116,14 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
       <button
         type="button"
         onClick={copyLink}
-        className={`flex flex-row items-center gap-1.5 px-4 py-2 rounded-full transition active:scale-95 cursor-pointer border shadow-2xs ${
+        className={`flex flex-row items-center gap-1.5 px-3.5 py-2 rounded-full transition active:scale-95 cursor-pointer border shadow-2xs ${
           copied
             ? "bg-emerald-500 text-white border-emerald-500"
             : "bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#374151] border-neutral-200"
         }`}
         aria-label="Salin Tautan Berita"
       >
-        <Link2 size={16} className={copied ? "text-white" : "text-[#374151]"} />
+        <Link2 size={15} className={copied ? "text-white" : "text-[#374151]"} />
         <span className="text-xs font-semibold leading-none">
           {copied ? "Tersalin!" : "Salin"}
         </span>

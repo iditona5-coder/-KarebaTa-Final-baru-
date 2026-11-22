@@ -660,7 +660,7 @@ export default function KarebaFeedFinal() {
 
     // Cek apakah iklan pop-up sudah pernah ditampilkan di sesi saat ini
     const isShown = typeof window !== "undefined" && sessionStorage.getItem("karebata_popup_ad_shown");
-    if (!isShown && viewMode === "feed" && !activePopupAd) {
+    if (!isShown && !showSplash && viewMode === "feed" && !activePopupAd) {
       const delay = Math.max(1, adSettings.popupDelaySeconds || 2) * 1000;
       const timer = setTimeout(() => {
         const randomAd = popupAds[Math.floor(Math.random() * popupAds.length)];
@@ -671,7 +671,7 @@ export default function KarebaFeedFinal() {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [adSettings, viewMode, activePopupAd]);
+  }, [adSettings, showSplash, viewMode, activePopupAd]);
 
   // Window helper untuk memicu atau menguji tampilan pop-up ad secara instan (misal dari Admin Dashboard)
   useEffect(() => {
@@ -1123,6 +1123,26 @@ export default function KarebaFeedFinal() {
   }, [commentInputText, activeCommentItem]);
 
   const [activeSharePostId, setActiveSharePostId] = useState<string | null>(null);
+
+  // Tutup otomatis bar Bagikan (Kirim, FB, WA, Salin) jika pengguna men-scroll layar
+  useEffect(() => {
+    if (!activeSharePostId) return;
+
+    const initialScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    const handleScrollCloseShare = () => {
+      const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (Math.abs(currentScrollY - initialScrollY) > 10) {
+        setActiveSharePostId(null);
+      }
+    };
+
+    window.addEventListener("scroll", handleScrollCloseShare, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScrollCloseShare);
+    };
+  }, [activeSharePostId]);
+
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
   const seenRealtimeNotifIdsRef = useRef<Set<string>>(new Set());
@@ -1706,6 +1726,42 @@ export default function KarebaFeedFinal() {
       window.removeEventListener("dragstart", handleDragStart);
     };
   }, []);
+
+  // Arahkan otomatis ke postingan spesifik saat tautan dibagikan dari WhatsApp / Facebook (#post-...)
+  const lastHandledHashPostRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined" || viewMode !== "feed" || feed.length === 0) return;
+    const hash = window.location.hash || "";
+    if (!hash.startsWith("#post-")) return;
+    const targetPostId = hash.slice("#post-".length).trim();
+    if (!targetPostId || lastHandledHashPostRef.current === targetPostId) return;
+
+    const targetPost = feed.find((item) => item.id === targetPostId);
+    if (!targetPost) return;
+
+    lastHandledHashPostRef.current = targetPostId;
+    setHighlightedPostId(targetPostId);
+    setHighlightSource("card");
+
+    const scrollTimer = setTimeout(() => {
+      const el = document.getElementById(`feed-post-${targetPostId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      try {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      } catch {}
+    }, 250);
+
+    const clearHighlightTimer = setTimeout(() => {
+      setHighlightedPostId((prev) => (prev === targetPostId ? null : prev));
+    }, 4500);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearHighlightTimer);
+    };
+  }, [viewMode, feed]);
 
   // Sinkronisasi postingan real-time dari Firestore proyek pribadi
   useEffect(() => {
@@ -2806,16 +2862,17 @@ export default function KarebaFeedFinal() {
 
   // Bagikan post
   const handleShare = (text: string, postId?: string) => {
+    const shareUrl = postId ? `${window.location.origin}/#post-${postId}` : window.location.href;
     if (navigator.share) {
       navigator
         .share({
           title: "Kareba'Ta",
           text: text,
-          url: window.location.href,
+          url: shareUrl,
         })
         .catch(() => {});
     } else {
-      navigator.clipboard.writeText(`${text} - Dibagikan dari Kareba'Ta`);
+      navigator.clipboard.writeText(`${text} - ${shareUrl}`);
       showToast("Tautan kabar berhasil disalin!");
     }
     if (postId) {
@@ -3127,20 +3184,18 @@ export default function KarebaFeedFinal() {
     );
   }
 
-  // LAYAR PEMBUKA AWAL DENGAN PROGRESS LOADING BAR BERJALAN AKTIF
-  if (showSplash) {
-    return (
-      <SplashScreen
-        durationMs={1200}
-        onFinish={() => {
-          try {
-            sessionStorage.setItem("karebata_splash_shown", "true");
-          } catch {}
-          setShowSplash(false);
-        }}
-      />
-    );
-  }
+  // LAYAR PEMBUKA AWAL SEBAGAI OVERLAY DI ATAS HALAMAN UTAMA (MENCEGAH LAYAR PUTIH KOSONG SAAT TRANSISI)
+  const splashOverlay = showSplash ? (
+    <SplashScreen
+      durationMs={1200}
+      onFinish={() => {
+        try {
+          sessionStorage.setItem("karebata_splash_shown", "true");
+        } catch {}
+        setShowSplash(false);
+      }}
+    />
+  ) : null;
 
   // JIKA BELUM LOGIN: WAJIB MASUK HALAMAN LOGIN TERLEBIH DAHULU (TIDAK ADA HALAMAN PENGUNJUNG TANPA LOGIN)
   if (viewMode === "login" || (!currentUser && typeof window !== "undefined" && !localStorage.getItem("karebata_is_logged_in"))) {
@@ -3156,6 +3211,7 @@ export default function KarebaFeedFinal() {
             <span className="flex-1 text-left">{toastMessage}</span>
           </div>
         )}
+        {splashOverlay}
       </>
     );
   }
@@ -3176,11 +3232,13 @@ export default function KarebaFeedFinal() {
             <span className="flex-1 text-left">{toastMessage}</span>
           </div>
         )}
+        {splashOverlay}
       </>
     );
   }
 
   return (
+    <>
     <div className="w-full box-border bg-neutral-100 text-neutral-900 flex justify-center selection:bg-[#00632B] selection:text-white min-h-screen">
       <div id="karebata-feed-app" className={`w-full max-w-[500px] mx-auto box-border bg-white relative font-sans shadow-sm flex flex-col min-h-screen ${selectedImage ? "pb-36" : displayFeed.length === 0 ? "pb-28" : "pb-16"}`}>
         {/* INPUT TERSEMBUNYI - INI KUNCINYA, TIDAK KELIHATAN */}
@@ -4651,7 +4709,7 @@ export default function KarebaFeedFinal() {
                 {activeSharePostId === f.id && (
                   <div className="mx-3.5 sm:mx-4 mt-2.5 px-3 py-0.5 bg-neutral-50 rounded-2xl border border-neutral-200 flex items-center flex-wrap justify-between gap-2 animate-fade-in">
                     <ShareBar
-                      newsUrl={window.location.href}
+                      newsUrl={`${window.location.origin}/#post-${f.id}`}
                       title={f.text}
                       onShared={() => {
                         handlePostShared(f.id);
@@ -6099,5 +6157,7 @@ export default function KarebaFeedFinal() {
         />
       </div>
     </div>
+    {splashOverlay}
+    </>
   );
 }
