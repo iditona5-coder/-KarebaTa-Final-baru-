@@ -19,6 +19,7 @@ import { FeedMedia } from "./FeedMedia";
 import { ShareBar } from "./ShareBar";
 import { ReactionButton } from "./ReactionButton";
 import { ReactionBadge } from "./ReactionBadge";
+import { ExpandablePostText } from "./ExpandablePostText";
 
 interface PostDetailModalProps {
   post: PostItem | null;
@@ -374,34 +375,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           {/* Post Content / Deskripsi di bawah media (Hanya jika memiliki foto/video) */}
           {post.img && (
             <div className="px-4">
-            {(() => {
-              const isLong = postText.length > 110 || postText.split("\n").length > 2;
-              return (
-                <div
-                  id={`detail-post-desc-container-${post.id}`}
-                  onClick={() => {
-                    if (isLong) {
-                      setIsExpanded((prev) => !prev);
-                    }
-                  }}
-                  className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
-                >
-                  <h3
-                    className={`text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight leading-snug whitespace-pre-wrap break-words transition-all ${
-                      isLong && !isExpanded ? "line-clamp-2" : ""
-                    }`}
-                  >
-                    {postText}
-                  </h3>
-                  {isLong && (
-                    <span className="text-xs font-semibold text-[#00632B] hover:text-[#004f22] mt-1 inline-block">
-                      {isExpanded ? "Tampilkan lebih sedikit" : "selengkapnya"}
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
+              <ExpandablePostText
+                text={postText}
+                isExpanded={isExpanded}
+                onToggle={() => setIsExpanded((prev) => !prev)}
+                maxLines={3}
+                variant="detail-caption"
+                containerId={`detail-post-desc-container-${post.id}`}
+              />
+            </div>
           )}
 
           {/* Baris Ringkasan Reaksi (Kiri) & Jumlah Komentar (Kanan) */}

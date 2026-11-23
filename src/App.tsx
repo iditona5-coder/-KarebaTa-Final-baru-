@@ -53,6 +53,7 @@ import { SponsorPopupModal } from "./components/SponsorPopupModal";
 import { ReactionButton } from "./components/ReactionButton";
 import { ReactionBadge } from "./components/ReactionBadge";
 import { ProfileReactionStatsButton } from "./components/ProfileReactionStatsButton";
+import { ExpandablePostText } from "./components/ExpandablePostText";
 import {
   extractVideoThumbnail,
   getVideoDuration,
@@ -4871,85 +4872,46 @@ export default function KarebaFeedFinal() {
                   </div>
                 ) : (
                   <div className="w-full px-4 pt-1 pb-2">
-                    {(() => {
-                      const isLong = f.text.length > 130 || f.text.split("\n").length > 3;
-                      return (
-                        <div
-                          id={`post-text-only-container-${f.id}`}
-                          onClick={() => {
-                            if (isLong) {
-                              toggleExpandPost(f.id);
-                            }
-                          }}
-                          className={`w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs transition-all ${
-                            isLong ? "cursor-pointer" : ""
-                          }`}
-                        >
-                          <p
-                            className={`text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap break-words select-text ${
-                              isLong && !expandedPosts[f.id] ? "line-clamp-3" : ""
-                            }`}
+                    <ExpandablePostText
+                      text={f.text}
+                      isExpanded={!!expandedPosts[f.id]}
+                      onToggle={() => toggleExpandPost(f.id)}
+                      maxLines={5}
+                      variant="text-only"
+                      containerId={`post-text-only-container-${f.id}`}
+                    >
+                      {(f.like || 0) >= giftMinLikes && (
+                        <div className="mt-3 flex items-center justify-start">
+                          <button
+                            id={`gift-btn-${f.id}`}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveGiftPost(f);
+                            }}
+                            className="px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white transition cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+                            aria-label="Pa'bere"
                           >
-                            {f.text}
-                          </p>
-                          {isLong && (
-                            <span className="text-sm font-bold text-[#00632B] hover:text-[#004f22] mt-2 inline-block">
-                              {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
-                            </span>
-                          )}
-                          {(f.like || 0) >= giftMinLikes && (
-                            <div className="mt-3 flex items-center justify-start">
-                              <button
-                                id={`gift-btn-${f.id}`}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveGiftPost(f);
-                                }}
-                                className="px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white transition cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold active:scale-95"
-                                aria-label="Pa'bere"
-                              >
-                                <Gift className="w-3.5 h-3.5 text-white shrink-0" />
-                                <span>Pa'bere</span>
-                              </button>
-                            </div>
-                          )}
+                            <Gift className="w-3.5 h-3.5 text-white shrink-0" />
+                            <span>Pa'bere</span>
+                          </button>
                         </div>
-                      );
-                    })()}
+                      )}
+                    </ExpandablePostText>
                   </div>
                 )}
 
                 {/* Post Content / Deskripsi di bawah media (Hanya jika memiliki foto/video) */}
                 {f.img && (
                   <div className="px-4">
-                    {(() => {
-                      const isLong = f.text.length > 110 || f.text.split("\n").length > 2;
-                      return (
-                        <div
-                          id={`post-desc-container-${f.id}`}
-                          onClick={() => {
-                            if (isLong) {
-                              toggleExpandPost(f.id);
-                            }
-                          }}
-                          className={`select-none ${isLong ? "cursor-pointer group" : ""}`}
-                        >
-                          <h3
-                            className={`text-[clamp(18px,5vw,22px)] font-bold text-neutral-900 tracking-tight leading-snug whitespace-pre-wrap break-words transition-all ${
-                              isLong && !expandedPosts[f.id] ? "line-clamp-2" : ""
-                            }`}
-                          >
-                            {f.text}
-                          </h3>
-                          {isLong && (
-                            <span className="text-[clamp(14px,3.8vw,16px)] font-bold text-[#00632B] hover:text-[#004f22] mt-1.5 inline-block">
-                              {expandedPosts[f.id] ? "Tampilkan lebih sedikit" : "selengkapnya"}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    <ExpandablePostText
+                      text={f.text}
+                      isExpanded={!!expandedPosts[f.id]}
+                      onToggle={() => toggleExpandPost(f.id)}
+                      maxLines={3}
+                      variant="media-caption"
+                      containerId={`post-desc-container-${f.id}`}
+                    />
                   </div>
                 )}
 
