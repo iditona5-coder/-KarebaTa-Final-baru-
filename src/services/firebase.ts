@@ -1967,28 +1967,61 @@ export async function updatePostByAdmin(
 }
 
 /**
+ * Edit Teks, Lokasi, dan Media (Foto/Video) Postingan oleh Pemilik (atau Admin)
+ */
+export async function updatePostInFirestore(
+  postId: string,
+  updates: {
+    text: string;
+    location?: string;
+    img?: string;
+    thumbnail?: string;
+    mediaType?: "image" | "video";
+    fileId?: string;
+    thumbFileId?: string;
+  }
+): Promise<boolean> {
+  if (!db) return true;
+  try {
+    const postDoc = doc(db, "posts", postId);
+    const payload: Record<string, any> = {
+      text: updates.text,
+      title: updates.text,
+      caption: updates.text,
+      isEdited: true,
+      updatedAtServer: serverTimestamp(),
+      updatedAtTimestamp: Date.now(),
+    };
+
+    if (updates.location !== undefined) {
+      payload.location = updates.location;
+      payload.loc = updates.location;
+    }
+
+    if (updates.img !== undefined) {
+      payload.img = updates.img;
+      payload.mediaType = updates.mediaType || "image";
+      payload.thumbnail = updates.thumbnail ?? "";
+      payload.fileId = updates.fileId ?? "";
+      payload.thumbFileId = updates.thumbFileId ?? "";
+    }
+
+    await updateDoc(postDoc, payload);
+    return true;
+  } catch (err) {
+    console.warn("[Firebase] Gagal update postingan:", err);
+    return false;
+  }
+}
+
+/**
  * Edit Teks / Deskripsi Postingan oleh Pemilik (atau Admin) saat ada salah ketik
  */
 export async function updatePostTextInFirestore(
   postId: string,
   newText: string
 ): Promise<boolean> {
-  if (!db) return true;
-  try {
-    const postDoc = doc(db, "posts", postId);
-    await updateDoc(postDoc, {
-      text: newText,
-      title: newText,
-      caption: newText,
-      isEdited: true,
-      updatedAtServer: serverTimestamp(),
-      updatedAtTimestamp: Date.now(),
-    });
-    return true;
-  } catch (err) {
-    console.warn("[Firebase] Gagal update teks postingan:", err);
-    return false;
-  }
+  return updatePostInFirestore(postId, { text: newText });
 }
 
 /**

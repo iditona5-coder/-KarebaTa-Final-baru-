@@ -20,7 +20,6 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
   variant = "feed",
 }) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [hoveredReaction, setHoveredReaction] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
@@ -108,37 +107,34 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
 
   return (
     <div ref={containerRef} className="relative inline-flex items-center">
-      {/* GELEMBUNG PILIHAN REAKSI EMOJI (LONG-PRESS / HOVER POP-UP) */}
+      {/* GELEMBUNG PILIHAN REAKSI EMOJI (COMPACT HORIZONTAL BAR) */}
       {showPicker && (
         <div
-          className="absolute bottom-full left-0 mb-2 z-50 flex items-center flex-wrap gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 max-w-[calc(100vw-24px)] box-border bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-neutral-200/90 animate-in fade-in zoom-in-95 duration-150 select-none"
-          style={{ boxShadow: "0 10px 25px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
+          className="absolute bottom-full left-0 mb-1.5 z-50 w-max max-w-[calc(100vw-24px)] flex flex-row items-center flex-nowrap gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 bg-white/95 backdrop-blur-md rounded-full border border-neutral-200/90 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.16),0_2px_6px_-1px_rgba(0,0,0,0.06)] select-none"
           role="toolbar"
           aria-label="Pilih Reaksi Emoji"
           onClick={(e) => e.stopPropagation()}
         >
-          {EMOJI_REACTIONS.map((item) => (
-            <button
-              key={item.type}
-              type="button"
-              onClick={(e) => handleSelectReaction(item.type, e)}
-              onMouseEnter={() => setHoveredReaction(item.label)}
-              onMouseLeave={() => setHoveredReaction(null)}
-              className="relative p-1 rounded-full hover:scale-135 active:scale-110 transition-transform duration-150 flex items-center justify-center cursor-pointer group focus:outline-none"
-              title={item.label}
-              aria-label={item.label}
-            >
-              {/* Tooltip Nama Reaksi di Atas Emoji */}
-              {hoveredReaction === item.label && (
-                <span className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-neutral-900/90 text-white text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none animate-in fade-in">
-                  {item.label}
+          {EMOJI_REACTIONS.map((item) => {
+            const isSelected = userReaction === item.type;
+            return (
+              <button
+                key={item.type}
+                type="button"
+                onClick={(e) => handleSelectReaction(item.type, e)}
+                className={`shrink-0 w-[clamp(30px,8vw,36px)] h-[clamp(30px,8vw,36px)] rounded-full flex items-center justify-center cursor-pointer touch-manipulation transition-transform duration-150 hover:scale-[1.18] active:scale-110 focus:outline-none ${
+                  isSelected
+                    ? `${item.activeBg} ring-1 ring-neutral-200`
+                    : "hover:bg-neutral-100/80"
+                }`}
+                aria-label={item.label}
+              >
+                <span className="text-[clamp(18px,4.8vw,22px)] leading-none select-none">
+                  {item.type}
                 </span>
-              )}
-              <span className="text-2xl sm:text-3xl leading-none select-none drop-shadow-2xs">
-                {item.type}
-              </span>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
 

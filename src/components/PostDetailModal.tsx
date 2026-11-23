@@ -242,10 +242,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                             <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-[#00632B]" />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-bold leading-tight text-[#00632B]">
-                                Edit Teks Kabar
+                                Edit Kabar
                               </p>
                               <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
-                                Perbaiki salah ketik / ubah teks
+                                Ubah teks, foto/video, atau lokasi
                               </p>
                             </div>
                           </button>

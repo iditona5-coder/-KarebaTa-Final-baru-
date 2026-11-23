@@ -69,6 +69,7 @@ import {
   listenToFirestorePosts,
   fetchLatestFirestorePosts,
   deletePostFromFirestore,
+  updatePostInFirestore,
   updatePostTextInFirestore,
   togglePostLikeInFirestore,
   incrementPostViewInFirestore,
@@ -384,8 +385,25 @@ export default function KarebaFeedFinal() {
     approvalStatus?: "approved" | "pending" | "rejected";
   } | null>(null);
   const [postToDelete, setPostToDelete] = useState<{ id: string; title?: string; img?: string } | null>(null);
-  const [editingPost, setEditingPost] = useState<{ id: string; text: string } | null>(null);
+  const [editingPost, setEditingPost] = useState<{
+    id: string;
+    text: string;
+    location: string;
+    img?: string;
+    thumbnail?: string;
+    mediaType?: "image" | "video";
+    fileId?: string;
+    thumbFileId?: string;
+  } | null>(null);
   const [editingPostText, setEditingPostText] = useState("");
+  const [editingPostLocation, setEditingPostLocation] = useState("");
+  const [editingPostMediaUrl, setEditingPostMediaUrl] = useState<string | null>(null);
+  const [editingPostMediaFile, setEditingPostMediaFile] = useState<File | null>(null);
+  const [editingPostMediaType, setEditingPostMediaType] = useState<"image" | "video">("image");
+  const [editingPostThumbnail, setEditingPostThumbnail] = useState<string | null>(null);
+  const [editingPostMediaChanged, setEditingPostMediaChanged] = useState(false);
+  const [isProcessingEditMedia, setIsProcessingEditMedia] = useState(false);
+  const editMediaInputRef = useRef<HTMLInputElement | null>(null);
   const [isSavingPostEdit, setIsSavingPostEdit] = useState(false);
   const [reportPostData, setReportPostData] = useState<{ id: string; user: string; text?: string } | null>(null);
   const [reportReason, setReportReason] = useState<string>("");
@@ -3063,36 +3081,252 @@ export default function KarebaFeedFinal() {
     showToast("Kabar berhasil di hapus");
   };
 
-  // FUNGSI EDIT TEKS / DESKRIPSI KABAR WARGA
+  // FUNGSI EDIT KABAR WARGA (TEKS, FOTO/VIDEO, DAN LOKASI)
+  const closeEditPostModal = () => {
+    if (editingPostMediaChanged && editingPostMediaUrl && editingPostMediaUrl.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(editingPostMediaUrl);
+      } catch {}
+    }
+    setEditingPost(null);
+    setEditingPostText("");
+    setEditingPostLocation("");
+    setEditingPostMediaUrl(null);
+    setEditingPostMediaFile(null);
+    setEditingPostMediaType("image");
+    setEditingPostThumbnail(null);
+    setEditingPostMediaChanged(false);
+    setIsProcessingEditMedia(false);
+    if (editMediaInputRef.current) {
+      editMediaInputRef.current.value = "";
+    }
+  };
+
   const handleStartEditPost = (post: FeedItem | PostItem | (Record<string, any> & { id: string })) => {
     // Validasi Keamanan: HANYA pemilik sah postingan yang boleh mengedit
     if (!isMyPost(post as any)) {
       showToast("Anda hanya dapat mengedit kabar milik akun Anda sendiri");
       return;
     }
+    const feedMatch = feed.find((f) => f.id === post.id);
     const currentText = (post as any).text || (post as any).caption || (post as any).desc || (post as any).title || "";
-    setEditingPost({ id: post.id, text: currentText });
+    const currentLoc = (post as any).location || (post as any).loc || feedMatch?.location || "";
+    const currentImg = (post as any).img || feedMatch?.img || undefined;
+    const currentThumb = (post as any).thumbnail || feedMatch?.thumbnail || undefined;
+    const currentFileId = (post as any).fileId || feedMatch?.fileId || undefined;
+    const currentThumbFileId = (post as any).thumbFileId || feedMatch?.thumbFileId || undefined;
+    const isVid =
+      (post as any).mediaType === "video" ||
+      feedMatch?.mediaType === "video" ||
+      Boolean(currentImg && (currentImg.startsWith("data:video") || currentImg.includes(".mp4")));
+    const resolvedType: "image" | "video" = isVid ? "video" : "image";
+
+    setEditingPost({
+      id: post.id,
+      text: currentText,
+      location: currentLoc,
+      img: currentImg,
+      thumbnail: currentThumb,
+      mediaType: currentImg ? resolvedType : undefined,
+      fileId: currentFileId,
+      thumbFileId: currentThumbFileId,
+    });
     setEditingPostText(currentText);
+    setEditingPostLocation(currentLoc);
+    setEditingPostMediaUrl(currentImg || null);
+    setEditingPostMediaFile(null);
+    setEditingPostMediaType(resolvedType);
+    setEditingPostThumbnail(currentThumb || null);
+    setEditingPostMediaChanged(false);
     setActiveMenuPostId(null);
+  };
+
+  const handleEditMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isVid = file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|3gp|avi)$/i.test(file.name);
+
+    if (isVid) {
+      if (file.size > MAX_VIDEO_FILE_SIZE_BYTES) {
+        setVideoDurationAlert({ isOpen: true, reason: "size", fileSizeBytes: file.size });
+        if (editMediaInputRef.current) editMediaInputRef.current.value = "";
+        return;
+      }
+      setIsProcessingEditMedia(true);
+      try {
+        const dur = await getVideoDuration(file);
+        if (dur > MAX_VIDEO_DURATION_SECONDS) {
+          setIsProcessingEditMedia(false);
+          setVideoDurationAlert({ isOpen: true, reason: "duration", duration: dur });
+          if (editMediaInputRef.current) editMediaInputRef.current.value = "";
+          return;
+        }
+        if (editingPostMediaChanged && editingPostMediaUrl && editingPostMediaUrl.startsWith("blob:")) {
+          try {
+            URL.revokeObjectURL(editingPostMediaUrl);
+          } catch {}
+        }
+        const blobUrl = URL.createObjectURL(file);
+        setEditingPostMediaFile(file);
+        setEditingPostMediaUrl(blobUrl);
+        setEditingPostMediaType("video");
+        setEditingPostMediaChanged(true);
+        const thumb = await extractVideoThumbnail(file);
+        setEditingPostThumbnail(thumb);
+      } catch {
+        setEditingPostThumbnail(null);
+      } finally {
+        setIsProcessingEditMedia(false);
+      }
+    } else {
+      setIsProcessingEditMedia(true);
+      try {
+        if (editingPostMediaChanged && editingPostMediaUrl && editingPostMediaUrl.startsWith("blob:")) {
+          try {
+            URL.revokeObjectURL(editingPostMediaUrl);
+          } catch {}
+        }
+        const compressedUrl = await compressImageFile(file);
+        setEditingPostMediaFile(null);
+        setEditingPostMediaUrl(compressedUrl);
+        setEditingPostMediaType("image");
+        setEditingPostThumbnail(compressedUrl);
+        setEditingPostMediaChanged(true);
+      } catch {
+        showToast("Gagal memproses foto yang dipilih");
+      } finally {
+        setIsProcessingEditMedia(false);
+      }
+    }
+  };
+
+  const handleRevertEditMedia = () => {
+    if (!editingPost) return;
+    if (editingPostMediaChanged && editingPostMediaUrl && editingPostMediaUrl.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(editingPostMediaUrl);
+      } catch {}
+    }
+    setEditingPostMediaUrl(editingPost.img || null);
+    setEditingPostMediaFile(null);
+    setEditingPostMediaType(editingPost.mediaType || "image");
+    setEditingPostThumbnail(editingPost.thumbnail || null);
+    setEditingPostMediaChanged(false);
+    if (editMediaInputRef.current) {
+      editMediaInputRef.current.value = "";
+    }
   };
 
   const handleSavePostEdit = async () => {
     if (!editingPost) return;
     const trimmed = editingPostText.trim().slice(0, 3000);
+    const trimmedLoc = editingPostLocation.trim().slice(0, 30);
     if (!trimmed) {
       showToast("Teks kabar tidak boleh kosong");
       return;
     }
 
+    const checkText = checkContentModeration(trimmed);
+    if (!checkText.isClean) {
+      showToast(`Ditolak: ${checkText.reason} Dilarang menggunakan kata "${checkText.flaggedWord}".`);
+      return;
+    }
+    if (trimmedLoc) {
+      const checkLoc = checkContentModeration(trimmedLoc);
+      if (!checkLoc.isClean) {
+        showToast(`Ditolak: Lokasi mengandung kata tidak pantas ("${checkLoc.flaggedWord}").`);
+        return;
+      }
+    }
+
     setIsSavingPostEdit(true);
     try {
-      await updatePostTextInFirestore(editingPost.id, trimmed);
+      let finalImg = editingPost.img;
+      let finalThumbnail = editingPost.thumbnail;
+      let finalMediaType = editingPost.mediaType;
+      let finalFileId = editingPost.fileId;
+      let finalThumbFileId = editingPost.thumbFileId;
+
+      if (editingPostMediaChanged && editingPostMediaUrl) {
+        const mediaSource =
+          editingPostMediaType === "image"
+            ? editingPostMediaUrl
+            : editingPostMediaFile || editingPostMediaUrl;
+
+        const uploadRes = await uploadToImageKit(
+          mediaSource,
+          `kareba_edit_${Date.now()}.${editingPostMediaType === "video" ? "mp4" : "jpg"}`
+        );
+
+        if (!uploadRes || !uploadRes.url) {
+          showToast("Gagal mengunggah foto/video baru. Periksa koneksi internet dan coba lagi.");
+          setIsSavingPostEdit(false);
+          return;
+        }
+
+        finalImg = uploadRes.url;
+        finalFileId = uploadRes.fileId;
+        finalMediaType = editingPostMediaType;
+        finalThumbnail =
+          editingPostMediaType === "image"
+            ? uploadRes.url
+            : uploadRes.thumbnailUrl || uploadRes.url;
+        finalThumbFileId = undefined;
+
+        if (editingPostMediaType === "video" && editingPostThumbnail && editingPostThumbnail.startsWith("data:")) {
+          const thumbRes = await uploadToImageKit(
+            editingPostThumbnail,
+            `thumb_edit_${Date.now()}.jpg`
+          );
+          if (thumbRes && thumbRes.url) {
+            finalThumbnail = thumbRes.url;
+            finalThumbFileId = thumbRes.fileId;
+          }
+        }
+
+        // Bersihkan media lama di ImageKit setelah media baru sukses terunggah
+        if (editingPost.fileId && editingPost.fileId !== finalFileId) {
+          deleteFromImageKit(editingPost.fileId);
+        }
+        if (editingPost.thumbFileId && editingPost.thumbFileId !== finalThumbFileId) {
+          deleteFromImageKit(editingPost.thumbFileId);
+        }
+      }
+
+      await updatePostInFirestore(editingPost.id, {
+        text: trimmed,
+        location: trimmedLoc,
+        ...(editingPostMediaChanged
+          ? {
+              img: finalImg || "",
+              thumbnail: finalThumbnail || "",
+              mediaType: finalMediaType || "image",
+              fileId: finalFileId || "",
+              thumbFileId: finalThumbFileId || "",
+            }
+          : {}),
+      });
 
       // 1. Update state feed utama
       setFeed((prev) => {
         const updated = prev.map((item) =>
           item.id === editingPost.id
-            ? { ...item, text: trimmed, isEdited: true }
+            ? {
+                ...item,
+                text: trimmed,
+                location: trimmedLoc || undefined,
+                ...(editingPostMediaChanged
+                  ? {
+                      img: finalImg,
+                      thumbnail: finalThumbnail,
+                      mediaType: finalMediaType,
+                      fileId: finalFileId,
+                      thumbFileId: finalThumbFileId,
+                    }
+                  : {}),
+                isEdited: true,
+              }
             : item
         );
         try {
@@ -3105,7 +3339,23 @@ export default function KarebaFeedFinal() {
       setPosts((prev) => {
         const updated = prev.map((item) =>
           item.id === editingPost.id
-            ? { ...item, title: trimmed, caption: trimmed, desc: trimmed, isEdited: true }
+            ? {
+                ...item,
+                title: trimmed,
+                caption: trimmed,
+                desc: trimmed,
+                loc: trimmedLoc || item.loc,
+                ...(editingPostMediaChanged
+                  ? {
+                      img: finalImg || "",
+                      thumbnail: finalThumbnail,
+                      mediaType: finalMediaType,
+                      fileId: finalFileId,
+                      thumbFileId: finalThumbFileId,
+                    }
+                  : {}),
+                isEdited: true,
+              }
             : item
         );
         try {
@@ -3122,13 +3372,22 @@ export default function KarebaFeedFinal() {
           title: trimmed,
           caption: trimmed,
           desc: trimmed,
+          loc: trimmedLoc || prev.loc,
+          ...(editingPostMediaChanged
+            ? {
+                img: finalImg || "",
+                thumbnail: finalThumbnail,
+                mediaType: finalMediaType,
+                fileId: finalFileId,
+                thumbFileId: finalThumbFileId,
+              }
+            : {}),
           isEdited: true,
         };
       });
 
-      showToast("Teks kabar berhasil diperbarui");
-      setEditingPost(null);
-      setEditingPostText("");
+      showToast("Kabar berhasil diperbarui");
+      closeEditPostModal();
     } catch (err) {
       console.error("Gagal mengedit postingan:", err);
       showToast("Gagal memperbarui kabar, silakan coba lagi");
@@ -4512,10 +4771,10 @@ export default function KarebaFeedFinal() {
                                 <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-[#00632B]" />
                                 <div className="min-w-0 flex-1">
                                   <p className="text-xs font-bold leading-tight text-[#00632B]">
-                                    Edit Teks Kabar
+                                    Edit Kabar
                                   </p>
                                   <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
-                                    Perbaiki salah ketik / ubah teks
+                                    Ubah teks, foto/video, atau lokasi
                                   </p>
                                 </div>
                               </button>
@@ -4906,15 +5165,14 @@ export default function KarebaFeedFinal() {
           </div>
         )}
 
-        {/* MODAL EDIT TEKS / DESKRIPSI KABAR WARGA */}
+        {/* MODAL EDIT KABAR WARGA (TEKS, FOTO/VIDEO, DAN LOKASI) */}
         {editingPost && (
           <div
             id="edit-post-modal-overlay"
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
+            className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
             onClick={() => {
-              if (!isSavingPostEdit) {
-                setEditingPost(null);
-                setEditingPostText("");
+              if (!isSavingPostEdit && !isProcessingEditMedia) {
+                closeEditPostModal();
               }
             }}
             onTouchMove={(e) => e.preventDefault()}
@@ -4926,6 +5184,15 @@ export default function KarebaFeedFinal() {
               onTouchMove={(e) => e.stopPropagation()}
               onWheel={(e) => e.stopPropagation()}
             >
+              {/* Input file tersembunyi untuk ganti foto/video */}
+              <input
+                ref={editMediaInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleEditMediaSelect}
+                className="hidden"
+              />
+
               {/* Header Modal */}
               <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-100">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -4933,22 +5200,78 @@ export default function KarebaFeedFinal() {
                     <Edit3 className="w-5 h-5 text-[#00632B]" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-base text-neutral-900 leading-tight">Edit Teks Kabar</h3>
-                    <p className="text-xs text-neutral-500 mt-0.5">Perbaiki salah ketik atau ubah tulisan kabar</p>
+                    <h3 className="font-bold text-base text-neutral-900 leading-tight">Edit Kabar</h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">Ubah tulisan, foto/video, atau lokasi kabar</p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  disabled={isSavingPostEdit}
-                  onClick={() => {
-                    setEditingPost(null);
-                    setEditingPostText("");
-                  }}
+                  disabled={isSavingPostEdit || isProcessingEditMedia}
+                  onClick={closeEditPostModal}
                   className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer disabled:opacity-40 shrink-0"
                   aria-label="Tutup"
                 >
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              {/* Area Ganti / Tambah Foto atau Video */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-neutral-700">Foto / Video</span>
+                  <div className="flex items-center gap-1.5">
+                    {editingPostMediaChanged && (
+                      <button
+                        type="button"
+                        disabled={isSavingPostEdit || isProcessingEditMedia}
+                        onClick={handleRevertEditMedia}
+                        className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition cursor-pointer disabled:opacity-50"
+                      >
+                        Batal Ganti
+                      </button>
+                    )}
+                    <button
+                      id="edit-change-media-btn"
+                      type="button"
+                      disabled={isSavingPostEdit || isProcessingEditMedia}
+                      onClick={() => editMediaInputRef.current?.click()}
+                      className="text-[11px] font-bold text-[#00632B] hover:text-white bg-emerald-50 hover:bg-[#00632B] border border-emerald-200 px-2.5 py-1 rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>{editingPostMediaUrl ? "Ganti Foto / Video" : "Tambah Foto / Video"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {isProcessingEditMedia ? (
+                  <div className="w-full h-36 rounded-2xl bg-neutral-50 border border-neutral-200 flex flex-col items-center justify-center gap-2 text-xs text-neutral-500">
+                    <div className="w-5 h-5 border-2 border-[#00632B]/30 border-t-[#00632B] rounded-full animate-spin" />
+                    <span>Memproses media...</span>
+                  </div>
+                ) : editingPostMediaUrl ? (
+                  <div className="relative w-full rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-200 max-h-56 flex items-center justify-center">
+                    {editingPostMediaType === "video" ? (
+                      <video
+                        src={editingPostMediaUrl}
+                        poster={editingPostThumbnail || undefined}
+                        controls
+                        playsInline
+                        className="w-full max-h-56 object-contain bg-black"
+                      />
+                    ) : (
+                      <img
+                        src={editingPostMediaUrl}
+                        alt="Pratinjau edit media"
+                        className="w-full max-h-56 object-contain bg-neutral-100"
+                      />
+                    )}
+                    {editingPostMediaChanged && (
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#00632B] text-white text-[10px] font-bold shadow-xs">
+                        Media Baru
+                      </span>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               {/* Area Input Teks */}
@@ -4959,7 +5282,7 @@ export default function KarebaFeedFinal() {
                 <div className="relative">
                   <textarea
                     id="edit-post-textarea"
-                    rows={5}
+                    rows={4}
                     value={editingPostText}
                     onChange={(e) => setEditingPostText(e.target.value)}
                     placeholder="Tuliskan perbaikan teks kabar Anda..."
@@ -4972,6 +5295,39 @@ export default function KarebaFeedFinal() {
                     <span>{editingPostText.length} / 3000 karakter</span>
                   </div>
                 </div>
+                {!checkContentModeration(editingPostText).isClean && (
+                  <p className="text-[11px] text-rose-600 font-medium">
+                    Peringatan: Teks terdeteksi mengandung kata tidak pantas ("{checkContentModeration(editingPostText).flaggedWord}").
+                  </p>
+                )}
+              </div>
+
+              {/* Area Input Lokasi */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="edit-post-location-input" className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Lokasi Kabar</span>
+                  </label>
+                  <span className="text-[11px] text-neutral-400 font-medium">
+                    {editingPostLocation.length}/30
+                  </span>
+                </div>
+                <input
+                  id="edit-post-location-input"
+                  type="text"
+                  value={editingPostLocation}
+                  onChange={(e) => setEditingPostLocation(e.target.value.slice(0, 30))}
+                  placeholder="Contoh: Makassar, Pantai Losari..."
+                  disabled={isSavingPostEdit}
+                  maxLength={30}
+                  className="w-full min-w-0 px-3.5 py-2.5 text-sm text-neutral-800 bg-neutral-50/80 rounded-xl border border-neutral-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#00632B] focus:border-transparent transition-all placeholder:text-neutral-400"
+                />
+                {editingPostLocation.trim() && !checkContentModeration(editingPostLocation).isClean && (
+                  <p className="text-[11px] text-rose-600 font-medium">
+                    Peringatan: Lokasi mengandung kata tidak pantas ("{checkContentModeration(editingPostLocation).flaggedWord}").
+                  </p>
+                )}
               </div>
 
               {/* Tombol Aksi */}
@@ -4979,11 +5335,8 @@ export default function KarebaFeedFinal() {
                 <button
                   id="cancel-edit-post-btn"
                   type="button"
-                  disabled={isSavingPostEdit}
-                  onClick={() => {
-                    setEditingPost(null);
-                    setEditingPostText("");
-                  }}
+                  disabled={isSavingPostEdit || isProcessingEditMedia}
+                  onClick={closeEditPostModal}
                   className="flex-1 min-w-[100px] py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer disabled:opacity-50"
                 >
                   Batal
@@ -4991,7 +5344,7 @@ export default function KarebaFeedFinal() {
                 <button
                   id="save-edit-post-btn"
                   type="button"
-                  disabled={isSavingPostEdit || !editingPostText.trim()}
+                  disabled={isSavingPostEdit || isProcessingEditMedia || !editingPostText.trim()}
                   onClick={handleSavePostEdit}
                   className="flex-1 min-w-[140px] py-2.5 text-xs font-bold text-white bg-[#00632B] hover:bg-[#005224] rounded-xl transition cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
@@ -5880,7 +6233,7 @@ export default function KarebaFeedFinal() {
 
         {/* MODAL PERINGATAN BATAS DURASI (30 DETIK) ATAU UKURAN VIDEO (20 MB) */}
         {videoDurationAlert?.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
             <div className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl p-4 sm:p-5 shadow-2xl border border-neutral-200 text-center space-y-4 max-h-[90dvh] overflow-y-auto">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-xs">
                 <Clock className="w-7 h-7 text-amber-600" />
@@ -5932,7 +6285,11 @@ export default function KarebaFeedFinal() {
                   type="button"
                   onClick={() => {
                     setVideoDurationAlert(null);
-                    openCustomGallery();
+                    if (editingPost) {
+                      editMediaInputRef.current?.click();
+                    } else {
+                      openCustomGallery();
+                    }
                   }}
                   className="w-full py-2.5 px-4 bg-[#00632B] hover:bg-[#004f22] active:scale-98 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                 >
