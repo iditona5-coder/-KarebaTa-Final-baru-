@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Fragment, Suspense, lazy } from "react";
 import {
   Heart,
   MessageCircle,
@@ -54,6 +54,7 @@ import { ReactionButton } from "./components/ReactionButton";
 import { ReactionBadge } from "./components/ReactionBadge";
 import { ProfileReactionStatsButton } from "./components/ProfileReactionStatsButton";
 import { ExpandablePostText } from "./components/ExpandablePostText";
+import { KAREBATA_APP_URL, copyTextToClipboard } from "./utils/clipboard";
 import {
   extractVideoThumbnail,
   getVideoDuration,
@@ -103,47 +104,22 @@ import {
 import { RunningTextBar, BulletinItem } from "./components/RunningTextBar";
 import { CardCarousel } from "./components/CardCarousel";
 import { PullToRefresh } from "./components/PullToRefresh";
-import { AdminDashboard } from "./components/AdminDashboard";
+const AdminDashboard = lazy(() =>
+  import("./components/AdminDashboard").then((m) => ({ default: m.AdminDashboard }))
+);
 import { preloadFeedMedia } from "./utils/mediaPreloader";
 import { LoginModal, LoginActionContext } from "./components/LoginModal";
-import { LoginPage } from "./components/LoginPage";
-import { SetupUsernamePage } from "./components/SetupUsernamePage";
+const LoginPage = lazy(() =>
+  import("./components/LoginPage").then((m) => ({ default: m.LoginPage }))
+);
+const SetupUsernamePage = lazy(() =>
+  import("./components/SetupUsernamePage").then((m) => ({ default: m.SetupUsernamePage }))
+);
 import { SplashScreen } from "./components/SplashScreen";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
-let hasSplashPlayedThisLaunch = false;
-
 export default function KarebaFeedFinal() {
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === "undefined" || hasSplashPlayedThisLaunch) return false;
-
-    const isStandalonePwa =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      window.matchMedia("(display-mode: fullscreen)").matches ||
-      window.matchMedia("(display-mode: minimal-ui)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
-      document.referrer.includes("android-app://") ||
-      window.location.search.includes("source=pwa");
-
-    if (isStandalonePwa) {
-      hasSplashPlayedThisLaunch = true;
-      try {
-        sessionStorage.setItem("karebata_splash_shown", "true");
-      } catch {}
-      return false;
-    }
-
-    try {
-      const alreadyShown = sessionStorage.getItem("karebata_splash_shown") === "true";
-      if (alreadyShown) return false;
-      hasSplashPlayedThisLaunch = true;
-      sessionStorage.setItem("karebata_splash_shown", "true");
-      return true;
-    } catch {
-      hasSplashPlayedThisLaunch = true;
-      return true;
-    }
-  });
+  const [showSplash, setShowSplash] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMediaChoiceModalOpen, setIsMediaChoiceModalOpen] = useState(false);
@@ -1185,6 +1161,52 @@ export default function KarebaFeedFinal() {
     };
   }, [activeSharePostId]);
 
+  // Tutup otomatis menu titik 3 pada kartu postingan saat pengguna men-scroll layar
+  useEffect(() => {
+    if (!activeMenuPostId) return;
+
+    const initialScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    let touchStartY: number | null = null;
+
+    const handleScrollCloseMenu = () => {
+      const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (Math.abs(currentScrollY - initialScrollY) > 6) {
+        setActiveMenuPostId(null);
+      }
+    };
+
+    const handleWheelCloseMenu = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > 2) {
+        setActiveMenuPostId(null);
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 0) {
+        touchStartY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartY !== null && e.touches && e.touches.length > 0) {
+        if (Math.abs(e.touches[0].clientY - touchStartY) > 10) {
+          setActiveMenuPostId(null);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScrollCloseMenu, { passive: true });
+    window.addEventListener("wheel", handleWheelCloseMenu, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScrollCloseMenu);
+      window.removeEventListener("wheel", handleWheelCloseMenu);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [activeMenuPostId]);
+
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
   const seenRealtimeNotifIdsRef = useRef<Set<string>>(new Set());
@@ -1375,6 +1397,7 @@ export default function KarebaFeedFinal() {
     } catch {}
     return [];
   });
+  const [isInitialFeedLoading, setIsInitialFeedLoading] = useState<boolean>(() => feed.length === 0);
 
   // Simpan secara otomatis setiap perubahan feed & posts ke localStorage agar tidak pernah hilang saat aplikasi dimuat ulang
   useEffect(() => {
@@ -1810,7 +1833,13 @@ export default function KarebaFeedFinal() {
 
   // Sinkronisasi postingan real-time dari Firestore proyek pribadi
   useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      setIsInitialFeedLoading(false);
+    }, 3500);
+
     const unsubscribe = listenToFirestorePosts((remotePosts) => {
+      clearTimeout(fallbackTimer);
+      setIsInitialFeedLoading(false);
       const deletedIds = new Set<string>();
       try {
         const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
@@ -1886,6 +1915,7 @@ export default function KarebaFeedFinal() {
     });
 
     return () => {
+      clearTimeout(fallbackTimer);
       if (typeof unsubscribe === "function") unsubscribe();
     };
   }, []);
@@ -3400,7 +3430,13 @@ export default function KarebaFeedFinal() {
   // JIKA SEDANG MEMBUKA HALAMAN DASBOR ADMIN TERPISAH
   if (viewMode === "admin") {
     return (
-      <>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+            <div className="w-7 h-7 border-3 border-[#00632B] border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
         <AdminDashboard
           feedPosts={feed}
           onBackToFeed={() => {
@@ -3476,7 +3512,7 @@ export default function KarebaFeedFinal() {
             minLikes={giftMinLikes}
           />
         )}
-      </>
+      </Suspense>
     );
   }
 
@@ -3496,7 +3532,13 @@ export default function KarebaFeedFinal() {
   // Halaman Login terpisah hanya dibuka jika rute secara eksplisit mengarah ke #login
   if (viewMode === "login") {
     return (
-      <>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="w-7 h-7 border-3 border-[#00632B] border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
         <LoginPage
           onLoginSuccess={handleLoginSuccess}
           initialMessage={loginRedirectMessage}
@@ -3508,14 +3550,20 @@ export default function KarebaFeedFinal() {
           </div>
         )}
         {splashOverlay}
-      </>
+      </Suspense>
     );
   }
 
   // JIKA SETELAH LOGIN GOOGLE: HANYA MASUK KE HALAMAN NGETIK NAMA JIKA AKUN BARU DAN BELUM MEMILIKI NAMA
   if (viewMode === "set_name") {
     return (
-      <>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="w-7 h-7 border-3 border-[#00632B] border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
         <SetupUsernamePage
           currentUser={currentUser}
           initialValue=""
@@ -3529,7 +3577,7 @@ export default function KarebaFeedFinal() {
           </div>
         )}
         {splashOverlay}
-      </>
+      </Suspense>
     );
   }
 
@@ -4592,17 +4640,38 @@ export default function KarebaFeedFinal() {
 
           <div className="w-full bg-white">
             {displayFeed.length === 0 ? (
-              <div className="py-5 sm:py-6 px-4 text-center flex flex-col items-center justify-center space-y-2.5 animate-fade-in">
-                <div className="w-14 h-14 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-400 shadow-2xs">
-                  <Newspaper className="w-7 h-7 stroke-[1.75] text-neutral-400" />
+              isInitialFeedLoading ? (
+                <div className="divide-y-2 divide-neutral-100">
+                  {[0, 1].map((idx) => (
+                    <div key={idx} className="p-4 space-y-3 animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-full bg-neutral-200 shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3.5 w-32 bg-neutral-200 rounded" />
+                          <div className="h-2.5 w-24 bg-neutral-100 rounded" />
+                        </div>
+                      </div>
+                      <div className="w-full h-48 rounded-2xl bg-neutral-100" />
+                      <div className="space-y-1.5">
+                        <div className="h-4 w-5/6 bg-neutral-200 rounded" />
+                        <div className="h-4 w-2/3 bg-neutral-100 rounded" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-sm sm:text-base font-bold text-neutral-900">Belum Ada Kabar Warga</h3>
-                  <p className="text-xs text-neutral-500 max-w-xs leading-normal">
-                    Aplikasi siap digunakan. Belum ada postingan warga yang diterbitkan. Jadilah yang pertama membagikan kabar!
-                  </p>
+              ) : (
+                <div className="py-5 sm:py-6 px-4 text-center flex flex-col items-center justify-center space-y-2.5 animate-fade-in">
+                  <div className="w-14 h-14 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-400 shadow-2xs">
+                    <Newspaper className="w-7 h-7 stroke-[1.75] text-neutral-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm sm:text-base font-bold text-neutral-900">Belum Ada Kabar Warga</h3>
+                    <p className="text-xs text-neutral-500 max-w-xs leading-normal">
+                      Aplikasi siap digunakan. Belum ada postingan warga yang diterbitkan. Jadilah yang pertama membagikan kabar!
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               displayFeed.map((f, index) => (
               <Fragment key={f.id}>
@@ -4721,9 +4790,10 @@ export default function KarebaFeedFinal() {
                     {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Edit, Salin) */}
                     {activeMenuPostId === f.id && (
                       <>
-                        {/* Backdrop untuk menutup menu saat klik di luar */}
+                        {/* Backdrop untuk menutup menu saat klik di luar (tetap izinkan scroll vertikal) */}
                         <div
                           className="fixed inset-0 z-30"
+                          style={{ touchAction: "pan-y" }}
                           onClick={() => setActiveMenuPostId(null)}
                         />
 
@@ -4829,9 +4899,7 @@ export default function KarebaFeedFinal() {
                             id={`menu-copy-btn-${f.id}`}
                             type="button"
                             onClick={() => {
-                              if (navigator?.clipboard) {
-                                navigator.clipboard.writeText(`${window.location.origin}/#post-${f.id}`);
-                              }
+                              copyTextToClipboard(`${window.location.origin}/#post-${f.id}`);
                               handlePostShared(f.id);
                               showToast("Tautan kabar berhasil disalin");
                               setActiveMenuPostId(null);
@@ -4840,6 +4908,28 @@ export default function KarebaFeedFinal() {
                           >
                             <Link2 className="w-4 h-4 shrink-0 text-neutral-600 transition-transform group-hover:scale-110" />
                             <span className="text-xs font-medium text-neutral-700">Salin Tautan</span>
+                          </button>
+
+                          {/* 4. Salin Link Aplikasi Kareba'Ta */}
+                          <button
+                            id={`menu-copy-app-link-btn-${f.id}`}
+                            type="button"
+                            onClick={() => {
+                              copyTextToClipboard(KAREBATA_APP_URL);
+                              showToast("Link Kareba'Ta berhasil disalin!");
+                              setActiveMenuPostId(null);
+                            }}
+                            className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group"
+                          >
+                            <KarebaPinIcon size={16} className="shrink-0 transition-transform group-hover:scale-110" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold leading-tight text-[#00632B]">
+                                Link Kareba&apos;Ta
+                              </p>
+                              <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                                Klik untuk salin link aplikasi
+                              </p>
+                            </div>
                           </button>
                         </div>
                       </>

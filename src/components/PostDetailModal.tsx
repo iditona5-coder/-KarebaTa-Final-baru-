@@ -20,6 +20,8 @@ import { ShareBar } from "./ShareBar";
 import { ReactionButton } from "./ReactionButton";
 import { ReactionBadge } from "./ReactionBadge";
 import { ExpandablePostText } from "./ExpandablePostText";
+import { KarebaPinIcon } from "./KarebaTaLogo";
+import { KAREBATA_APP_URL, copyTextToClipboard } from "../utils/clipboard";
 
 interface PostDetailModalProps {
   post: PostItem | null;
@@ -79,6 +81,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const shareOpenScrollTopRef = useRef<number>(0);
+  const menuOpenScrollTopRef = useRef<number>(0);
 
   if (!post) return null;
 
@@ -134,6 +137,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             ) {
               setIsShareOpen(false);
             }
+            if (
+              isMenuOpen &&
+              Math.abs(e.currentTarget.scrollTop - menuOpenScrollTopRef.current) > 6
+            ) {
+              setIsMenuOpen(false);
+            }
           }}
           className="flex-1 bg-white overflow-y-auto overscroll-contain"
           style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
@@ -181,7 +190,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <button
                 id={`detail-menu-btn-${post.id}`}
                 type="button"
-                onClick={() => setIsMenuOpen((prev) => !prev)}
+                onClick={() => {
+                  if (!isMenuOpen) {
+                    menuOpenScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
+                  }
+                  setIsMenuOpen((prev) => !prev);
+                }}
                 className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
                 aria-label="Opsi postingan"
               >
@@ -193,6 +207,9 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                 <>
                   <div
                     className="fixed inset-0 z-30"
+                    style={{ touchAction: "pan-y" }}
+                    onWheel={() => setIsMenuOpen(false)}
+                    onTouchMove={() => setIsMenuOpen(false)}
                     onClick={() => setIsMenuOpen(false)}
                   />
                   <div
@@ -305,9 +322,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                       id={`menu-detail-copy-btn-${post.id}`}
                       type="button"
                       onClick={() => {
-                        if (navigator?.clipboard) {
-                          navigator.clipboard.writeText(`${window.location.origin}/#post-${post.id}`);
-                        }
+                        copyTextToClipboard(`${window.location.origin}/#post-${post.id}`);
                         if (onShare) onShare(post.id);
                         if (onShowToast) onShowToast("Tautan kabar berhasil disalin");
                         setIsMenuOpen(false);
@@ -316,6 +331,28 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                     >
                       <Link2 className="w-4 h-4 shrink-0 text-neutral-600 transition-transform group-hover:scale-110" />
                       <span className="text-xs font-medium text-neutral-700">Salin Tautan</span>
+                    </button>
+
+                    {/* 4. Salin Link Aplikasi Kareba'Ta */}
+                    <button
+                      id={`menu-detail-copy-app-link-btn-${post.id}`}
+                      type="button"
+                      onClick={() => {
+                        copyTextToClipboard(KAREBATA_APP_URL);
+                        if (onShowToast) onShowToast("Link Kareba'Ta berhasil disalin!");
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group"
+                    >
+                      <KarebaPinIcon size={16} className="shrink-0 transition-transform group-hover:scale-110" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold leading-tight text-[#00632B]">
+                          Link Kareba&apos;Ta
+                        </p>
+                        <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                          Klik untuk salin link aplikasi
+                        </p>
+                      </div>
                     </button>
                   </div>
                 </>
