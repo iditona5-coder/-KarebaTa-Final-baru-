@@ -1,5 +1,5 @@
 import React from "react";
-import { Heart, MessageCircle, Trash2 } from "lucide-react";
+import { Heart, MessageSquare, Trash2 } from "lucide-react";
 
 export interface CommentActionsProps {
   likes?: number;
@@ -42,7 +42,7 @@ export function CommentActions({
         className="flex flex-row items-center gap-1 text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer active:scale-95"
         aria-label="Balas komentar"
       >
-        <MessageCircle className="w-3.5 h-3.5 text-neutral-400" />
+        <MessageSquare className="w-3.5 h-3.5 text-neutral-400" />
         <span className="text-[12px]">Balas</span>
       </button>
 

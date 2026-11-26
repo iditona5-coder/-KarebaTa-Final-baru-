@@ -362,6 +362,12 @@ export default function KarebaFeedFinal() {
     approvalStatus?: "approved" | "pending" | "rejected";
   } | null>(null);
   const [postToDelete, setPostToDelete] = useState<{ id: string; title?: string; img?: string } | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<{
+    id: string;
+    text?: string;
+    user?: string;
+    isOtherUser?: boolean;
+  } | null>(null);
   const [editingPost, setEditingPost] = useState<{
     id: string;
     text: string;
@@ -1975,6 +1981,7 @@ export default function KarebaFeedFinal() {
       isEditProfileOpen ||
       reportPostData ||
       postToDelete ||
+      commentToDelete ||
       editingPost ||
       activeCommentItem ||
       activeDetailPost ||
@@ -2004,6 +2011,7 @@ export default function KarebaFeedFinal() {
     isEditProfileOpen,
     reportPostData,
     postToDelete,
+    commentToDelete,
     editingPost,
     activeCommentItem,
     activeDetailPost,
@@ -2428,9 +2436,16 @@ export default function KarebaFeedFinal() {
     }
   };
 
-  // Handler Hapus Komentar (hanya pemilik komentar)
+  // Handler Hapus Komentar (pemilik komentar atau pemilik postingan)
   const handleDeleteComment = (commentId: string) => {
-    if (!activeCommentItem) return;
+    if (!activeCommentItem || !currentUser) return;
+    const targetComment = (activeCommentItem.comments || []).find((comm) => comm.id === commentId);
+    if (!targetComment) return;
+    const canDelete = targetComment.user === userName || isMyPost(activeCommentItem);
+    if (!canDelete) {
+      showToast("Anda hanya dapat menghapus komentar sendiri atau komentar di postingan Anda.");
+      return;
+    }
     const remainingComments = (activeCommentItem.comments || []).filter((comm) => comm.id !== commentId);
 
     setFeed((prevFeed) =>
@@ -3721,27 +3736,9 @@ export default function KarebaFeedFinal() {
             )}
           </header>
 
-          {/* Papan Teks Berjalan di Bawah Bar */}
+          {/* Papan Teks Berjalan di Bawah Bar (Non-interaktif / tidak bisa diklik) */}
           {!isSearchOpen && (
-            <RunningTextBar
-              announcements={bulletins}
-              onItemClick={(text) => {
-                const lower = text.toLowerCase();
-                if (
-                  lower.includes("iklan") ||
-                  lower.includes("promo") ||
-                  lower.includes("umkm") ||
-                  lower.includes("tarif") ||
-                  lower.includes("whatsapp") ||
-                  lower.includes("pasang")
-                ) {
-                  // Langsung buka modal Bantuan / Hubungi WhatsApp Admin untuk pasang iklan
-                  setIsHelpOpen(true);
-                } else {
-                  showToast(text);
-                }
-              }}
-            />
+            <RunningTextBar announcements={bulletins} />
           )}
 
           {/* PAPAN HORIZONTAL STATUS UNGGAH MEDIA (ALA FACEBOOK) - DI BAWAH PAPAN TEKS BERJALAN */}
@@ -5887,14 +5884,28 @@ export default function KarebaFeedFinal() {
                       <p className="text-xs text-neutral-700 mt-1 leading-relaxed whitespace-pre-wrap break-words">{c.text}</p>
 
                       {/* Aksi Komentar (Like, Balas, Hapus) */}
-                      <CommentActions
-                        likes={c.likes ?? 0}
-                        isLiked={c.isLiked}
-                        onLike={() => handleLikeComment(c.id)}
-                        onReply={() => handleReplyComment(c.user)}
-                        onDelete={() => handleDeleteComment(c.id)}
-                        isOwner={Boolean(currentUser && c.user === userName)}
-                      />
+                      {(() => {
+                        const isCommentAuthor = Boolean(currentUser && c.user === userName);
+                        const isPostOwner = Boolean(currentUser && isMyPost(activeCommentItem));
+                        const canDeleteComment = isCommentAuthor || isPostOwner;
+                        return (
+                          <CommentActions
+                            likes={c.likes ?? 0}
+                            isLiked={c.isLiked}
+                            onLike={() => handleLikeComment(c.id)}
+                            onReply={() => handleReplyComment(c.user)}
+                            onDelete={() =>
+                              setCommentToDelete({
+                                id: c.id,
+                                text: c.text,
+                                user: c.user,
+                                isOtherUser: !isCommentAuthor && isPostOwner,
+                              })
+                            }
+                            isOwner={canDeleteComment}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
                 ))
@@ -5992,6 +6003,73 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
             )}
+            </div>
+          </div>
+        )}
+
+        {/* MODAL KONFIRMASI HAPUS KOMENTAR SENDIRI */}
+        {commentToDelete && (
+          <div
+            id="delete-comment-modal-overlay"
+            className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
+            onClick={() => setCommentToDelete(null)}
+            onTouchMove={(e) => e.preventDefault()}
+            onWheel={(e) => e.preventDefault()}
+          >
+            <div
+              className="bg-white border border-neutral-200 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border"
+              onClick={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bold text-base text-neutral-900">Hapus Komentar</h3>
+                <button
+                  type="button"
+                  onClick={() => setCommentToDelete(null)}
+                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer shrink-0"
+                  aria-label="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-neutral-600 leading-relaxed">
+                  {commentToDelete.isOtherUser && commentToDelete.user
+                    ? `Apakah Anda yakin ingin menghapus komentar dari @${commentToDelete.user.replace(/^@/, "")} di postingan Anda?`
+                    : "Apakah Anda yakin ingin menghapus komentar ini?"}
+                </p>
+                {commentToDelete.text && (
+                  <p className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-200/80 rounded-xl px-3 py-2 line-clamp-2 italic">
+                    &ldquo;{commentToDelete.text}&rdquo;
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 pt-1">
+                <button
+                  id="cancel-delete-comment-btn"
+                  type="button"
+                  onClick={() => setCommentToDelete(null)}
+                  className="flex-1 min-w-[100px] py-2 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  id="confirm-delete-comment-btn"
+                  type="button"
+                  onClick={() => {
+                    if (commentToDelete) {
+                      handleDeleteComment(commentToDelete.id);
+                      setCommentToDelete(null);
+                    }
+                  }}
+                  className="flex-1 min-w-[120px] py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition cursor-pointer shadow-xs"
+                >
+                  Hapus Komentar
+                </button>
+              </div>
             </div>
           </div>
         )}

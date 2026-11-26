@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { X, Megaphone, MapPin, Clock } from "lucide-react";
+import React, { useRef, useEffect, useCallback } from "react";
 
 export interface BulletinItem {
   id: string;
@@ -11,14 +10,13 @@ export interface BulletinItem {
 
 interface RunningTextBarProps {
   announcements?: (string | BulletinItem)[];
-  onItemClick?: (text: string) => void;
 }
 
 const DEFAULT_ANNOUNCEMENTS: BulletinItem[] = [
   {
     id: "b-promo-1",
     category: "PASANG IKLAN",
-    text: "Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Klik untuk chat WhatsApp Admin!",
+    text: "Promosikan Usaha & UMKM Anda di Kareba'Ta! Tarif mulai Rp 25.000 (3 hari) & Rp 50.000 / minggu tayang terus-menerus tanpa batas. Hubungi WhatsApp Admin!",
     location: "Layanan Iklan",
     time: "Aktif",
   },
@@ -54,10 +52,7 @@ const DEFAULT_ANNOUNCEMENTS: BulletinItem[] = [
 
 export const RunningTextBar: React.FC<RunningTextBarProps> = ({
   announcements = DEFAULT_ANNOUNCEMENTS,
-  onItemClick,
 }) => {
-  const [isListOpen, setIsListOpen] = useState(false);
-
   // Normalisasi data pengumuman
   const items: BulletinItem[] = announcements.map((item, idx) => {
     if (typeof item === "string") {
@@ -73,12 +68,10 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
 
   // Ref untuk Custom Animation Engine (Bukan Bawaan Browser / Tag Marquee)
   const trackRef = useRef<HTMLDivElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const offsetRef = useRef<number>(0);
   const halfWidthRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const animFrameIdRef = useRef<number | null>(null);
-  const isHoveredRef = useRef<boolean>(false);
 
   // Hitung separuh lebar konten untuk seamless infinite wrap
   const measureHalfWidth = useCallback(() => {
@@ -98,8 +91,6 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
   // Custom Tick Engine menggunakan requestAnimationFrame
   useEffect(() => {
     measureHalfWidth();
-
-    // Pantau perubahan ukuran jendela
     window.addEventListener("resize", measureHalfWidth);
 
     const speed = 36; // Kecepatan gerak: 36 piksel per detik
@@ -111,16 +102,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
       const delta = (timestamp - lastTimeRef.current) / 1000;
       lastTimeRef.current = timestamp;
 
-      // Jalankan animasi jika tidak sedang di-hover
-      if (!isHoveredRef.current) {
-        const half = halfWidthRef.current;
-        if (half > 0) {
-          offsetRef.current += speed * delta;
-          if (offsetRef.current >= half) {
-            offsetRef.current = offsetRef.current % half;
-          }
-          applyTransform(offsetRef.current);
+      const half = halfWidthRef.current;
+      if (half > 0) {
+        offsetRef.current += speed * delta;
+        if (offsetRef.current >= half) {
+          offsetRef.current = offsetRef.current % half;
         }
+        applyTransform(offsetRef.current);
       }
 
       animFrameIdRef.current = requestAnimationFrame(loop);
@@ -136,171 +124,64 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
     };
   }, [measureHalfWidth, applyTransform, items]);
 
-  // Jalankan animasi otomatis tanpa drag manual
-  const handleItemPress = (item: BulletinItem) => {
-    if (onItemClick) {
-      onItemClick(item.text);
-    }
-  };
-
   if (items.length === 0) return null;
 
   return (
-    <>
-      {/* Papan Teks Berjalan Mandiri (Custom Engine Tanpa Tag Marquee Bawaan Browser & Tanpa Native Tooltip) */}
-      {/* Papan Teks Berjalan Mandiri (Custom Engine Tanpa Tag Marquee Bawaan Browser & Tanpa Native Tooltip) */}
-      <div
-        id="running-text-board"
-        className="w-full max-w-full bg-neutral-900 border-b border-neutral-800 text-white flex items-center h-8 sm:h-8.5 overflow-hidden relative select-none shadow-2xs z-30"
-        style={{ touchAction: "pan-y" }}
-      >
-        {/* Label Badge Statis Kiri - Merah Kontras Modern */}
-        <button
-          type="button"
-          onClick={() => setIsListOpen(true)}
-          className="bg-red-600 hover:bg-red-700 active:scale-95 transition text-white h-full px-2.5 sm:px-3 flex items-center gap-1.5 shrink-0 z-20 font-black text-[clamp(10px,2.8vw,11.5px)] tracking-wider uppercase shadow-xs cursor-pointer select-none"
-          aria-label="Buka info pengumuman warga"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-          </span>
-          <span className="whitespace-nowrap font-extrabold tracking-tight">INFO</span>
-        </button>
-
-        {/* Area Viewport Marquee (Teks mengalir murni otomatis, sentuhan layar tidak akan menyeret teks) */}
-        <div
-          ref={containerRef}
-          className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center pointer-events-auto"
-          onMouseEnter={() => {
-            isHoveredRef.current = true;
-          }}
-          onMouseLeave={() => {
-            isHoveredRef.current = false;
-          }}
-        >
-          {/* Efek Gradien Tepi Halus Kiri & Kanan (Vignette Fade) */}
-          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-neutral-900 to-transparent z-10" />
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-neutral-900 to-transparent z-10" />
-
-          {/* Jalur Teks Bergerak - Digeser dengan translate3d custom RAF */}
-          <div
-            ref={trackRef}
-            className="flex items-center h-full whitespace-nowrap will-change-transform"
-            style={{ transform: "translate3d(0px, 0, 0)" }}
-          >
-            {/* Set Pertama */}
-            {items.map((item, idx) => (
-              <div
-                key={`m1-${item.id}-${idx}`}
-                onClick={() => handleItemPress(item)}
-                className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
-              >
-                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
-                  {item.category}
-                </span>
-                <span className="font-medium tracking-wide">{item.text}</span>
-                <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
-              </div>
-            ))}
-
-            {/* Set Kedua (Duplikasi untuk loop tanpa jeda patah) */}
-            {items.map((item, idx) => (
-              <div
-                key={`m2-${item.id}-${idx}`}
-                onClick={() => handleItemPress(item)}
-                className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 hover:text-white transition whitespace-nowrap leading-none cursor-pointer"
-              >
-                <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
-                  {item.category}
-                </span>
-                <span className="font-medium tracking-wide">{item.text}</span>
-                <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
-              </div>
-            ))}
-          </div>
-        </div>
+    <div
+      id="running-text-board"
+      className="w-full max-w-full bg-neutral-900 border-b border-neutral-800 text-white flex items-center h-8 sm:h-8.5 overflow-hidden relative select-none shadow-2xs z-30 pointer-events-none"
+      style={{ touchAction: "pan-y" }}
+    >
+      {/* Label Badge Statis Kiri - Non-interaktif */}
+      <div className="bg-red-600 text-white h-full px-2.5 sm:px-3 flex items-center gap-1.5 shrink-0 z-20 font-black text-[clamp(10px,2.8vw,11.5px)] tracking-wider uppercase shadow-xs select-none">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+        </span>
+        <span className="whitespace-nowrap font-extrabold tracking-tight">INFO</span>
       </div>
 
-      {/* Modal Daftar Lengkap Info Terkini (In-App Custom Modal, Tanpa Browser Alert/Prompt) */}
-      {isListOpen && (
+      {/* Area Viewport Marquee (Pasif penuh, tidak dapat diklik) */}
+      <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center">
+        {/* Efek Gradien Tepi Halus Kiri & Kanan */}
+        <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-neutral-900 to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-neutral-900 to-transparent z-10" />
+
+        {/* Jalur Teks Bergerak */}
         <div
-          id="running-text-bulletin-modal"
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in"
-          onClick={() => setIsListOpen(false)}
+          ref={trackRef}
+          className="flex items-center h-full whitespace-nowrap will-change-transform"
+          style={{ transform: "translate3d(0px, 0, 0)" }}
         >
-          <div
-            className="bg-white border border-neutral-200 rounded-2xl w-full box-border p-4 sm:p-5 space-y-4 shadow-2xl overflow-hidden max-h-[85dvh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center flex-wrap justify-between gap-2 border-b border-neutral-100 pb-3 shrink-0">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-                  <Megaphone className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-sm sm:text-base text-neutral-900 leading-tight">
-                    Info & Warta Terkini
-                  </h3>
-                  <p className="text-[11px] text-neutral-500">Pembaruan info penting seputar kabar warga terkini</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsListOpen(false)}
-                className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer shrink-0"
-                aria-label="Tutup"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          {/* Set Pertama */}
+          {items.map((item, idx) => (
+            <div
+              key={`m1-${item.id}-${idx}`}
+              className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 whitespace-nowrap leading-none"
+            >
+              <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
+                {item.category}
+              </span>
+              <span className="font-medium tracking-wide">{item.text}</span>
+              <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
             </div>
+          ))}
 
-            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-100 space-y-1">
-              {items.map((b) => (
-                <div
-                  key={`bulletin-modal-${b.id}`}
-                  onClick={() => {
-                    handleItemPress(b);
-                    setIsListOpen(false);
-                  }}
-                  className="py-3 px-1 hover:bg-neutral-50 rounded-xl transition cursor-pointer group"
-                >
-                  <div className="flex items-center flex-wrap justify-between gap-2 mb-1">
-                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wide bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-                      {b.category}
-                    </span>
-                    {b.time && (
-                      <span className="text-[10px] text-neutral-400 flex items-center gap-1 shrink-0">
-                        <Clock className="w-3 h-3" />
-                        <span>{b.time}</span>
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-neutral-800 leading-relaxed font-medium group-hover:text-[#00632B] transition">
-                    {b.text}
-                  </p>
-                  {b.location && (
-                    <p className="text-[10px] text-neutral-500 mt-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-yellow-500" />
-                      <span>{b.location}</span>
-                    </p>
-                  )}
-                </div>
-              ))}
+          {/* Set Kedua (Duplikasi untuk loop tanpa jeda patah) */}
+          {items.map((item, idx) => (
+            <div
+              key={`m2-${item.id}-${idx}`}
+              className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 whitespace-nowrap leading-none"
+            >
+              <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
+                {item.category}
+              </span>
+              <span className="font-medium tracking-wide">{item.text}</span>
+              <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
             </div>
-
-            <div className="pt-2 border-t border-neutral-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsListOpen(false)}
-                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 };
