@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { ReactionType, EMOJI_REACTIONS } from "../types";
+import { isScrollInteractionBlocked } from "../utils/scrollGuard";
 
 interface ReactionButtonProps {
   postId: string;
@@ -23,9 +24,11 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number; scrollY: number } | null>(null);
+  const pointerMovedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close picker on click outside
+  // Close picker on click outside or scroll
   useEffect(() => {
     if (!showPicker) return;
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -33,11 +36,16 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
         setShowPicker(false);
       }
     };
+    const handleScrollClose = () => {
+      setShowPicker(false);
+    };
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("touchstart", handleClickOutside);
+    window.addEventListener("scroll", handleScrollClose, { passive: true });
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
+      window.removeEventListener("scroll", handleScrollClose);
     };
   }, [showPicker]);
 
@@ -48,9 +56,16 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
     };
   }, []);
 
-  const handlePointerDown = () => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     isLongPressRef.current = false;
+    pointerMovedRef.current = isScrollInteractionBlocked();
+    const scrollY = typeof window !== "undefined" ? window.scrollY || window.pageYOffset || 0 : 0;
+    pointerStartRef.current = { x: e.clientX, y: e.clientY, scrollY };
+
+    if (pointerMovedRef.current) return;
+
     timerRef.current = setTimeout(() => {
+      if (pointerMovedRef.current || isScrollInteractionBlocked()) return;
       isLongPressRef.current = true;
       setShowPicker(true);
       if (navigator.vibrate) {
@@ -61,10 +76,42 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
     }, 320);
   };
 
-  const handlePointerUp = () => {
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointerStartRef.current) return;
+    const dx = Math.abs(e.clientX - pointerStartRef.current.x);
+    const dy = Math.abs(e.clientY - pointerStartRef.current.y);
+    const scrollY = typeof window !== "undefined" ? window.scrollY || window.pageYOffset || 0 : 0;
+    const sdy = Math.abs(scrollY - pointerStartRef.current.scrollY);
+    if (dx > 6 || dy > 6 || sdy > 2) {
+      pointerMovedRef.current = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+
+    let moved = pointerMovedRef.current;
+    if (pointerStartRef.current) {
+      const dx = Math.abs(e.clientX - pointerStartRef.current.x);
+      const dy = Math.abs(e.clientY - pointerStartRef.current.y);
+      const scrollY = typeof window !== "undefined" ? window.scrollY || window.pageYOffset || 0 : 0;
+      const sdy = Math.abs(scrollY - pointerStartRef.current.scrollY);
+      if (dx > 6 || dy > 6 || sdy > 2) {
+        moved = true;
+      }
+    }
+    pointerStartRef.current = null;
+    pointerMovedRef.current = false;
+
+    if (moved || isScrollInteractionBlocked()) {
+      return;
     }
 
     // Jika bukan long-press, ini adalah quick tap biasa
@@ -80,6 +127,8 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
   };
 
   const handlePointerCancel = () => {
+    pointerStartRef.current = null;
+    pointerMovedRef.current = true;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -89,6 +138,7 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
   const handleSelectReaction = (reaction: ReactionType, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    if (isScrollInteractionBlocked()) return;
     setShowPicker(false);
     // Jika memilih reaksi yang sama persis yang sedang aktif, batalkan reaksi
     if (userReaction === reaction) {
@@ -143,11 +193,15 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
         id={`reaction-btn-${postId}`}
         type="button"
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onPointerLeave={handlePointerCancel}
         onContextMenu={(e) => {
           e.preventDefault();
-          setShowPicker(true);
+          if (!isScrollInteractionBlocked()) {
+            setShowPicker(true);
+          }
         }}
         className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition select-none group ${
           activeReactionInfo

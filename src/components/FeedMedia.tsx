@@ -19,6 +19,7 @@ import { extractVideoThumbnail } from "../utils/thumbnail";
 import { isMediaCached, markMediaCached, preloadImage } from "../utils/mediaPreloader";
 import { normalizeMediaUrl } from "../services/imagekit";
 import { getLocalVideoBlob } from "../utils/localMediaCache";
+import { isScrollInteractionBlocked } from "../utils/scrollGuard";
 
 export interface MediaAuthorInfo {
   avatar?: string;
@@ -278,20 +279,30 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   };
 
   // Proteksi anti-play/anti-click saat scrolling pada perangkat sentuh (touchscreen) & mouse
-  const pointerStartPosRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const pointerStartPosRef = useRef<{ x: number; y: number; scrollY: number; time: number } | null>(null);
   const isDraggingMediaRef = useRef(false);
   const blockClickUntilRef = useRef(0);
 
   const handleMediaPointerDown = (e: React.PointerEvent) => {
-    pointerStartPosRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
-    isDraggingMediaRef.current = false;
+    const currentScrollY =
+      typeof window !== "undefined" ? window.scrollY || window.pageYOffset || 0 : 0;
+    pointerStartPosRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollY: currentScrollY,
+      time: Date.now(),
+    };
+    isDraggingMediaRef.current = isScrollInteractionBlocked();
   };
 
   const handleMediaPointerMove = (e: React.PointerEvent) => {
     if (pointerStartPosRef.current) {
       const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
       const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
-      if (dx > 6 || dy > 6) {
+      const currentScrollY =
+        typeof window !== "undefined" ? window.scrollY || window.pageYOffset || 0 : 0;
+      const scrollDelta = Math.abs(currentScrollY - pointerStartPosRef.current.scrollY);
+      if (dx > 6 || dy > 6 || scrollDelta > 2) {
         isDraggingMediaRef.current = true;
       }
     }
@@ -301,16 +312,24 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     if (pointerStartPosRef.current) {
       const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
       const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
+      const currentScrollY =
+        typeof window !== "undefined" ? window.scrollY || window.pageYOffset || 0 : 0;
+      const scrollDelta = Math.abs(currentScrollY - pointerStartPosRef.current.scrollY);
       const duration = Date.now() - pointerStartPosRef.current.time;
       pointerStartPosRef.current = null;
-      if (dx > 6 || dy > 6 || duration > 350) {
+      if (dx > 6 || dy > 6 || scrollDelta > 2 || duration > 350 || isScrollInteractionBlocked()) {
         isDraggingMediaRef.current = true;
-        blockClickUntilRef.current = Date.now() + 400;
+        blockClickUntilRef.current = Date.now() + 450;
         setTimeout(() => {
           isDraggingMediaRef.current = false;
-        }, 400);
+        }, 450);
         return;
       }
+    }
+    if (isScrollInteractionBlocked()) {
+      isDraggingMediaRef.current = true;
+      blockClickUntilRef.current = Date.now() + 450;
+      return;
     }
     isDraggingMediaRef.current = false;
   };
@@ -318,14 +337,16 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   const handleMediaPointerCancel = () => {
     pointerStartPosRef.current = null;
     isDraggingMediaRef.current = true;
-    blockClickUntilRef.current = Date.now() + 400;
+    blockClickUntilRef.current = Date.now() + 450;
     setTimeout(() => {
       isDraggingMediaRef.current = false;
-    }, 400);
+    }, 450);
   };
 
   const toggleVideoPlay = () => {
-    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) return;
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current || isScrollInteractionBlocked()) {
+      return;
+    }
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       safePlay(videoRef.current);
@@ -336,7 +357,9 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) return;
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current || isScrollInteractionBlocked()) {
+      return;
+    }
     if (!videoRef.current) return;
     videoRef.current.muted = !videoRef.current.muted;
     setIsMuted(videoRef.current.muted);
@@ -347,7 +370,9 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   // Mencegah 100% fullscreen terbuka tidak sengaja saat pengguna sedang scrolling
   // =========================================================================
   const openFullscreen = () => {
-    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) return;
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current || isScrollInteractionBlocked()) {
+      return;
+    }
     if (videoRef.current) {
       if (!videoRef.current.paused) {
         safePause(videoRef.current);
@@ -364,7 +389,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
 
   const handleImageClick = (e: React.MouseEvent) => {
     // Jika terdeteksi geseran jari atau scroll, jangan buka fullscreen
-    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) {
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current || isScrollInteractionBlocked()) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -413,9 +438,13 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
     }
   }, [isFullscreen, isVideo]);
 
-  // Tombol Full Screen: Membuka layar penuh saat ditekan
+  // Tombol Full Screen: Membuka layar penuh saat ditekan (hanya jika bukan gestur scroll)
   const handleFsBtnClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current || isScrollInteractionBlocked()) {
+      e.preventDefault();
+      return;
+    }
     openFullscreen();
   };
 
@@ -777,7 +806,11 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
         onPointerUp={handleMediaPointerUp}
         onPointerCancel={handleMediaPointerCancel}
         onClick={(e) => {
-          if (isDraggingMediaRef.current || Date.now() < blockClickUntilRef.current) {
+          if (
+            isDraggingMediaRef.current ||
+            Date.now() < blockClickUntilRef.current ||
+            isScrollInteractionBlocked()
+          ) {
             e.preventDefault();
             e.stopPropagation();
             return;

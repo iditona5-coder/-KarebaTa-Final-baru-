@@ -55,6 +55,7 @@ import { ReactionBadge } from "./components/ReactionBadge";
 import { ProfileReactionStatsButton } from "./components/ProfileReactionStatsButton";
 import { ExpandablePostText } from "./components/ExpandablePostText";
 import { KAREBATA_APP_URL, copyTextToClipboard } from "./utils/clipboard";
+import { isScrollInteractionBlocked } from "./utils/scrollGuard";
 import {
   extractVideoThumbnail,
   getVideoDuration,
@@ -4027,7 +4028,11 @@ export default function KarebaFeedFinal() {
         {/* PAPAN UNGGAH TEKS KABAR WARGA (MINIMALIS & PRAKTIS ALA SOSIAL MEDIA) */}
         <section id="quick-text-composer-trigger" className="w-full box-border bg-white px-3 sm:px-3.5 py-3 border-b border-neutral-200">
           <div
-            onClick={() => {
+            onClick={(e) => {
+              if (isScrollInteractionBlocked()) {
+                e.preventDefault();
+                return;
+              }
               if (currentBanStatus.isBanned) {
                 showToast("Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.");
                 return;
@@ -4150,10 +4155,12 @@ export default function KarebaFeedFinal() {
                       key={`saved-${p.id}`}
                       id={`saved-card-${p.id}`}
                       data-card-item="true"
-                      onClick={() => {
-                        if (!(window as any).__KAREBATA_IS_DRAGGING_CARD__) {
-                          handleOpenCardInFeed(p);
+                      onClick={(e) => {
+                        if ((window as any).__KAREBATA_IS_DRAGGING_CARD__ || isScrollInteractionBlocked()) {
+                          e.preventDefault();
+                          return;
                         }
+                        handleOpenCardInFeed(p);
                       }}
                       onContextMenu={(e) => e.preventDefault()}
                       className="relative w-[clamp(92px,25vw,112px)] h-[162px] bg-emerald-50/80 hover:bg-emerald-100/70 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-emerald-200/80 shadow-2xs shrink-0 select-none active:scale-[0.98] flex flex-col justify-between box-border"
@@ -4227,20 +4234,32 @@ export default function KarebaFeedFinal() {
                 id="user-create-reel-card"
                 data-card-item="true"
                 onTouchStart={(e) => {
-                  (e.currentTarget as any).__START_POS__ = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                  (e.currentTarget as any).__START_POS__ = {
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                    scrollY: window.scrollY || window.pageYOffset || 0,
+                  };
+                  (e.currentTarget as any).__TOUCH_BLOCKED__ = isScrollInteractionBlocked();
                 }}
                 onTouchEnd={(e) => {
                   const start = (e.currentTarget as any).__START_POS__;
                   if (start && e.changedTouches[0]) {
                     const dx = Math.abs(e.changedTouches[0].clientX - start.x);
                     const dy = Math.abs(e.changedTouches[0].clientY - start.y);
-                    if (dx > 7 || dy > 7) {
-                      return; // Sedang menggeser/scroll layar, jangan buka modal
+                    const scrollDelta = Math.abs((window.scrollY || window.pageYOffset || 0) - start.scrollY);
+                    if (dx > 6 || dy > 6 || scrollDelta > 2 || isScrollInteractionBlocked()) {
+                      (e.currentTarget as any).__TOUCH_BLOCKED__ = true;
+                      return;
                     }
                   }
                 }}
                 onClick={(e) => {
-                  if ((window as any).__KAREBATA_IS_DRAGGING_CARD__) {
+                  if (
+                    (window as any).__KAREBATA_IS_DRAGGING_CARD__ ||
+                    (e.currentTarget as any).__TOUCH_BLOCKED__ ||
+                    isScrollInteractionBlocked()
+                  ) {
+                    (e.currentTarget as any).__TOUCH_BLOCKED__ = false;
                     e.preventDefault();
                     return;
                   }
@@ -4315,10 +4334,12 @@ export default function KarebaFeedFinal() {
                       key={p.id}
                       id={`user-post-card-${p.id}`}
                       data-card-item="true"
-                      onClick={() => {
-                        if (!(window as any).__KAREBATA_IS_DRAGGING_CARD__) {
-                          handleOpenCardInFeed(p);
+                      onClick={(e) => {
+                        if ((window as any).__KAREBATA_IS_DRAGGING_CARD__ || isScrollInteractionBlocked()) {
+                          e.preventDefault();
+                          return;
                         }
+                        handleOpenCardInFeed(p);
                       }}
                       onContextMenu={(e) => e.preventDefault()}
                       className="relative w-[clamp(92px,25vw,112px)] h-[162px] bg-neutral-50 hover:bg-neutral-100 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-neutral-200 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col justify-between box-border"
@@ -4611,18 +4632,17 @@ export default function KarebaFeedFinal() {
                     const duration = Date.now() - helpTapRef.current.time;
                     helpTapRef.current = null;
 
-                    // HANYA buka jika sentuhan benar-benar ketukan diam di tempat (dx & dy < 5px) dan durasi wajar tap (60-450ms)
-                    // Jika jari bergerak (sedang scrolling atau mengusap feed), abaikan total!
-                    if (dx < 5 && dy < 5 && duration >= 60 && duration <= 450) {
+                    // HANYA buka jika sentuhan benar-benar ketukan diam di tempat (dx & dy < 5px) dan tidak sedang scrolling
+                    if (dx < 5 && dy < 5 && duration >= 60 && duration <= 450 && !isScrollInteractionBlocked()) {
                       const lastScroll = (window as any).__KAREBATA_LAST_SCROLL_TIME__ || 0;
                       if (Date.now() - lastScroll > 350) {
                         setIsHelpOpen(true);
                       }
                     }
                   }}
-                  onClick={(e) => {
+                  onClick={() => {
                     // Hanya izinkan klik mouse di komputer desktop (bukan perangkat layar sentuh)
-                    if (typeof window !== "undefined" && !("ontouchstart" in window)) {
+                    if (typeof window !== "undefined" && !("ontouchstart" in window) && !isScrollInteractionBlocked()) {
                       setIsHelpOpen(true);
                     }
                   }}
@@ -5018,7 +5038,11 @@ export default function KarebaFeedFinal() {
                       <button
                         id={`comment-count-${f.id}`}
                         type="button"
-                        onClick={() => setActiveCommentItem(f)}
+                        onClick={() => {
+                          if (!isScrollInteractionBlocked()) {
+                            setActiveCommentItem(f);
+                          }
+                        }}
                         className="text-xs font-medium text-neutral-500 hover:text-[#00632B] hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
                       >
                         {f.comments!.length.toLocaleString("id-ID")} Komentar
@@ -5041,7 +5065,11 @@ export default function KarebaFeedFinal() {
                     <button
                       id={`comment-btn-${f.id}`}
                       type="button"
-                      onClick={() => setActiveCommentItem(f)}
+                      onClick={() => {
+                        if (!isScrollInteractionBlocked()) {
+                          setActiveCommentItem(f);
+                        }
+                      }}
                       className="flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition hover:text-[#00632B] text-neutral-600"
                       aria-label="Komentar"
                     >

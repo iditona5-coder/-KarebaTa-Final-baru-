@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { isScrollInteractionBlocked } from "../utils/scrollGuard";
 
 interface CardCarouselProps {
   id?: string;
@@ -137,9 +138,22 @@ export function CardCarousel({
       }
     };
 
-    // Cegah klik kartu jika baru saja terjadi geseran jari/mouse
+    const handlePointerCancel = () => {
+      if (!isDown) return;
+      isDown = false;
+      setIsPointerDown(false);
+      hasMoved = true;
+      (window as any).__KAREBATA_IS_DRAGGING_CARD__ = true;
+      if (dragLockTimeout) clearTimeout(dragLockTimeout);
+      dragLockTimeout = setTimeout(() => {
+        (window as any).__KAREBATA_IS_DRAGGING_CARD__ = false;
+        hasMoved = false;
+      }, 300);
+    };
+
+    // Cegah klik kartu jika baru saja terjadi geseran jari/mouse atau scroll halaman
     const handleCaptureClick = (e: MouseEvent) => {
-      if (hasMoved || (window as any).__KAREBATA_IS_DRAGGING_CARD__) {
+      if (hasMoved || (window as any).__KAREBATA_IS_DRAGGING_CARD__ || isScrollInteractionBlocked()) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -162,7 +176,7 @@ export function CardCarousel({
     el.addEventListener("pointerdown", handlePointerDown, { passive: true });
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
     window.addEventListener("pointerup", handlePointerUp, { passive: true });
-    window.addEventListener("pointercancel", handlePointerUp, { passive: true });
+    window.addEventListener("pointercancel", handlePointerCancel, { passive: true });
     el.addEventListener("click", handleCaptureClick, true);
     el.addEventListener("wheel", handleWheel, { passive: true });
 
@@ -173,7 +187,7 @@ export function CardCarousel({
       el.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
       el.removeEventListener("click", handleCaptureClick, true);
       el.removeEventListener("wheel", handleWheel);
     };

@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { initGlobalScrollGuard } from './utils/scrollGuard';
 
 // Cegah error internal assertion Firebase Auth yang tidak berbahaya (misalnya saat popup login Google ditutup/dibatalkan sebelum selesai)
 if (typeof window !== 'undefined') {
@@ -161,16 +162,9 @@ window.addEventListener(
   { passive: false }
 );
 
-// 5. Catat waktu terakhir layar di-scroll untuk mencegah salah klik pada tombol selama navigasi
+// 5. Pelindung global: cegah gestur scroll / tap penahan scroll memicu klik atau membuka tirai overlay
 if (typeof window !== 'undefined') {
-  (window as any).__KAREBATA_LAST_SCROLL_TIME__ = 0;
-  window.addEventListener(
-    'scroll',
-    () => {
-      (window as any).__KAREBATA_LAST_SCROLL_TIME__ = Date.now();
-    },
-    { passive: true }
-  );
+  initGlobalScrollGuard();
 }
 
 createRoot(document.getElementById('root')!).render(
