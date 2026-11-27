@@ -171,23 +171,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-3.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3.5 sm:p-4 bg-black/75 backdrop-blur-xs animate-fade-in select-none"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-200 transform transition-all duration-200 animate-scale-up max-h-[92dvh] flex flex-col"
+        className="w-full max-w-[500px] mx-auto box-border bg-neutral-950 rounded-3xl shadow-2xl overflow-hidden border border-neutral-800 transform transition-all duration-200 animate-scale-up max-h-[92dvh] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal dengan Logo Kareba'Ta & Tombol Tutup */}
-        <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-neutral-100 flex items-center flex-wrap justify-between gap-2 bg-neutral-50/70 shrink-0">
+        <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-neutral-800 flex items-center flex-wrap justify-between gap-2 bg-neutral-900/70 shrink-0">
           <KarebaTaLogo showSubtitle={true} />
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-neutral-200/70 hover:bg-neutral-300 text-neutral-600 hover:text-neutral-900 transition flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
+            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
             aria-label="Tutup jendela login"
           >
             <X className="w-5 h-5" />
@@ -197,47 +197,47 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Konten Utama */}
         <div className="p-4 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center overflow-y-auto">
           {/* Ikon Kontekstual */}
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-3 text-[#E5A000] shadow-xs">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-950/60 border border-amber-700/50 flex items-center justify-center mb-3 text-[#E5A000] shadow-xs">
             {renderContextIcon()}
           </div>
 
           <h2
             id="login-modal-title"
-            className="text-lg sm:text-xl font-extrabold text-neutral-900 tracking-tight"
+            className="text-lg sm:text-xl font-extrabold text-neutral-100 tracking-tight"
             style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
           >
             {getActionTitle()}
           </h2>
 
-          <p className="text-xs sm:text-sm text-neutral-600 mt-1.5 leading-relaxed max-w-sm mx-auto">
+          <p className="text-xs sm:text-sm text-neutral-400 mt-1.5 leading-relaxed max-w-sm mx-auto">
             {getActionSubtitle()}
           </p>
 
           {/* Banner Informasi: Membaca Tetap Bebas */}
-          <div className="mt-3.5 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-200/70 flex flex-wrap items-center justify-center gap-2 text-[11px] text-emerald-800 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <div className="mt-3.5 py-2 px-3 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex flex-wrap items-center justify-center gap-2 text-[11px] text-emerald-300 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>Membaca & menonton kabar warga tetap bebas tanpa login</span>
           </div>
 
           {/* Pesan Error / Bantuan Khusus Unauthorized Domain */}
           {isDomainError ? (
-            <div className="mt-4 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 text-left text-xs space-y-2.5">
-              <div className="flex items-start gap-2 text-amber-900 font-semibold">
-                <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="mt-4 p-3.5 rounded-2xl bg-amber-950/60 border border-amber-700/60 text-left text-xs space-y-2.5">
+              <div className="flex items-start gap-2 text-amber-300 font-semibold">
+                <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <span>Domain belum diizinkan di Firebase Console</span>
               </div>
-              <p className="text-neutral-700 text-[11px] leading-relaxed">
+              <p className="text-neutral-300 text-[11px] leading-relaxed">
                 Google membatasi autentikasi di domain ini. Silakan salin nama domain berikut dan tambahkan ke <b>Authorized Domains</b> di Firebase Console:
               </p>
 
-              <div className="flex items-center flex-wrap gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
-                <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 min-w-[140px] px-1">
+              <div className="flex items-center flex-wrap gap-1.5 bg-black border border-amber-700/50 rounded-xl p-1.5">
+                <span className="text-[11px] font-mono text-neutral-200 truncate flex-1 min-w-[140px] px-1">
                   {currentHost}
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyHost}
-                  className="px-2.5 py-1 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center gap-1 transition shrink-0 cursor-pointer"
+                  className="px-2.5 py-1 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-black rounded-lg flex items-center gap-1 transition shrink-0 cursor-pointer"
                 >
                   {copiedDomain ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   <span>{copiedDomain ? "Tersalin!" : "Salin"}</span>
@@ -245,7 +245,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
             </div>
           ) : errorMessage ? (
-            <div className="mt-3.5 p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium text-left">
+            <div className="mt-3.5 p-2.5 rounded-xl bg-rose-950/60 border border-rose-800/60 text-xs text-rose-300 font-medium text-left">
               {errorMessage}
             </div>
           ) : null}
@@ -257,12 +257,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-2xl font-bold text-[clamp(13px,3.6vw,15px)] flex flex-wrap items-center justify-center gap-2.5 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 select-none"
+              className="w-full py-3.5 px-4 bg-neutral-900 hover:bg-neutral-800 active:bg-neutral-800 text-white border-2 border-neutral-700 hover:border-neutral-500 rounded-2xl font-bold text-[clamp(13px,3.6vw,15px)] flex flex-wrap items-center justify-center gap-2.5 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-50 select-none"
             >
               {isLoading ? (
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-[#00632B] animate-spin shrink-0" />
-                  <span className="text-neutral-600">Menghubungkan Akun Google...</span>
+                  <div className="w-4 h-4 rounded-full border-2 border-neutral-600 border-t-emerald-400 animate-spin shrink-0" />
+                  <span className="text-neutral-300">Menghubungkan Akun Google...</span>
                 </div>
               ) : (
                 <>
@@ -292,7 +292,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition cursor-pointer"
+              className="w-full py-2 text-xs font-semibold text-neutral-400 hover:text-neutral-100 transition cursor-pointer"
             >
               Nanti Saja, Lanjut Baca Kabar
             </button>

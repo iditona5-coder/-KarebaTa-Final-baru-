@@ -33,7 +33,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     <div
       id="karebata-splash-screen"
       dir="ltr"
-      className={`fixed inset-0 z-[999999] w-full h-[100dvh] box-border bg-white flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] select-none transition-opacity duration-200 ease-out ${
+      className={`fixed inset-0 z-[999999] w-full h-[100dvh] box-border bg-black flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] select-none transition-opacity duration-200 ease-out ${
         isFading ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       aria-label="Layar Pembuka Kareba'Ta"
@@ -49,7 +49,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           className="text-[clamp(30px,9vw,48px)] font-black tracking-tight leading-none mb-2 whitespace-nowrap"
           style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
         >
-          <span className="text-[#00632B]">Kareba&apos;</span>
+          <span className="text-emerald-500">Kareba&apos;</span>
           <span className="text-[#E5A000]">Ta</span>
         </h1>
 

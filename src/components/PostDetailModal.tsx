@@ -105,24 +105,24 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-white flex justify-center overflow-hidden overscroll-none select-none animate-fade-in"
+      className="fixed inset-0 z-50 bg-black flex justify-center overflow-hidden overscroll-none select-none animate-fade-in"
       style={{ overscrollBehavior: "none" }}
     >
       <div
         id="post-fullscreen-modal"
-        className="w-full h-full max-w-[500px] mx-auto box-border bg-white flex flex-col relative overflow-hidden"
+        className="w-full h-full max-w-[500px] mx-auto box-border bg-black flex flex-col relative overflow-hidden"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {/* Sticky Header Navigasi (Bersih tanpa icon X) */}
-        <header className="sticky top-0 z-40 bg-white border-b border-neutral-200 px-3.5 sm:px-4 py-3 flex items-center justify-between shadow-2xs shrink-0">
+        <header className="sticky top-0 z-40 bg-black border-b border-neutral-800 px-3.5 sm:px-4 py-3 flex items-center justify-between shadow-2xs shrink-0">
           <button
             id="close-post-fullscreen-btn"
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 text-neutral-800 hover:text-[#00632B] transition active:scale-95 cursor-pointer font-bold text-sm"
+            className="flex items-center gap-2 text-neutral-100 hover:text-emerald-400 transition active:scale-95 cursor-pointer font-bold text-sm"
             aria-label="Kembali ke beranda"
           >
-            <ArrowLeft className="w-5 h-5 text-neutral-800" />
+            <ArrowLeft className="w-5 h-5 text-neutral-100" />
             <span>Kabar Warga</span>
           </button>
         </header>
@@ -144,18 +144,18 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               setIsMenuOpen(false);
             }
           }}
-          className="flex-1 bg-white overflow-y-auto overscroll-contain"
+          className="flex-1 bg-black overflow-y-auto overscroll-contain"
           style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
           <article
             id={`feed-post-${post.id}`}
-            className="w-full bg-white space-y-3 pt-3.5 pb-6"
+            className="w-full bg-black space-y-3 pt-3.5 pb-6"
           >
           {/* Post Header: Responsif & rapih di semua ukuran layar */}
           <div className="px-3.5 sm:px-4 flex items-start justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {/* Ikon Profil: Selalu Huruf Pertama Nama Pengguna */}
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/20 ring-offset-1 ring-offset-white flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-500/30 ring-offset-1 ring-offset-black flex items-center justify-center text-xs font-bold text-white shadow-xs shrink-0 select-none">
                 {isOwner
                   ? initial
                   : ((post.user || "").replace(/^@/, "").trim()[0] || authorInit || "K").toUpperCase()}
@@ -163,10 +163,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-x-1.5 gap-y-0.5 min-w-0 flex-wrap">
-                  <span className="text-[14px] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-full">
+                  <span className="text-[14px] font-bold text-neutral-100 tracking-[-0.01em] truncate max-w-full">
                     {authorName.startsWith("@") ? authorName : `@${authorName}`}
                   </span>
-                  <span className="text-[11px] text-neutral-300 shrink-0 select-none">·</span>
+                  <span className="text-[11px] text-neutral-600 shrink-0 select-none">·</span>
                   <span className="text-[12px] text-neutral-400 font-medium shrink-0 whitespace-nowrap">
                     {postTime}
                   </span>
@@ -177,7 +177,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   )}
                 </div>
                 {postLocation && (
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-500 mt-0.5 min-w-0">
+                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 mt-0.5 min-w-0">
                     <MapPin className="w-3 h-3 text-yellow-500 shrink-0 inline" />
                     <span className="truncate">{postLocation}</span>
                   </div>
@@ -196,10 +196,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   }
                   setIsMenuOpen((prev) => !prev);
                 }}
-                className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
+                className="p-1.5 text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 rounded-full transition cursor-pointer"
                 aria-label="Opsi postingan"
               >
-                <MoreHorizontal className="w-5 h-5 text-neutral-600" />
+                <MoreHorizontal className="w-5 h-5 text-neutral-400" />
               </button>
 
               {/* Dropdown Menu Titik 3 */}
@@ -213,7 +213,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                     onClick={() => setIsMenuOpen(false)}
                   />
                   <div
-                    className="absolute right-0 top-9 z-40 w-52 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                    className="absolute right-0 top-9 z-40 w-52 max-w-[calc(100vw-2rem)] bg-neutral-900 rounded-2xl shadow-xl border border-neutral-700 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
                   >
                     {/* 1. Opsi Simpan Kabar */}
                     {onToggleSave && (
@@ -224,17 +224,17 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                           onToggleSave(post.id);
                           setIsMenuOpen(false);
                         }}
-                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                        className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-800 transition cursor-pointer group"
                       >
                         <Bookmark
                           className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
                             isSaved
-                              ? "fill-[#00632B] text-[#00632B]"
-                              : "text-neutral-600"
+                              ? "fill-emerald-400 text-emerald-400"
+                              : "text-neutral-400"
                           }`}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className={`text-xs font-bold leading-tight ${isSaved ? "text-[#00632B]" : "text-neutral-800"}`}>
+                          <p className={`text-xs font-bold leading-tight ${isSaved ? "text-emerald-400" : "text-neutral-100"}`}>
                             {isSaved ? "Batal Simpan" : "Simpan Kabar"}
                           </p>
                           <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
@@ -255,14 +255,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                               onEdit(post);
                               setIsMenuOpen(false);
                             }}
-                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group text-emerald-700"
+                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-emerald-950/60 transition cursor-pointer group text-emerald-400"
                           >
-                            <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-[#00632B]" />
+                            <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-emerald-400" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold leading-tight text-[#00632B]">
+                              <p className="text-xs font-bold leading-tight text-emerald-400">
                                 Edit Kabar
                               </p>
-                              <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                              <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
                                 Ubah teks, foto/video, atau lokasi
                               </p>
                             </div>
@@ -276,14 +276,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                               onDelete(post);
                               setIsMenuOpen(false);
                             }}
-                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-950/60 transition cursor-pointer group text-rose-400"
                           >
-                            <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                            <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-400" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold leading-tight text-rose-600">
+                              <p className="text-xs font-bold leading-tight text-rose-400">
                                 Hapus Kabar
                               </p>
-                              <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                              <p className="text-[10px] text-rose-400/80 leading-tight mt-0.5">
                                 Hapus postingan Anda
                               </p>
                             </div>
@@ -300,14 +300,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                             onReport(post.id, post.user || "kabar_warga");
                             setIsMenuOpen(false);
                           }}
-                          className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                          className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-950/60 transition cursor-pointer group text-rose-400"
                         >
-                          <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                          <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-400" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold leading-tight text-rose-600">
+                            <p className="text-xs font-bold leading-tight text-rose-400">
                               Laporkan Kabar
                             </p>
-                            <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                            <p className="text-[10px] text-rose-400/80 leading-tight mt-0.5">
                               Laporkan jika melanggar
                             </p>
                           </div>
@@ -315,7 +315,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                       )
                     )}
 
-                    <div className="my-1 border-t border-neutral-100" />
+                    <div className="my-1 border-t border-neutral-800" />
 
                     {/* 3. Salin Tautan */}
                     <button
@@ -327,10 +327,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                         if (onShowToast) onShowToast("Tautan kabar berhasil disalin");
                         setIsMenuOpen(false);
                       }}
-                      className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                      className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-800 transition cursor-pointer group"
                     >
-                      <Link2 className="w-4 h-4 shrink-0 text-neutral-600 transition-transform group-hover:scale-110" />
-                      <span className="text-xs font-medium text-neutral-700">Salin Tautan</span>
+                      <Link2 className="w-4 h-4 shrink-0 text-neutral-400 transition-transform group-hover:scale-110" />
+                      <span className="text-xs font-medium text-neutral-200">Salin Tautan</span>
                     </button>
 
                     {/* 4. Salin Link Aplikasi Kareba'Ta */}
@@ -342,14 +342,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                         if (onShowToast) onShowToast("Link Kareba'Ta berhasil disalin!");
                         setIsMenuOpen(false);
                       }}
-                      className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group"
+                      className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-emerald-950/60 transition cursor-pointer group"
                     >
                       <KarebaPinIcon size={16} className="shrink-0 transition-transform group-hover:scale-110" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold leading-tight text-[#00632B]">
+                        <p className="text-xs font-bold leading-tight text-emerald-400">
                           Link Kareba&apos;Ta
                         </p>
-                        <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                        <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
                           Klik untuk salin link aplikasi
                         </p>
                       </div>
@@ -385,8 +385,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             </div>
           ) : (
             <div className="w-full px-4 pt-1 pb-2">
-              <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-50 via-emerald-50/30 to-amber-50/20 border border-neutral-200/90 shadow-2xs">
-                <p className="text-base sm:text-lg font-bold text-neutral-900 leading-relaxed tracking-tight whitespace-pre-wrap break-words select-text">
+              <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950/30 border border-neutral-800 shadow-2xs">
+                <p className="text-base sm:text-lg font-bold text-neutral-100 leading-relaxed tracking-tight whitespace-pre-wrap break-words select-text">
                   {postText}
                 </p>
                 {onOpenGift && likeCount >= minLikes && (
@@ -397,7 +397,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                         e.stopPropagation();
                         onOpenGift(feedItem || post);
                       }}
-                      className="px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white transition cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+                      className="px-3 py-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 transition cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-semibold active:scale-95"
                       aria-label="Pa'bere"
                     >
                       <Gift className="w-3.5 h-3.5 text-white shrink-0" />
@@ -425,7 +425,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           {/* Baris Ringkasan Reaksi (Kiri) & Jumlah Komentar (Kanan) */}
           {(likeCount > 0 || commentsCount > 0) && (
-            <div className="px-3.5 sm:px-4 pb-1.5 flex items-center flex-wrap justify-between gap-2 text-xs text-neutral-500">
+            <div className="px-3.5 sm:px-4 pb-1.5 flex items-center flex-wrap justify-between gap-2 text-xs text-neutral-400">
               <div className="min-w-0">
                 {likeCount > 0 && (
                   <ReactionBadge
@@ -440,7 +440,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   id={`comment-detail-count-${post.id}`}
                   type="button"
                   onClick={() => onOpenComments?.()}
-                  className="text-xs font-medium text-neutral-500 hover:text-[#00632B] hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                  className="text-xs font-medium text-neutral-400 hover:text-emerald-400 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
                 >
                   {commentsCount.toLocaleString("id-ID")} Komentar
                 </button>
@@ -449,7 +449,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           )}
 
           {/* Post Actions: Suka / Reaksi, Komentar, Bagikan (Kiri) & Jumlah Share (Kanan Sejajar Icon Share) */}
-          <div className="px-3.5 sm:px-4 flex items-center flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold text-neutral-600">
+          <div className="px-3.5 sm:px-4 flex items-center flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold text-neutral-400">
             <div className="flex items-center flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 min-w-0">
               {onReact ? (
                 <ReactionButton
@@ -474,7 +474,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   id={`comment-detail-btn-${post.id}`}
                   type="button"
                   onClick={onOpenComments}
-                  className="flex items-center gap-1.5 py-1 transition cursor-pointer hover:text-[#00632B] text-neutral-600"
+                  className="flex items-center gap-1.5 py-1 transition cursor-pointer hover:text-emerald-400 text-neutral-400"
                   aria-label="Komentar"
                 >
                   <MessageSquare className="w-4 h-4" />
@@ -490,7 +490,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   setIsShareOpen((prev) => !prev);
                 }}
                 className={`flex items-center gap-1.5 py-1 transition cursor-pointer ${
-                  isShareOpen ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
+                  isShareOpen ? "text-emerald-400 font-bold" : "hover:text-emerald-400 text-neutral-400"
                 }`}
                 aria-label="Bagikan"
               >
@@ -507,7 +507,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   shareOpenScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
                   setIsShareOpen((prev) => !prev);
                 }}
-                className="text-xs font-medium text-neutral-500 hover:text-emerald-600 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                className="text-xs font-medium text-neutral-400 hover:text-emerald-400 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
                 aria-label={`Dibagikan ${postShares.toLocaleString("id-ID")} kali`}
                 title={`Dibagikan ${postShares.toLocaleString("id-ID")} kali`}
               >
@@ -518,7 +518,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           {/* Bar Bagikan Interaktif (FB, WA, Salin) - Persis seperti di Feed */}
           {isShareOpen && (
-            <div className="mx-3.5 sm:mx-4 mt-2.5 px-3 py-1 bg-neutral-50 rounded-2xl border border-neutral-200 flex items-center flex-wrap justify-between gap-2 animate-fade-in">
+            <div className="mx-3.5 sm:mx-4 mt-2.5 px-3 py-1 bg-neutral-900 rounded-2xl border border-neutral-800 flex items-center flex-wrap justify-between gap-2 animate-fade-in">
               <ShareBar
                 newsUrl={window.location.href}
                 title={postText}

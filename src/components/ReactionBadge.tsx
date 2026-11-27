@@ -45,7 +45,7 @@ export const ReactionBadge: React.FC<ReactionBadgeProps> = ({
         {topEmojis.map((em) => (
           <span
             key={em}
-            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white border border-neutral-200 text-[11px] shadow-2xs leading-none select-none"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-[11px] shadow-2xs leading-none select-none"
           >
             {em}
           </span>
@@ -53,7 +53,7 @@ export const ReactionBadge: React.FC<ReactionBadgeProps> = ({
       </div>
 
       {/* Total Angka Reaksi */}
-      <span className="font-semibold text-neutral-600 text-[11.5px] leading-none select-none">
+      <span className="font-semibold text-neutral-400 text-[11.5px] leading-none select-none">
         {totalLikes.toLocaleString("id-ID")}
       </span>
     </div>

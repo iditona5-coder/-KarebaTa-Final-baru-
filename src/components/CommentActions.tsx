@@ -25,7 +25,7 @@ export function CommentActions({
         type="button"
         onClick={onLike}
         className={`flex flex-row items-center gap-1 transition-colors cursor-pointer active:scale-95 ${
-          isLiked ? "text-red-500 font-semibold" : "text-neutral-400 hover:text-neutral-600"
+          isLiked ? "text-red-500 font-semibold" : "text-neutral-400 hover:text-neutral-200"
         }`}
         aria-label="Suka komentar"
       >
@@ -39,7 +39,7 @@ export function CommentActions({
       <button
         type="button"
         onClick={onReply}
-        className="flex flex-row items-center gap-1 text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer active:scale-95"
+        className="flex flex-row items-center gap-1 text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer active:scale-95"
         aria-label="Balas komentar"
       >
         <MessageSquare className="w-3.5 h-3.5 text-neutral-400" />

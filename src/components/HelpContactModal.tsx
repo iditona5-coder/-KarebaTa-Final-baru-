@@ -77,10 +77,10 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="help-page-title"
-      className="fixed inset-0 z-[99999] bg-neutral-100 flex justify-center w-full h-full overflow-hidden select-none animate-fade-in"
+      className="fixed inset-0 z-[99999] bg-black flex justify-center w-full h-full overflow-hidden select-none animate-fade-in"
     >
       {/* Kolom Halaman Mandiri Penuh (Solid Opaque, Beranda Belakang 100% Tertutup) */}
-      <div className="w-full max-w-[500px] mx-auto box-border bg-neutral-50 h-full flex flex-col shadow-2xl overflow-hidden relative pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="w-full max-w-[500px] mx-auto box-border bg-black h-full flex flex-col shadow-2xl overflow-hidden relative pb-[env(safe-area-inset-bottom,0px)]">
         {/* TOP APP BAR (Sticky Header) */}
         <header className="bg-gradient-to-r from-[#00632B] via-[#004d22] to-[#003818] text-white px-3.5 sm:px-6 py-3.5 sm:py-4 pt-[max(0.875rem,env(safe-area-inset-top))] flex items-center flex-wrap justify-between gap-2 shadow-md shrink-0 border-b border-emerald-900/50 z-20">
           <div className="flex items-center flex-wrap gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -113,67 +113,67 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
         </header>
 
         {/* MAIN BODY (Scrollable Standalone Content) */}
-        <main className="flex-1 overflow-y-auto px-3.5 sm:px-4 py-6 sm:py-8 bg-neutral-50 box-border">
+        <main className="flex-1 overflow-y-auto px-3.5 sm:px-4 py-6 sm:py-8 bg-black box-border">
           <div className="w-full max-w-[500px] mx-auto space-y-5 box-border">
             {/* BADGE HERO KEMITRAAN */}
             <div className="text-center space-y-2 pb-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-950/70 text-amber-300 border border-amber-700/60 shadow-2xs">
                 <span>Kemitraan Promosi Usaha & UMKM</span>
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-neutral-100 tracking-tight">
                 Promosikan Usaha Anda ke Seluruh Warga
               </h2>
-              <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-neutral-400 max-w-md mx-auto">
                 Tingkatkan penjualan dan jangkauan pelanggan lokal ke seluruh warga dan wilayah sekitar melalui aplikasi berita warga Kareba'Ta.
               </p>
             </div>
 
             {/* KOTAK DESKRIPSI LAYANAN RESMI */}
-            <div className="bg-amber-50/90 border border-amber-300/80 rounded-3xl p-5 shadow-xs flex items-start gap-3.5">
-              <ShieldCheck className="w-6 h-6 text-amber-700 shrink-0 mt-0.5" />
+            <div className="bg-amber-950/40 border border-amber-700/50 rounded-3xl p-5 shadow-xs flex items-start gap-3.5">
+              <ShieldCheck className="w-6 h-6 text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-1.5">
-                <h3 className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-wide">
+                <h3 className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide">
                   Layanan Pasang Iklan Sponsor:
                 </h3>
-                <p className="text-xs sm:text-sm text-amber-950 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-amber-100/90 leading-relaxed font-medium">
                   Warga atau pemilik UMKM / usaha lokal yang ingin memasang kabar sponsor atau spanduk promosi dapat menghubungi Admin melalui jalur WhatsApp resmi.
                 </p>
               </div>
             </div>
 
             {/* KARTU JAM RESPON ADMIN */}
-            <div className="bg-white border border-neutral-200/90 rounded-3xl p-4 sm:p-5 shadow-xs flex items-center flex-wrap justify-between gap-3 sm:gap-4 box-border">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-4 sm:p-5 shadow-xs flex items-center flex-wrap justify-between gap-3 sm:gap-4 box-border">
               <div className="flex items-center gap-3.5 min-w-[180px] flex-1">
-                <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/60 flex items-center justify-center shrink-0 shadow-2xs">
+                <div className="w-11 h-11 rounded-2xl bg-amber-950/60 text-amber-400 border border-amber-700/50 flex items-center justify-center shrink-0 shadow-2xs">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="text-[11px] uppercase font-bold text-neutral-400 block tracking-wider">
                     Jam Respon Admin:
                   </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-neutral-800 block break-words">
+                  <span className="text-xs sm:text-sm font-extrabold text-neutral-100 block break-words">
                     {settings.workingHours || "Setiap Hari: 08.00 - 21.00 WITA"}
                   </span>
                 </div>
               </div>
 
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-950/70 text-emerald-300 border border-emerald-700/60 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Siap Melayani</span>
               </span>
             </div>
 
             {/* TOMBOL UTAMA WHATSAPP: HANYA TOMBOL SAJA (TANPA NOMOR HP MUNCUL) */}
-            <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-6 text-center space-y-4 shadow-sm box-border">
+            <div className="bg-gradient-to-br from-emerald-950/50 via-neutral-950 to-neutral-900 border-2 border-emerald-600/40 rounded-3xl p-4 sm:p-6 text-center space-y-4 shadow-sm box-border">
               <div className="space-y-2">
-                <div className="inline-flex items-center flex-wrap justify-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-[11px] font-black uppercase tracking-wider">
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <div className="inline-flex items-center flex-wrap justify-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 text-[11px] font-black uppercase tracking-wider">
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>Layanan Pasang Iklan Sponsor</span>
                 </div>
-                <h3 className="text-sm sm:text-base font-extrabold text-neutral-900">
+                <h3 className="text-sm sm:text-base font-extrabold text-neutral-100">
                   Kirim Pesan Langsung ke Admin Pengelola
                 </h3>
-                <p className="text-xs text-neutral-600 max-w-md mx-auto">
+                <p className="text-xs text-neutral-400 max-w-md mx-auto">
                   Klik tombol di bawah untuk langsung membuka ruang pesan WhatsApp dan menghubungi Admin.
                 </p>
               </div>
@@ -182,7 +182,7 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
                 id="whatsapp-contact-admin-btn"
                 type="button"
                 onClick={handleOpenWhatsApp}
-                className="w-full py-3.5 sm:py-4 px-4 sm:px-6 bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-600/30 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-center transition cursor-pointer"
+                className="w-full py-3.5 sm:py-4 px-4 sm:px-6 bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-950/40 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-center transition cursor-pointer"
               >
                 {/* WhatsApp SVG Logo */}
                 <svg
@@ -198,37 +198,37 @@ export const HelpContactModal: React.FC<HelpContactModalProps> = ({
             </div>
 
             {/* FORMAT PROMOSI YANG TERSEDIA */}
-            <div className="bg-white border border-neutral-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-              <span className="text-xs font-black text-neutral-800 uppercase tracking-wider block">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 shadow-xs space-y-3">
+              <span className="text-xs font-black text-neutral-200 uppercase tracking-wider block">
                 Format Iklan & Promosi di Kareba'Ta:
               </span>
-              <div className="space-y-2.5 text-xs text-neutral-700">
+              <div className="space-y-2.5 text-xs text-neutral-300">
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-neutral-900 block">Banner Spanduk Sponsor</span>
-                    <span className="text-neutral-500">Tampil menonjol di beranda kabar warga utama di antara berita lokal.</span>
+                    <span className="font-bold text-neutral-100 block">Banner Spanduk Sponsor</span>
+                    <span className="text-neutral-400">Tampil menonjol di beranda kabar warga utama di antara berita lokal.</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-neutral-900 block">Tautan Langsung ke Toko</span>
-                    <span className="text-neutral-500">Tombol aksi yang mengarahkan pembaca langsung ke WhatsApp jualan atau web usaha Anda.</span>
+                    <span className="font-bold text-neutral-100 block">Tautan Langsung ke Toko</span>
+                    <span className="text-neutral-400">Tombol aksi yang mengarahkan pembaca langsung ke WhatsApp jualan atau web usaha Anda.</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-neutral-900 block">Teks Berjalan</span>
-                    <span className="text-neutral-500">Pemberitahuan promo singkat yang bergulir di bagian atas layar aplikasi.</span>
+                    <span className="font-bold text-neutral-100 block">Teks Berjalan</span>
+                    <span className="text-neutral-400">Pemberitahuan promo singkat yang bergulir di bagian atas layar aplikasi.</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* INFORMASI RESMI */}
-            <div className="pt-6 pb-2 text-center text-xs text-neutral-400">
+            <div className="pt-6 pb-2 text-center text-xs text-neutral-500">
               Kareba'Ta © 2026 • Layanan Resmi
             </div>
           </div>

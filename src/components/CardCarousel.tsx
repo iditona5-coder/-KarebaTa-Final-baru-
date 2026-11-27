@@ -200,7 +200,7 @@ export function CardCarousel({
         <button
           type="button"
           onClick={() => scrollStep("left")}
-          className="absolute left-1 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-white/95 hover:bg-white text-neutral-800 rounded-full shadow-md border border-neutral-200 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer backdrop-blur-xs"
+          className="absolute left-1 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-neutral-900/90 hover:bg-neutral-800 text-neutral-100 rounded-full shadow-md border border-neutral-700 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer backdrop-blur-xs"
           aria-label="Geser ke kiri"
         >
           <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
@@ -230,7 +230,7 @@ export function CardCarousel({
         <button
           type="button"
           onClick={() => scrollStep("right")}
-          className="absolute right-1 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-white/95 hover:bg-white text-neutral-800 rounded-full shadow-md border border-neutral-200 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer backdrop-blur-xs"
+          className="absolute right-1 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-neutral-900/90 hover:bg-neutral-800 text-neutral-100 rounded-full shadow-md border border-neutral-700 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer backdrop-blur-xs"
           aria-label="Geser ke kanan"
         >
           <ChevronRight className="w-4 h-4 stroke-[2.5]" />

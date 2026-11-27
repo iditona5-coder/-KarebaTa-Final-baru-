@@ -77,7 +77,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
+        className="w-full max-w-[500px] mx-auto box-border bg-neutral-950 border border-neutral-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
@@ -112,17 +112,17 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
         </div>
 
         {/* Isi Modal */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-neutral-800">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-neutral-100">
           {/* Kutipan Berita Singkat */}
-          <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3">
+          <div className="bg-amber-950/40 border border-amber-700/50 rounded-2xl p-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold text-amber-950 flex items-center gap-1">
+              <p className="text-xs font-bold text-amber-300 flex items-center gap-1">
                 <span>Postingan Viral & Populer</span>
-                <span className="text-[10px] text-amber-700 font-normal">
+                <span className="text-[10px] text-amber-400 font-normal">
                   ({(post.like || 0).toLocaleString("id-ID")} Suka)
                 </span>
               </p>
-              <p className="text-[11px] text-amber-900/90 line-clamp-2 mt-0.5 leading-relaxed">
+              <p className="text-[11px] text-amber-100/90 line-clamp-2 mt-0.5 leading-relaxed">
                 "{post.text}"
               </p>
             </div>
@@ -130,7 +130,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
 
           {/* Pilihan Nominal Pa'bere */}
           <div>
-            <label className="text-xs font-bold text-neutral-700 block mb-2">
+            <label className="text-xs font-bold text-neutral-300 block mb-2">
               Pilih Rencana Nominal Pa'bere:
             </label>
             <div className="flex flex-wrap gap-2">
@@ -141,12 +141,12 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   onClick={() => setSelectedNominal(opt.value)}
                   className={`flex-1 min-w-[125px] box-border p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                     selectedNominal === opt.value
-                      ? "border-[#00632B] bg-emerald-50/70 shadow-xs ring-1 ring-[#00632B]"
-                      : "border-neutral-200 hover:border-neutral-300 bg-white"
+                      ? "border-emerald-500 bg-emerald-950/50 shadow-xs ring-1 ring-emerald-500"
+                      : "border-neutral-800 hover:border-neutral-700 bg-neutral-900"
                   }`}
                 >
-                  <span className="text-xs font-bold text-neutral-900">{opt.label}</span>
-                  <span className="text-[10px] text-neutral-500 mt-0.5">{opt.desc}</span>
+                  <span className="text-xs font-bold text-neutral-100">{opt.label}</span>
+                  <span className="text-[10px] text-neutral-400 mt-0.5">{opt.desc}</span>
                 </button>
               ))}
             </div>
@@ -154,18 +154,18 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
 
           {/* Tab Pilihan Saluran Pembayaran (Jika kreator punya lebih dari 1 metode) */}
           {availableMethodsCount > 1 && (
-            <div className="flex flex-wrap rounded-xl bg-neutral-100 p-1 gap-1 box-border">
+            <div className="flex flex-wrap rounded-xl bg-neutral-900 border border-neutral-800 p-1 gap-1 box-border">
               {hasBank && (
                 <button
                   type="button"
                   onClick={() => setActiveTab("bank")}
                   className={`flex-1 min-w-[96px] py-1.5 px-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === "bank"
-                      ? "bg-white text-emerald-800 shadow-xs ring-1 ring-emerald-600/30"
-                      : "text-neutral-500 hover:text-neutral-800"
+                      ? "bg-neutral-800 text-emerald-400 shadow-xs ring-1 ring-emerald-500/40"
+                      : "text-neutral-400 hover:text-neutral-200"
                   }`}
                 >
-                  <Building2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>Rekening Bank</span>
                 </button>
               )}
@@ -176,8 +176,8 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   onClick={() => setActiveTab("dana")}
                   className={`flex-1 min-w-[80px] py-1.5 px-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === "dana"
-                      ? "bg-white text-[#118EEA] shadow-xs ring-1 ring-[#118EEA]/30"
-                      : "text-neutral-500 hover:text-neutral-800"
+                      ? "bg-neutral-800 text-sky-400 shadow-xs ring-1 ring-sky-500/40"
+                      : "text-neutral-400 hover:text-neutral-200"
                   }`}
                 >
                   <Smartphone className="w-3.5 h-3.5 text-[#118EEA] shrink-0" />
@@ -191,11 +191,11 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   onClick={() => setActiveTab("qris")}
                   className={`flex-1 min-w-[80px] py-1.5 px-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTab === "qris"
-                      ? "bg-white text-amber-800 shadow-xs ring-1 ring-amber-600/30"
-                      : "text-neutral-500 hover:text-neutral-800"
+                      ? "bg-neutral-800 text-amber-400 shadow-xs ring-1 ring-amber-500/40"
+                      : "text-neutral-400 hover:text-neutral-200"
                   }`}
                 >
-                  <QrCode className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <QrCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span>QRIS</span>
                 </button>
               )}
@@ -206,22 +206,22 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
           {/* TAB 1: REKENING BANK */}
           {/* ============================================================== */}
           {activeTab === "bank" && (
-            <div className="bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border border-emerald-300/80 rounded-2xl p-4 space-y-3.5 animate-fade-in">
+            <div className="bg-gradient-to-br from-emerald-950/50 via-neutral-900 to-neutral-950 border border-emerald-800/60 rounded-2xl p-4 space-y-3.5 animate-fade-in">
               <div className="flex items-center flex-wrap justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
                     <Building2 className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-xs font-extrabold text-emerald-900 block break-words">
+                    <span className="text-xs font-extrabold text-emerald-300 block break-words">
                       {bankName}
                     </span>
-                    <span className="text-xs font-bold text-neutral-800 break-words">
+                    <span className="text-xs font-bold text-neutral-100 break-words">
                       a.n. {bankOwner}
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                <span className="text-[10px] text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-700/60 shrink-0">
                   Rekening Resmi
                 </span>
               </div>
@@ -229,12 +229,12 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
               {bankNumber ? (
                 <>
                   {/* Kotak Nomor Rekening yang siap disalin */}
-                  <div className="bg-white border-2 border-dashed border-emerald-500/50 rounded-xl p-3 flex items-center flex-wrap justify-between gap-2 shadow-2xs">
+                  <div className="bg-black border-2 border-dashed border-emerald-500/50 rounded-xl p-3 flex items-center flex-wrap justify-between gap-2 shadow-2xs">
                     <div className="min-w-[140px] flex-1">
                       <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
                         Nomor Rekening:
                       </span>
-                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-900 select-all break-all">
+                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-100 select-all break-all">
                         {bankNumber}
                       </span>
                     </div>
@@ -245,7 +245,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                       className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0 ${
                         copiedText === "Nomor Rekening"
                           ? "bg-emerald-600 text-white"
-                          : "bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200"
+                          : "bg-emerald-950/70 hover:bg-emerald-900/70 text-emerald-300 border border-emerald-700/60"
                       }`}
                     >
                       {copiedText === "Nomor Rekening" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -254,11 +254,11 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   </div>
 
                   {/* Panduan Transfer Rekening Bank */}
-                  <div className="bg-white/90 border border-emerald-200/90 rounded-xl p-3 space-y-1.5 text-left text-xs">
-                    <p className="font-bold text-emerald-950 flex items-center gap-1">
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3 space-y-1.5 text-left text-xs">
+                    <p className="font-bold text-emerald-300 flex items-center gap-1">
                       <span>Cara Transfer via m-Banking / ATM:</span>
                     </p>
-                    <ol className="text-[11px] text-neutral-700 list-decimal list-inside space-y-1 leading-relaxed pl-1">
+                    <ol className="text-[11px] text-neutral-300 list-decimal list-inside space-y-1 leading-relaxed pl-1">
                       <li>Tekan <b>"Salin Rekening"</b> di atas.</li>
                       <li>Buka m-Banking Anda (<b>BRImo, BCA, Mandiri, BNI, BSI</b>) atau ATM.</li>
                       <li>Pilih menu <b>Transfer</b> &rarr; pilih <b>{bankName.split(" ")[0] || "Bank"}</b> &rarr; tempel nomor rekening.</li>
@@ -267,11 +267,11 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center space-y-1">
-                  <p className="text-xs font-bold text-amber-900">
+                <div className="bg-amber-950/50 border border-amber-700/50 rounded-xl p-3 text-center space-y-1">
+                  <p className="text-xs font-bold text-amber-300">
                     Pengunggah belum memasang nomor rekening bank
                   </p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">
                     Pengunggah kabar dapat memasukkan nomor rekening bank di menu profil akun agar hadiah dari warga bisa langsung masuk.
                   </p>
                 </div>
@@ -283,22 +283,22 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
           {/* TAB 2: DANA */}
           {/* ============================================================== */}
           {activeTab === "dana" && (
-            <div className="bg-gradient-to-br from-[#118EEA]/10 via-sky-50 to-white border border-[#118EEA]/30 rounded-2xl p-4 space-y-3 animate-fade-in">
+            <div className="bg-gradient-to-br from-sky-950/50 via-neutral-900 to-neutral-950 border border-sky-800/60 rounded-2xl p-4 space-y-3 animate-fade-in">
               <div className="flex items-center flex-wrap justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div className="w-7 h-7 rounded-lg bg-[#118EEA] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
                     D
                   </div>
                   <div className="min-w-0">
-                    <span className="text-xs font-extrabold text-[#118EEA] block">
+                    <span className="text-xs font-extrabold text-sky-400 block">
                       Akun DANA Pembuat Berita:
                     </span>
-                    <span className="text-xs font-bold text-neutral-900 break-words">
+                    <span className="text-xs font-bold text-neutral-100 break-words">
                       a.n. {danaOwner}
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                <span className="text-[10px] text-emerald-300 font-bold bg-emerald-950/80 border border-emerald-700/60 px-2 py-0.5 rounded-full shrink-0">
                   Resmi
                 </span>
               </div>
@@ -306,12 +306,12 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
               {danaNumber ? (
                 <>
                   {/* Kotak Nomor DANA yang siap disalin */}
-                  <div className="bg-white border-2 border-dashed border-[#118EEA]/40 rounded-xl p-3 flex items-center flex-wrap justify-between gap-2 shadow-2xs">
+                  <div className="bg-black border-2 border-dashed border-[#118EEA]/50 rounded-xl p-3 flex items-center flex-wrap justify-between gap-2 shadow-2xs">
                     <div className="min-w-[140px] flex-1">
                       <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
                         Nomor HP DANA:
                       </span>
-                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-900 select-all break-all">
+                      <span className="text-base sm:text-lg font-black font-mono tracking-wider text-neutral-100 select-all break-all">
                         {danaNumber}
                       </span>
                     </div>
@@ -322,7 +322,7 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                       className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0 ${
                         copiedText === "Nomor DANA"
                           ? "bg-emerald-600 text-white"
-                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800"
+                          : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700"
                       }`}
                     >
                       {copiedText === "Nomor DANA" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -339,20 +339,20 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                     <ExternalLink className="w-4 h-4 shrink-0" />
                     <span>Kirim {selectedNominal.toLocaleString("id-ID")} via Aplikasi DANA</span>
                   </button>
-                  <p className="text-[10px] text-center text-neutral-500 leading-tight">
+                  <p className="text-[10px] text-center text-neutral-400 leading-tight">
                     *Membuka aplikasi DANA di HP Anda. Nomor otomatis disalin ke papan klip.
                   </p>
 
                   {/* Panduan Praktis Kirim dari Rekening Bank (BRI, BCA, Mandiri, BNI) */}
-                  <div className="bg-sky-50/80 border border-sky-200/90 rounded-2xl p-3 space-y-1.5 text-left">
-                    <p className="text-[11px] font-bold text-sky-950 flex items-center gap-1.5">
+                  <div className="bg-neutral-900 border border-sky-800/50 rounded-2xl p-3 space-y-1.5 text-left">
+                    <p className="text-[11px] font-bold text-sky-300 flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-[#118EEA] shrink-0" />
                       <span>Uang Anda ada di Rekening Bank (Bukan DANA)?</span>
                     </p>
-                    <p className="text-[10.5px] text-sky-900 leading-relaxed">
+                    <p className="text-[10.5px] text-neutral-300 leading-relaxed">
                       Bisa langsung kirim dari m-Banking Anda (<b>BRImo, BCA Mobile, Livin Mandiri, BNI Mobile, BSI</b>):
                     </p>
-                    <ol className="text-[10.5px] text-sky-900 list-decimal list-inside space-y-0.5 leading-relaxed pl-1">
+                    <ol className="text-[10.5px] text-neutral-300 list-decimal list-inside space-y-0.5 leading-relaxed pl-1">
                       <li>Klik tombol <b>"Salin"</b> nomor DANA di atas.</li>
                       <li>Buka m-Banking Anda &rarr; pilih menu <b>Top Up / Dompet Digital &rarr; DANA</b>.</li>
                       <li>Tempel nomor HP tersebut dan masukkan nominal yang ingin dikirimkan.</li>
@@ -360,11 +360,11 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center space-y-1">
-                  <p className="text-xs font-bold text-amber-900">
+                <div className="bg-amber-950/50 border border-amber-700/50 rounded-xl p-3 text-center space-y-1">
+                  <p className="text-xs font-bold text-amber-300">
                     Pengunggah belum memasang nomor DANA di profil
                   </p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">
                     Pengunggah berita dapat mengatur nomor DANA miliknya di menu profil akun agar hadiah dari warga dan admin bisa langsung cair.
                   </p>
                 </div>
@@ -376,8 +376,8 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
           {/* TAB 3: QRIS BARCODE */}
           {/* ============================================================== */}
           {activeTab === "qris" && (
-            <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 flex flex-col items-center text-center space-y-3 animate-fade-in">
-              <p className="text-xs font-bold text-neutral-800">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col items-center text-center space-y-3 animate-fade-in">
+              <p className="text-xs font-bold text-neutral-200">
                 Scan Barcode QRIS Warga:
               </p>
               {qrisUrl ? (
@@ -389,16 +389,16 @@ export const RewardGiftModal: React.FC<RewardGiftModalProps> = ({
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  <p className="text-[11px] text-neutral-600 leading-relaxed max-w-xs">
+                  <p className="text-[11px] text-neutral-300 leading-relaxed max-w-xs">
                     Dapat di-scan memakai m-Banking apa saja (<b>BRImo, BCA Mobile, Livin Mandiri, BNI, ShopeePay, DANA, GoPay</b>).
                   </p>
                 </>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center space-y-1 w-full">
-                  <p className="text-xs font-bold text-amber-900">
+                <div className="bg-amber-950/50 border border-amber-700/50 rounded-xl p-3 text-center space-y-1 w-full">
+                  <p className="text-xs font-bold text-amber-300">
                     Pengunggah belum mengunggah gambar QRIS
                   </p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">
                     Pengunggah berita dapat menambahkan link barcode QRIS miliknya di menu profil akun.
                   </p>
                 </div>

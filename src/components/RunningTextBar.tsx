@@ -129,23 +129,23 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
   return (
     <div
       id="running-text-board"
-      className="w-full max-w-full bg-neutral-900 border-b border-neutral-800 text-white flex items-center h-8 sm:h-8.5 overflow-hidden relative select-none shadow-2xs z-30 pointer-events-none"
+      className="w-full max-w-full bg-white border-b border-neutral-200 text-neutral-900 flex items-center h-[clamp(24px,6.8vw,28px)] overflow-hidden relative select-none shadow-2xs z-30 pointer-events-none"
       style={{ touchAction: "pan-y" }}
     >
       {/* Label Badge Statis Kiri - Non-interaktif */}
-      <div className="bg-red-600 text-white h-full px-2.5 sm:px-3 flex items-center gap-1.5 shrink-0 z-20 font-black text-[clamp(10px,2.8vw,11.5px)] tracking-wider uppercase shadow-xs select-none">
-        <span className="relative flex h-2 w-2">
+      <div className="bg-red-600 text-white h-full px-[clamp(7px,2.2vw,10px)] flex items-center gap-[clamp(4px,1.2vw,6px)] shrink-0 z-20 font-black text-[clamp(9px,2.5vw,10.5px)] tracking-wider uppercase shadow-xs select-none">
+        <span className="relative flex h-1.5 w-1.5 shrink-0">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
         </span>
-        <span className="whitespace-nowrap font-extrabold tracking-tight">INFO</span>
+        <span className="whitespace-nowrap font-extrabold tracking-tight leading-none">INFO</span>
       </div>
 
       {/* Area Viewport Marquee (Pasif penuh, tidak dapat diklik) */}
-      <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center">
+      <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center bg-white">
         {/* Efek Gradien Tepi Halus Kiri & Kanan */}
-        <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-neutral-900 to-transparent z-10" />
-        <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-neutral-900 to-transparent z-10" />
+        <div className="absolute left-0 top-0 bottom-0 w-2.5 sm:w-3.5 bg-gradient-to-r from-white to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-2.5 sm:w-3.5 bg-gradient-to-l from-white to-transparent z-10" />
 
         {/* Jalur Teks Bergerak */}
         <div
@@ -157,13 +157,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
           {items.map((item, idx) => (
             <div
               key={`m1-${item.id}-${idx}`}
-              className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 whitespace-nowrap leading-none"
+              className="inline-flex items-center gap-[clamp(6px,1.6vw,8px)] px-[clamp(12px,3.5vw,18px)] text-[clamp(11px,3vw,12.5px)] text-neutral-900 whitespace-nowrap leading-none"
             >
-              <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
+              <span className="text-[clamp(9px,2.4vw,10px)] font-bold text-neutral-800 bg-neutral-100 px-[clamp(5px,1.5vw,7px)] py-[2px] rounded border border-neutral-300 leading-none">
                 {item.category}
               </span>
               <span className="font-medium tracking-wide">{item.text}</span>
-              <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
+              <span className="text-neutral-400 font-bold text-[clamp(11px,3vw,13px)] mx-[clamp(6px,2vw,10px)] select-none">•</span>
             </div>
           ))}
 
@@ -171,13 +171,13 @@ export const RunningTextBar: React.FC<RunningTextBarProps> = ({
           {items.map((item, idx) => (
             <div
               key={`m2-${item.id}-${idx}`}
-              className="inline-flex items-center gap-2 px-5 text-[clamp(12.5px,3.4vw,14px)] text-neutral-200 whitespace-nowrap leading-none"
+              className="inline-flex items-center gap-[clamp(6px,1.6vw,8px)] px-[clamp(12px,3.5vw,18px)] text-[clamp(11px,3vw,12.5px)] text-neutral-900 whitespace-nowrap leading-none"
             >
-              <span className="text-[clamp(10px,2.8vw,11.5px)] font-bold text-amber-300 bg-neutral-800/90 px-2 py-0.5 rounded border border-neutral-700/60 leading-none">
+              <span className="text-[clamp(9px,2.4vw,10px)] font-bold text-neutral-800 bg-neutral-100 px-[clamp(5px,1.5vw,7px)] py-[2px] rounded border border-neutral-300 leading-none">
                 {item.category}
               </span>
               <span className="font-medium tracking-wide">{item.text}</span>
-              <span className="text-neutral-500 font-bold text-base mx-3 select-none">•</span>
+              <span className="text-neutral-400 font-bold text-[clamp(11px,3vw,13px)] mx-[clamp(6px,2vw,10px)] select-none">•</span>
             </div>
           ))}
         </div>

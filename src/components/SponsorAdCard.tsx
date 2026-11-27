@@ -176,29 +176,29 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
   return (
     <article
       id={`sponsor-ad-${ad.id}`}
-      className="w-full box-border bg-gradient-to-b from-amber-50/40 via-white to-white border-y border-amber-200/70 sm:border sm:border-amber-200/80 sm:rounded-2xl sm:mb-5 shadow-xs overflow-hidden transition-all duration-200"
+      className="w-full box-border bg-gradient-to-b from-amber-950/30 via-neutral-950 to-neutral-950 border-y border-neutral-800 sm:border sm:border-neutral-800 sm:rounded-2xl sm:mb-5 shadow-xs overflow-hidden transition-all duration-200"
     >
       {/* HEADER SPONSOR */}
       <div className="px-3.5 sm:px-4 pt-3.5 pb-2.5 flex items-center flex-wrap justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Avatar Advertiser */}
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-600 to-amber-700 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-xs border border-amber-300">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-600 to-amber-700 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-xs border border-amber-400/50">
             {initialLetter}
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h4 className="font-bold text-sm text-neutral-900 truncate">
+              <h4 className="font-bold text-sm text-neutral-100 truncate">
                 {ad.advertiserName}
               </h4>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-amber-500/15 to-yellow-500/20 text-amber-900 border border-amber-300/80">
-                {isVideo && <VideoIcon className="w-2.5 h-2.5 text-amber-700 inline" />}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-950/70 text-amber-300 border border-amber-700/60">
+                {isVideo && <VideoIcon className="w-2.5 h-2.5 text-amber-400 inline" />}
                 <span>{ad.badgeText || (isVideo ? "Video Sponsor" : "Iklan Bersponsor")}</span>
               </span>
             </div>
 
             {ad.location && (
-              <p className="text-[11px] text-neutral-500 flex items-center gap-1 truncate mt-0.5">
+              <p className="text-[11px] text-neutral-400 flex items-center gap-1 truncate mt-0.5">
                 <MapPin className="w-3 h-3 text-yellow-500 shrink-0" />
                 <span className="truncate">{ad.location}</span>
               </p>
@@ -210,7 +210,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
       {/* MEDIA BANNER: VIDEO ATAU POSTER FOTO SESUAI RASIO ASLI (100% RAPAT KANAN-KIRI) */}
       {mediaSource && (
         <div
-          className={`w-full relative overflow-hidden group flex items-center justify-center bg-neutral-100/40 ${
+          className={`w-full relative overflow-hidden group flex items-center justify-center bg-black ${
             ad.actionType !== "none" ? "cursor-pointer" : ""
           }`}
           style={{
@@ -300,9 +300,9 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
       )}
 
       {/* BODY PROMO & CALL TO ACTION */}
-      <div className="p-4 space-y-3 bg-white">
+      <div className="p-4 space-y-3 bg-neutral-950">
         <div>
-          <h3 className="font-bold text-base text-neutral-900 leading-snug">
+          <h3 className="font-bold text-base text-neutral-100 leading-snug">
             {ad.title}
           </h3>
           {ad.description && (() => {
@@ -315,14 +315,14 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 className={`mt-1 ${isLong ? "cursor-pointer" : ""}`}
               >
                 <p
-                  className={`text-xs text-neutral-700 leading-relaxed whitespace-pre-line ${
+                  className={`text-xs text-neutral-300 leading-relaxed whitespace-pre-line ${
                     isLong && !isExpanded ? "line-clamp-2" : ""
                   }`}
                 >
                   {ad.description}
                 </p>
                 {isLong && (
-                  <span className="text-xs font-bold text-[#00632B] hover:text-[#004f22] mt-1 inline-block">
+                  <span className="text-xs font-bold text-emerald-400 hover:text-emerald-300 mt-1 inline-block">
                     {isExpanded ? "Tampilkan lebih sedikit" : "selengkapnya"}
                   </span>
                 )}
@@ -342,8 +342,8 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
               onClick={handleActionClick}
               className={`flex-1 min-w-[175px] py-2.5 px-3 sm:px-4 rounded-xl font-bold text-[clamp(11.5px,3.2vw,13.5px)] flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-center shadow-sm transition active:scale-98 cursor-pointer select-none ${
                 ad.actionType === "whatsapp"
-                  ? "bg-[#25D366] hover:bg-[#20ba59] text-white shadow-emerald-900/20"
-                  : "bg-neutral-900 hover:bg-neutral-800 text-white shadow-neutral-900/20"
+                  ? "bg-[#25D366] hover:bg-[#20ba59] text-white shadow-emerald-950/30"
+                  : "bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700"
               }`}
             >
               {ad.actionType === "whatsapp" ? (
@@ -378,7 +378,7 @@ export const SponsorAdCard: React.FC<SponsorAdCardProps> = ({
                 touchTrackRef.current.initiated = false;
                 onOpenHelp();
               }}
-              className="text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-3 py-2.5 rounded-xl transition cursor-pointer shrink-0"
+              className="text-[11px] font-bold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-700/60 px-3 py-2.5 rounded-xl transition cursor-pointer shrink-0"
               aria-label="Mau Pasang Iklan? Hubungi Admin"
             >
               Mau Pasang Iklan?

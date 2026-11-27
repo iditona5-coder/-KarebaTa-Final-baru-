@@ -140,19 +140,19 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
       }}
     >
       <div
-        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-200/60 flex flex-col max-h-[82vh] my-auto animate-in zoom-in-95 duration-200 transition-all"
+        className="w-full max-w-[500px] mx-auto box-border bg-neutral-950 rounded-3xl overflow-hidden shadow-2xl border border-amber-700/50 flex flex-col max-h-[82vh] my-auto animate-in zoom-in-95 duration-200 transition-all"
         onClick={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
         {/* TOP BAR / HEADER MODAL POP-UP */}
-        <div className="px-3.5 sm:px-4 py-3 bg-gradient-to-r from-amber-500/10 via-amber-50 to-white border-b border-amber-100 flex items-center flex-wrap justify-between gap-2">
+        <div className="px-3.5 sm:px-4 py-3 bg-gradient-to-r from-amber-950/60 via-neutral-900 to-neutral-950 border-b border-neutral-800 flex items-center flex-wrap justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs border border-amber-300">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs border border-amber-400/50">
               {initialLetter}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center flex-wrap gap-1.5">
-                <span className="font-bold text-xs text-neutral-900 truncate">
+                <span className="font-bold text-xs text-neutral-100 truncate">
                   {ad.advertiserName}
                 </span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold uppercase bg-amber-500 text-slate-950 shadow-2xs shrink-0">
@@ -161,7 +161,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 </span>
               </div>
               {ad.location && (
-                <p className="text-[10px] text-neutral-500 flex items-center gap-0.5 truncate">
+                <p className="text-[10px] text-neutral-400 flex items-center gap-0.5 truncate">
                   <MapPin className="w-2.5 h-2.5 text-yellow-500" />
                   <span>{ad.location}</span>
                 </p>
@@ -173,7 +173,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 active:scale-95 text-neutral-600 flex items-center justify-center transition cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-300 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0"
             aria-label="Tutup Pop-up Iklan"
           >
             <X className="w-4 h-4" />
@@ -181,7 +181,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
         </div>
 
         {/* AREA MEDIA FOTO ATAU VIDEO DENGAN RASIO ASLI - TANPA HITAM & TANPA BLUR */}
-        <div className="relative w-full max-h-[32vh] sm:max-h-[36vh] bg-neutral-100/60 overflow-hidden flex items-center justify-center group select-none">
+        <div className="relative w-full max-h-[32vh] sm:max-h-[36vh] bg-black overflow-hidden flex items-center justify-center group select-none">
           {isVideo ? (
             <div className="relative w-full flex items-center justify-center">
               <video
@@ -269,12 +269,12 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
         </div>
 
         {/* KONTEN KETERANGAN & TOMBOL AKSI */}
-        <div className="p-3.5 sm:p-4 overflow-y-auto space-y-2.5 flex-1 min-h-0 bg-white">
+        <div className="p-3.5 sm:p-4 overflow-y-auto space-y-2.5 flex-1 min-h-0 bg-neutral-950">
           <div>
-            <h3 className="font-extrabold text-sm sm:text-base text-neutral-900 leading-snug">
+            <h3 className="font-extrabold text-sm sm:text-base text-neutral-100 leading-snug">
               {ad.title}
             </h3>
-            <p className="text-xs text-neutral-600 mt-1 leading-relaxed whitespace-pre-line">
+            <p className="text-xs text-neutral-300 mt-1 leading-relaxed whitespace-pre-line">
               {ad.description}
             </p>
           </div>
@@ -288,8 +288,8 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
                 onClick={handleActionClick}
                 className={`w-full py-2.5 px-3 sm:px-4 rounded-xl font-extrabold text-[clamp(12px,3.4vw,14px)] text-white flex flex-wrap items-center justify-center gap-2 text-center shadow-md transition active:scale-98 cursor-pointer select-none ${
                   ad.actionType === "whatsapp"
-                    ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-600/25"
-                    : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-600/25"
+                    ? "bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 shadow-emerald-950/30"
+                    : "bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-700 hover:to-yellow-800 shadow-amber-950/30"
                 }`}
               >
                 {ad.actionType === "whatsapp" ? (
@@ -309,7 +309,7 @@ export const SponsorPopupModal: React.FC<SponsorPopupModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 rounded-xl hover:bg-neutral-100 transition cursor-pointer text-center"
+              className="w-full py-2 text-xs font-semibold text-neutral-400 hover:text-neutral-200 rounded-xl hover:bg-neutral-900 transition cursor-pointer text-center"
             >
               Lewati Iklan &amp; Lanjutkan ke Beranda
             </button>

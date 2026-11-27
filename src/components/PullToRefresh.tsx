@@ -224,16 +224,16 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
         }}
         aria-live="polite"
       >
-        <div className="w-10 h-10 rounded-full bg-white text-neutral-800 shadow-[0_10px_25px_rgba(0,0,0,0.18)] border border-neutral-200/90 backdrop-blur-md flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-neutral-900 text-neutral-100 shadow-[0_10px_25px_rgba(0,0,0,0.65)] border border-neutral-700/90 backdrop-blur-md flex items-center justify-center">
           {isRefreshing ? (
             /* Indikator bulat berputar persis seperti loading */
-            <div className="w-5 h-5 rounded-full border-2 border-[#00632B]/20 border-t-[#00632B] animate-spin" />
+            <div className="w-5 h-5 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
           ) : (
             <div
               className="w-5 h-5 flex items-center justify-center transition-transform duration-75"
               style={{ transform: `rotate(${canPull ? 180 : rotationDeg}deg)` }}
             >
-              <ArrowDown className={`w-4 h-4 ${canPull ? "text-[#00632B]" : "text-neutral-500"}`} />
+              <ArrowDown className={`w-4 h-4 ${canPull ? "text-emerald-400" : "text-neutral-400"}`} />
             </div>
           )}
         </div>

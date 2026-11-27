@@ -76,7 +76,7 @@ export function KarebaTaLogo({
             fontFamily: "'Poppins', system-ui, sans-serif",
           }}
         >
-          <span className="text-[#00632B]">Kareba&apos;</span>
+          <span className="text-emerald-500">Kareba&apos;</span>
           <span className="text-[#E5A000]">Ta</span>
         </div>
 

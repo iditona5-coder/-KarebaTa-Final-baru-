@@ -160,7 +160,7 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
       {/* GELEMBUNG PILIHAN REAKSI EMOJI (COMPACT HORIZONTAL BAR) */}
       {showPicker && (
         <div
-          className="absolute bottom-full left-0 mb-1.5 z-50 w-max max-w-[calc(100vw-24px)] flex flex-row items-center flex-nowrap gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 bg-white/95 backdrop-blur-md rounded-full border border-neutral-200/90 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.16),0_2px_6px_-1px_rgba(0,0,0,0.06)] select-none"
+          className="absolute bottom-full left-0 mb-1.5 z-50 w-max max-w-[calc(100vw-24px)] flex flex-row items-center flex-nowrap gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 bg-neutral-900/95 backdrop-blur-md rounded-full border border-neutral-700/90 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.6),0_2px_6px_-1px_rgba(0,0,0,0.3)] select-none"
           role="toolbar"
           aria-label="Pilih Reaksi Emoji"
           onClick={(e) => e.stopPropagation()}
@@ -174,8 +174,8 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
                 onClick={(e) => handleSelectReaction(item.type, e)}
                 className={`shrink-0 w-[clamp(30px,8vw,36px)] h-[clamp(30px,8vw,36px)] rounded-full flex items-center justify-center cursor-pointer touch-manipulation transition-transform duration-150 hover:scale-[1.18] active:scale-110 focus:outline-none ${
                   isSelected
-                    ? `${item.activeBg} ring-1 ring-neutral-200`
-                    : "hover:bg-neutral-100/80"
+                    ? `${item.activeBg} ring-1 ring-neutral-600`
+                    : "hover:bg-neutral-800"
                 }`}
                 aria-label={item.label}
               >
@@ -206,7 +206,7 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
         className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition select-none group ${
           activeReactionInfo
             ? `${activeReactionInfo.color} font-bold`
-            : "hover:text-red-500 text-neutral-600"
+            : "hover:text-red-400 text-neutral-400"
         } ${className}`}
         aria-label={activeReactionInfo ? activeReactionInfo.label : "Suka"}
       >
@@ -234,7 +234,7 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
               variant === "detail"
                 ? "w-4 h-4"
                 : "w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)]"
-            } text-neutral-500 group-hover:text-red-500 transition-transform active:scale-125`}
+            } text-neutral-400 group-hover:text-red-400 transition-transform active:scale-125`}
           />
         )}
         <span className="whitespace-nowrap font-bold">

@@ -117,7 +117,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[500px] mx-auto box-border bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
+        className="w-full max-w-[500px] mx-auto box-border bg-neutral-950 border border-neutral-800 text-neutral-100 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
@@ -154,28 +154,28 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
 
         {/* Formulir */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4">
-          <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-3.5">
-            <p className="text-xs text-emerald-950 leading-relaxed">
+          <div className="bg-emerald-950/50 border border-emerald-800/60 rounded-2xl p-3.5">
+            <p className="text-xs text-emerald-200 leading-relaxed">
               Ketika postingan berita Anda mencapai syarat tanda Suka, tombol <b>Pa'bere</b> akan muncul sehingga warga dan admin bisa mentransfer apresiasi langsung ke rekening/dompet Anda tanpa potongan!
             </p>
           </div>
 
           {/* Tab Pilihan Metode Penerimaan Uang */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-800 block">
+            <label className="text-xs font-bold text-neutral-200 block">
               Pilih Saluran Penerimaan Hadiah Anda:
             </label>
-            <div className="flex flex-wrap gap-1.5 p-1 bg-neutral-100 rounded-2xl border border-neutral-200 box-border">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-neutral-900 rounded-2xl border border-neutral-800 box-border">
               <button
                 type="button"
                 onClick={() => setPayoutMethod("bank")}
                 className={`flex-1 min-w-[90px] py-2 px-1.5 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                   payoutMethod === "bank"
-                    ? "bg-white text-emerald-800 shadow-xs ring-1 ring-emerald-600"
-                    : "text-neutral-600 hover:text-neutral-900"
+                    ? "bg-neutral-800 text-emerald-400 shadow-xs ring-1 ring-emerald-500"
+                    : "text-neutral-400 hover:text-neutral-200"
                 }`}
               >
-                <Building2 className="w-4 h-4 text-emerald-700" />
+                <Building2 className="w-4 h-4 text-emerald-400" />
                 <span className="text-[11px]">Rekening Bank</span>
               </button>
 
@@ -184,8 +184,8 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                 onClick={() => setPayoutMethod("dana")}
                 className={`flex-1 min-w-[90px] py-2 px-1.5 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                   payoutMethod === "dana"
-                    ? "bg-white text-[#118EEA] shadow-xs ring-1 ring-[#118EEA]"
-                    : "text-neutral-600 hover:text-neutral-900"
+                    ? "bg-neutral-800 text-sky-400 shadow-xs ring-1 ring-[#118EEA]"
+                    : "text-neutral-400 hover:text-neutral-200"
                 }`}
               >
                 <Smartphone className="w-4 h-4 text-[#118EEA]" />
@@ -197,11 +197,11 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                 onClick={() => setPayoutMethod("qris")}
                 className={`flex-1 min-w-[90px] py-2 px-1.5 text-center rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                   payoutMethod === "qris"
-                    ? "bg-white text-amber-700 shadow-xs ring-1 ring-amber-600"
-                    : "text-neutral-600 hover:text-neutral-900"
+                    ? "bg-neutral-800 text-amber-400 shadow-xs ring-1 ring-amber-500"
+                    : "text-neutral-400 hover:text-neutral-200"
                 }`}
               >
-                <QrCode className="w-4 h-4 text-amber-600" />
+                <QrCode className="w-4 h-4 text-amber-400" />
                 <span className="text-[11px]">QRIS Barcode</span>
               </button>
             </div>
@@ -209,19 +209,19 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
 
           {/* JIKA MEMILIH REKENING BANK */}
           {payoutMethod === "bank" && (
-            <div className="bg-neutral-50/80 border border-neutral-200 rounded-2xl p-3.5 space-y-3.5 animate-fade-in">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3.5 space-y-3.5 animate-fade-in">
               {/* Pilihan Bank */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-neutral-700 block">
+                <label className="text-xs font-bold text-neutral-300 block">
                   Nama Bank (Pilih Bank Anda):
                 </label>
                 <select
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs sm:text-sm font-bold text-neutral-900 focus:border-emerald-600 outline-none transition"
+                  className="w-full px-3.5 py-2.5 bg-black border border-neutral-700 rounded-xl text-xs sm:text-sm font-bold text-neutral-100 focus:border-emerald-500 outline-none transition"
                 >
                   {POPULAR_BANKS.map((b) => (
-                    <option key={b} value={b}>
+                    <option key={b} value={b} className="bg-neutral-900 text-neutral-100">
                       {b}
                     </option>
                   ))}
@@ -230,7 +230,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
 
               {/* Nomor Rekening */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-neutral-700 block">
+                <label className="text-xs font-bold text-neutral-300 block">
                   Nomor Rekening Bank (Wajib):
                 </label>
                 <input
@@ -239,16 +239,16 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                   value={bankAccountNumber}
                   onChange={(e) => setBankAccountNumber(e.target.value.replace(/[^0-9-]/g, "").slice(0, 30))}
                   placeholder="Contoh: 0123-01-000456-50-8"
-                  className="w-full px-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs sm:text-sm font-mono font-bold text-neutral-900 focus:border-emerald-600 outline-none transition"
+                  className="w-full px-3.5 py-2.5 bg-black border border-neutral-700 rounded-xl text-xs sm:text-sm font-mono font-bold text-neutral-100 placeholder:text-neutral-500 focus:border-emerald-500 outline-none transition"
                 />
-                <p className="text-[10px] text-neutral-500">
+                <p className="text-[10px] text-neutral-400">
                   *Nomor rekening yang tertera di buku tabungan atau kartu ATM Anda.
                 </p>
               </div>
 
               {/* Nama Pemilik Rekening */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-neutral-700 block">
+                <label className="text-xs font-bold text-neutral-300 block">
                   Nama Pemilik Rekening (Sesuai Buku Tabungan):
                 </label>
                 <input
@@ -257,7 +257,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                   value={bankAccountName}
                   onChange={(e) => setBankAccountName(e.target.value.slice(0, 45))}
                   placeholder="Contoh: Andi Rustam / Hj. Nurhaedah"
-                  className="w-full px-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs sm:text-sm font-bold text-neutral-900 focus:border-emerald-600 outline-none transition"
+                  className="w-full px-3.5 py-2.5 bg-black border border-neutral-700 rounded-xl text-xs sm:text-sm font-bold text-neutral-100 placeholder:text-neutral-500 focus:border-emerald-500 outline-none transition"
                 />
               </div>
             </div>
@@ -265,14 +265,14 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
 
           {/* JIKA MEMILIH DANA */}
           {payoutMethod === "dana" && (
-            <div className="bg-sky-50/50 border border-sky-200/80 rounded-2xl p-3.5 space-y-3.5 animate-fade-in">
+            <div className="bg-sky-950/30 border border-sky-800/60 rounded-2xl p-3.5 space-y-3.5 animate-fade-in">
               {/* Nomor HP DANA */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-neutral-700 block">
+                <label className="text-xs font-bold text-neutral-300 block">
                   Nomor Akun DANA (Wajib):
                 </label>
                 <div className="relative flex items-center">
-                  <span className="absolute left-3 text-sky-600 select-none flex items-center justify-center">
+                  <span className="absolute left-3 text-sky-400 select-none flex items-center justify-center">
                     <Smartphone className="w-3.5 h-3.5" />
                   </span>
                   <input
@@ -281,14 +281,14 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                     value={danaNumber}
                     onChange={(e) => setDanaNumber(e.target.value.replace(/[^0-9+]/g, "").slice(0, 16))}
                     placeholder="Contoh: 085351037179"
-                    className="w-full pl-8 pr-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs sm:text-sm font-mono font-bold text-neutral-900 focus:border-[#118EEA] outline-none transition"
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-black border border-neutral-700 rounded-xl text-xs sm:text-sm font-mono font-bold text-neutral-100 placeholder:text-neutral-500 focus:border-[#118EEA] outline-none transition"
                   />
                 </div>
               </div>
 
               {/* Nama Pemilik Akun DANA */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-neutral-700 block">
+                <label className="text-xs font-bold text-neutral-300 block">
                   Nama Terdaftar di DANA (Wajib):
                 </label>
                 <input
@@ -297,7 +297,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                   value={danaName}
                   onChange={(e) => setDanaName(e.target.value.slice(0, 40))}
                   placeholder="Contoh: Sitti Salma / Andi Rustam"
-                  className="w-full px-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs sm:text-sm font-bold text-neutral-900 focus:border-[#118EEA] outline-none transition"
+                  className="w-full px-3.5 py-2.5 bg-black border border-neutral-700 rounded-xl text-xs sm:text-sm font-bold text-neutral-100 placeholder:text-neutral-500 focus:border-[#118EEA] outline-none transition"
                 />
               </div>
             </div>
@@ -305,10 +305,10 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
 
           {/* JIKA MEMILIH QRIS */}
           {payoutMethod === "qris" && (
-            <div className="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-3.5 space-y-3.5 animate-fade-in">
+            <div className="bg-amber-950/30 border border-amber-700/60 rounded-2xl p-3.5 space-y-3.5 animate-fade-in">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
-                  <QrCode className="w-3.5 h-3.5 text-amber-600" />
+                <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5 text-amber-400" />
                   <span>Tautan / URL Gambar Barcode QRIS:</span>
                 </label>
                 <input
@@ -317,9 +317,9 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
                   value={qrisUrl}
                   onChange={(e) => setQrisUrl(e.target.value)}
                   placeholder="https://... (URL gambar barcode QRIS Anda)"
-                  className="w-full px-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-xs text-neutral-900 focus:border-amber-600 outline-none transition"
+                  className="w-full px-3.5 py-2.5 bg-black border border-neutral-700 rounded-xl text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-amber-500 outline-none transition"
                 />
-                <p className="text-[10.5px] text-neutral-500">
+                <p className="text-[10.5px] text-neutral-400">
                   *Barcode QRIS dari aplikasi bank (BRI, BCA, Mandiri) atau e-wallet (DANA, GoPay) yang dapat di-scan oleh pembaca kabar.
                 </p>
               </div>
@@ -331,7 +331,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 min-w-[88px] py-3 px-3 rounded-xl border border-neutral-300 text-neutral-700 font-bold text-xs hover:bg-neutral-100 transition cursor-pointer"
+              className="flex-1 min-w-[88px] py-3 px-3 rounded-xl border border-neutral-700 bg-neutral-900 text-neutral-200 font-bold text-xs hover:bg-neutral-800 transition cursor-pointer"
             >
               Batal
             </button>
@@ -346,7 +346,7 @@ export const WalletSettingsModal: React.FC<WalletSettingsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 justify-center text-[10px] text-neutral-400 pt-1">
-            <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+            <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
             <span>Rekening hanya ditampilkan saat postingan Anda mencapai syarat Suka.</span>
           </div>
         </form>

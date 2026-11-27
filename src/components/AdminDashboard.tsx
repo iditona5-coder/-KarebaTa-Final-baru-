@@ -128,6 +128,8 @@ interface AdminDashboardProps {
   onBackToFeed: () => void;
   onPostDeleted?: (postId: string, mediaUrl?: string, fileId?: string, thumbFileId?: string) => void;
   onPreviewPost?: (post: FeedItem) => void;
+  initialMenu?: AdminMenuKey;
+  initialPostFilter?: "all" | "pending" | "image" | "video" | "hidden";
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -135,6 +137,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onBackToFeed,
   onPostDeleted,
   onPreviewPost,
+  initialMenu,
+  initialPostFilter,
 }) => {
   // Sesi Autentikasi Admin
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -154,7 +158,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [pinError, setPinError] = useState<string>("");
 
   // Menu Aktif (10 Menu Lengkap)
-  const [activeMenu, setActiveMenu] = useState<AdminMenuKey>("dashboard");
+  const [activeMenu, setActiveMenu] = useState<AdminMenuKey>(initialMenu || "dashboard");
+  useEffect(() => {
+    if (initialMenu) {
+      setActiveMenu(initialMenu);
+    }
+  }, [initialMenu]);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Notifikasi Toast Ringkas
@@ -195,7 +204,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [feedPosts]);
 
   const [searchPostQuery, setSearchPostQuery] = useState("");
-  const [postMediaFilter, setPostMediaFilter] = useState<"all" | "pending" | "image" | "video" | "hidden">("all");
+  const [postMediaFilter, setPostMediaFilter] = useState<"all" | "pending" | "image" | "video" | "hidden">(
+    initialPostFilter || "all"
+  );
+  useEffect(() => {
+    if (initialPostFilter) {
+      setPostMediaFilter(initialPostFilter);
+    }
+  }, [initialPostFilter]);
   const [selectedPostForEdit, setSelectedPostForEdit] = useState<FeedItem | null>(null);
   const [editPostCaption, setEditPostCaption] = useState("");
   const [editPostLocation, setEditPostLocation] = useState("");
@@ -683,7 +699,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // TAMPILAN DASHBOARD ADMIN LENGKAP (10 MENU MATERIAL 3)
   // =========================================================================
   return (
-    <div className="min-h-screen w-full max-w-full box-border overflow-x-hidden bg-neutral-50 text-neutral-900 flex flex-col lg:flex-row antialiased selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen w-full max-w-full box-border overflow-x-hidden bg-black text-neutral-100 flex flex-col lg:flex-row antialiased selection:bg-emerald-500 selection:text-white">
       {/* Toast Notifikasi */}
       {toastMessage && (
         <div className="fixed top-5 left-4 right-4 sm:left-auto sm:right-5 z-50 w-auto max-w-[500px] mx-auto box-border bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl animate-fade-in flex flex-wrap items-center justify-center gap-2 border border-emerald-400 text-center">
@@ -696,22 +712,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* SIDEBAR NAVIGATION DRAWER (MATERIAL 3) */}
       {/* ================================================================= */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-neutral-200 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-neutral-950 border-r border-neutral-800 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-0 max-lg:-translate-x-full"
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-neutral-200">
+        <div className="p-5 border-b border-neutral-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white font-black text-sm shadow-md shadow-emerald-900/10">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white font-black text-sm shadow-md shadow-emerald-950/50">
                 K
               </div>
               <div>
-                <h2 className="font-extrabold text-sm text-neutral-900 tracking-tight">
+                <h2 className="font-extrabold text-sm text-white tracking-tight">
                   Kareba'Ta Admin
                 </h2>
-                <span className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wider">
+                <span className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider">
                   Panel Pengelola
                 </span>
               </div>
@@ -720,7 +736,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               type="button"
               onClick={() => setIsMobileDrawerOpen(false)}
-              className="lg:hidden p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-100"
+              className="lg:hidden p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800"
             >
               <X className="w-5 h-5" />
             </button>
@@ -738,8 +754,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "dashboard"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
@@ -755,15 +771,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "users"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <div className="flex items-center gap-3">
               <Users className="w-4 h-4" />
               <span>2. Pengguna</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 text-neutral-300 font-semibold border border-neutral-800">
               {totalUsersCount}
             </span>
           </button>
@@ -777,8 +793,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "posts"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -787,11 +803,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <div className="flex items-center gap-1">
               {pendingPostsCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500 text-white font-extrabold animate-pulse">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-extrabold animate-pulse">
                   {pendingPostsCount}
                 </span>
               )}
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 text-neutral-300 font-semibold border border-neutral-800">
                 {postsList.length}
               </span>
             </div>
@@ -806,8 +822,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "reports"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -830,15 +846,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "bulletins"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <div className="flex items-center gap-3">
               <Megaphone className="w-4 h-4" />
               <span>5. Teks Berjalan</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 text-neutral-300 font-semibold border border-neutral-800">
               {bulletinsList.length}
             </span>
           </button>
@@ -852,15 +868,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "ads"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <div className="flex items-center gap-3">
-              <Megaphone className="w-4 h-4 text-amber-600" />
+              <Megaphone className="w-4 h-4 text-amber-400" />
               <span>6. Iklan Sponsor</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 font-bold">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold">
               {adSettings.ads.filter((a) => a.isActive).length} Aktif
             </span>
           </button>
@@ -874,8 +890,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "analytics"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <BarChart3 className="w-4 h-4" />
@@ -891,8 +907,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "settings"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <Settings className="w-4 h-4" />
@@ -908,15 +924,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeMenu === "logs"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"
-                : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/50"
+                : "text-neutral-300 hover:text-white hover:bg-neutral-900"
             }`}
           >
             <div className="flex items-center gap-3">
               <History className="w-4 h-4" />
               <span>9. Log Aktivitas</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold border border-neutral-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 text-neutral-300 font-semibold border border-neutral-800">
               {auditLogs.length}
             </span>
           </button>
@@ -927,7 +943,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             type="button"
             onClick={handleSwitchAccount}
             disabled={isSwitchingAccount}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition cursor-pointer disabled:opacity-50"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-blue-400 hover:bg-blue-500/15 hover:text-blue-300 transition cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isSwitchingAccount ? "animate-spin" : ""}`} />
             <span className="flex-1 text-left">{isSwitchingAccount ? "Membuka Google..." : "Beralih Akun"}</span>
@@ -937,7 +953,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/15 hover:text-rose-300 transition cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span className="flex-1 text-left">10. Keluar & Kunci PIN</span>
@@ -945,18 +961,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </nav>
 
         {/* Profil Admin Footer */}
-        <div className="p-4 border-t border-neutral-200 bg-neutral-50">
+        <div className="p-4 border-t border-neutral-800 bg-neutral-900">
           <div className="flex items-center justify-between">
             <div className="min-w-0 pr-2">
-              <p className="text-xs font-bold text-neutral-900 truncate">{currentUser?.email || PRIMARY_ADMIN_EMAIL}</p>
-              <p className="text-[10px] text-emerald-600 font-semibold">Admin</p>
+              <p className="text-xs font-bold text-white truncate">{currentUser?.email || PRIMARY_ADMIN_EMAIL}</p>
+              <p className="text-[10px] text-emerald-400 font-semibold">Admin</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
                 onClick={handleSwitchAccount}
                 disabled={isSwitchingAccount}
-                className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                className="p-1.5 text-neutral-400 hover:text-blue-400 hover:bg-blue-500/15 rounded-lg transition"
                 title="Beralih Akun Google"
                 aria-label="Beralih Akun Google"
               >
@@ -965,7 +981,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                className="p-1.5 text-neutral-400 hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition"
                 title="Keluar & Kunci PIN"
                 aria-label="Logout"
               >
@@ -980,7 +996,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {isMobileDrawerOpen && (
         <div
           onClick={() => setIsMobileDrawerOpen(false)}
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-30 bg-black/75 backdrop-blur-xs lg:hidden"
         />
       )}
 
@@ -989,17 +1005,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ================================================================= */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64 box-border">
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-neutral-200 px-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-2xs flex flex-wrap items-center justify-between gap-2 box-border">
+        <header className="sticky top-0 z-20 bg-black/95 backdrop-blur-md border-b border-neutral-800 px-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-2xs flex flex-wrap items-center justify-between gap-2 box-border">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setIsMobileDrawerOpen(true)}
-              className="lg:hidden p-2 rounded-xl bg-neutral-100 text-neutral-700 hover:text-neutral-900 border border-neutral-200 shrink-0"
+              className="lg:hidden p-2 rounded-xl bg-neutral-900 text-neutral-200 hover:text-white border border-neutral-800 shrink-0"
             >
               <Menu className="w-5 h-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-lg font-black text-neutral-900 capitalize break-words leading-snug">
+              <h1 className="text-sm sm:text-lg font-black text-white capitalize break-words leading-snug">
                 {activeMenu === "dashboard" && "1. Dashboard & Ikhtisar Aplikasi"}
                 {activeMenu === "users" && "2. Manajemen Pengguna & Akun Warga"}
                 {activeMenu === "posts" && "3. Moderasi Postingan & Kabar Warga"}
@@ -1010,7 +1026,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeMenu === "settings" && "8. Pengaturan Aplikasi & Kunci Admin"}
                 {activeMenu === "logs" && "9. Log Aktivitas Audit Pengelola"}
               </h1>
-              <p className="text-[11px] text-neutral-500 hidden sm:block">
+              <p className="text-[11px] text-neutral-400 hidden sm:block">
                 Kareba'Ta Cloud Database &bull; Realtime Sync Aktif
               </p>
             </div>
@@ -1022,7 +1038,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               type="button"
               onClick={handleSwitchAccount}
               disabled={isSwitchingAccount}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
               title="Beralih ke akun Google lain"
             >
               <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSwitchingAccount ? "animate-spin" : ""}`} />
@@ -1032,7 +1048,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               type="button"
               onClick={handleExitToFeed}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs active:scale-95"
               title="Keluar dari dasbor dan kunci kembali dengan PIN"
             >
               <LogOut className="w-3.5 h-3.5 shrink-0" />
@@ -1050,16 +1066,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {activeMenu === "dashboard" && (
             <div className="space-y-6 animate-fade-in">
               {pendingPostsCount > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-amber-900">
+                      <p className="text-xs font-black text-amber-300">
                         {pendingPostsCount} Kabar Warga Menunggu Persetujuan Admin
                       </p>
-                      <p className="text-[11px] text-amber-700">
+                      <p className="text-[11px] text-amber-400/90">
                         Mode persetujuan admin sedang aktif. Tinjau dan loloskan kabar agar tampil di beranda warga.
                       </p>
                     </div>
@@ -1070,7 +1086,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       setPostMediaFilter("pending");
                       setActiveMenu("posts");
                     }}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0 shadow-xs"
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 shadow-xs"
                   >
                     Tinjau Sekarang &rarr;
                   </button>
@@ -1079,73 +1095,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* Kartu Statistik Utama Material 3 */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                 {/* 1. Pengguna */}
-                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-600 flex items-center justify-center mb-2">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
                     <Users className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-neutral-500 font-semibold">Total Pengguna</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{totalUsersCount}</h3>
+                  <p className="text-[11px] text-neutral-400 font-semibold">Total Pengguna</p>
+                  <h3 className="text-xl font-black text-white mt-0.5">{totalUsersCount}</h3>
                 </div>
 
                 {/* 2. Postingan */}
-                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center mb-2">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
                     <FileText className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-neutral-500 font-semibold">Total Postingan</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{postsList.length}</h3>
+                  <p className="text-[11px] text-neutral-400 font-semibold">Total Postingan</p>
+                  <h3 className="text-xl font-black text-white mt-0.5">{postsList.length}</h3>
                 </div>
 
                 {/* 3. Views */}
-                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-600 flex items-center justify-center mb-2">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2">
                     <Eye className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-neutral-500 font-semibold">Total Dilihat</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{totalViewsCount}</h3>
+                  <p className="text-[11px] text-neutral-400 font-semibold">Total Dilihat</p>
+                  <h3 className="text-xl font-black text-white mt-0.5">{totalViewsCount}</h3>
                 </div>
 
                 {/* 4. Suka */}
-                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-600 flex items-center justify-center mb-2">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-2">
                     <Heart className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-neutral-500 font-semibold">Total Suka</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{totalLikesCount}</h3>
+                  <p className="text-[11px] text-neutral-400 font-semibold">Total Suka</p>
+                  <h3 className="text-xl font-black text-white mt-0.5">{totalLikesCount}</h3>
                 </div>
 
                 {/* 5. Laporan */}
-                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center mb-2">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-2">
                     <AlertTriangle className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-neutral-500 font-semibold">Laporan Masuk</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">{pendingReportsCount}</h3>
+                  <p className="text-[11px] text-neutral-400 font-semibold">Laporan Masuk</p>
+                  <h3 className="text-xl font-black text-white mt-0.5">{pendingReportsCount}</h3>
                 </div>
 
                 {/* 6. Iklan Aktif */}
-                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-yellow-500/20 text-yellow-600 flex items-center justify-center mb-2">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center mb-2">
                     <Megaphone className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-neutral-500 font-semibold">Iklan Tayang</p>
-                  <h3 className="text-xl font-black text-neutral-900 mt-0.5">
+                  <p className="text-[11px] text-neutral-400 font-semibold">Iklan Tayang</p>
+                  <h3 className="text-xl font-black text-white mt-0.5">
                     {adSettings.ads.filter((a) => a.isActive).length}
                   </h3>
                 </div>
               </div>
 
               {/* Seksi Postingan Terbaru Warga */}
-              <div className="bg-white border border-neutral-200 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>Postingan Terkini di Beranda Warga</span>
                   </h3>
                   <button
                     type="button"
                     onClick={() => setActiveMenu("posts")}
-                    className="text-xs font-bold text-emerald-600 hover:underline"
+                    className="text-xs font-bold text-emerald-400 hover:underline"
                   >
                     Kelola Semua Postingan &rarr;
                   </button>
@@ -1155,27 +1171,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {feedPosts.slice(0, 6).map((post) => (
                     <div
                       key={post.id}
-                      className="bg-neutral-50 border border-neutral-200/80 rounded-2xl p-3.5 space-y-3 flex flex-col justify-between"
+                      className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3.5 space-y-3 flex flex-col justify-between"
                     >
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
                           {(post.user || post.name || "W")[0].toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-neutral-900 truncate">
+                          <p className="text-xs font-bold text-white truncate">
                             @{post.user || post.name || "warga"}
                           </p>
-                          <p className="text-[10px] text-neutral-500 truncate">{post.location || post.time}</p>
+                          <p className="text-[10px] text-neutral-400 truncate">{post.location || post.time}</p>
                         </div>
                         {post.isHidden && (
-                          <span className="text-[10px] bg-amber-500/20 text-amber-700 font-bold px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full">
                             Disembunyikan
                           </span>
                         )}
                       </div>
 
                       {post.img && (
-                        <div className="h-32 rounded-xl overflow-hidden bg-black/40">
+                        <div className="h-32 rounded-xl overflow-hidden bg-black">
                           <img
                             src={post.thumbnail || post.img}
                             alt=""
@@ -1184,11 +1200,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       )}
 
-                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-neutral-300 line-clamp-2 leading-relaxed">
                         {post.text || "Tanpa teks"}
                       </p>
 
-                      <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px] text-neutral-500">
+                      <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-400">
                         <div className="flex items-center gap-2.5">
                           <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-neutral-400" /> {post.views || 0} tayang</span>
                           <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-500" /> {post.like || 0} suka</span>
@@ -1206,7 +1222,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               },
                             });
                           }}
-                          className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded-lg transition flex items-center gap-1 cursor-pointer"
+                          className="px-2 py-0.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold text-[10px] rounded-lg transition flex items-center gap-1 cursor-pointer"
                           title="Hapus permanen"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -1225,7 +1241,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "users" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   {/* Pencarian Pengguna */}
                   <div className="relative flex-1">
@@ -1234,9 +1250,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={searchUserQuery}
                       onChange={(e) => setSearchUserQuery(e.target.value)}
                       placeholder="Cari nama atau username pengguna..."
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 pl-9 pr-3 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500"
                     />
-                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
                   </div>
 
                   {/* Filter Status Akun */}
@@ -1249,7 +1265,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition capitalize cursor-pointer ${
                           userStatusFilter === st
                             ? "bg-emerald-600 text-white"
-                            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                            : "bg-neutral-900 text-neutral-300 border border-neutral-800 hover:bg-neutral-800"
                         }`}
                       >
                         {st === "all" ? "Semua Status" : st}
@@ -1277,15 +1293,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     .map((user) => (
                       <div
                         key={user.userName}
-                        className="bg-neutral-50 border border-neutral-200 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 box-border"
+                        className="bg-neutral-900 border border-neutral-800 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 box-border"
                       >
                         <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
                             {user.initial}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-xs font-bold text-neutral-900 break-words">@{user.userName}</h4>
-                            <p className="text-[11px] text-neutral-500 break-all">{user.email}</p>
+                            <h4 className="text-xs font-bold text-white break-words">@{user.userName}</h4>
+                            <p className="text-[11px] text-neutral-400 break-all">{user.email}</p>
                           </div>
                         </div>
 
@@ -1303,7 +1319,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               });
                               setEditUserNameInput(user.userName);
                             }}
-                            className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5"
+                            className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-100 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5"
                           >
                             <Edit3 className="w-3.5 h-3.5 text-sky-400" />
                             <span>Edit Nama</span>
@@ -1321,7 +1337,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 initial: user.initial,
                               });
                             }}
-                            className="px-3 py-1.5 bg-amber-50 border border-amber-200/80 hover:bg-amber-900 text-amber-700 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5"
+                            className="px-3 py-1.5 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 text-amber-300 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5"
                           >
                             <UserX className="w-3.5 h-3.5" />
                             <span>Suspend</span>
@@ -1341,7 +1357,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 },
                               });
                             }}
-                            className="px-3 py-1.5 bg-rose-50/60 border border-rose-200/80 hover:bg-rose-900 text-rose-700 text-xs font-bold rounded-lg transition cursor-pointer"
+                            className="px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 text-rose-400 text-xs font-bold rounded-lg transition cursor-pointer"
                           >
                             Blokir
                           </button>
@@ -1354,20 +1370,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* MODAL EDIT NAMA PENGGUNA */}
               {selectedUserForEdit && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 box-border">
-                  <div className="bg-white border border-neutral-200 rounded-3xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-5 space-y-4">
-                    <h3 className="text-sm font-black text-neutral-900">Edit Nama Pengguna</h3>
+                  <div className="bg-neutral-950 border border-neutral-800 rounded-3xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-5 space-y-4">
+                    <h3 className="text-sm font-black text-white">Edit Nama Pengguna</h3>
                     <input
                       type="text"
                       value={editUserNameInput}
                       onChange={(e) => setEditUserNameInput(e.target.value)}
                       placeholder="Masukkan nama pengguna baru..."
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 box-border"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 box-border"
                     />
                     <div className="flex flex-wrap justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setSelectedUserForEdit(null)}
-                        className="px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-900"
+                        className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
                       >
                         Batal
                       </button>
@@ -1398,33 +1414,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {activeMenu === "posts" && (
             <div className="space-y-6 animate-fade-in">
               {/* Bar Saklar Cepat Persetujuan Admin */}
-              <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
                       appConfig.requirePostApproval
-                        ? "bg-amber-50 text-amber-600 border-amber-200"
-                        : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                        ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                        : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                     }`}
                   >
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xs sm:text-sm font-black text-neutral-900">
+                      <h3 className="text-xs sm:text-sm font-black text-white">
                         Persetujuan Admin Sebelum Kabar Tayang
                       </h3>
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase ${
                           appConfig.requirePostApproval
-                            ? "bg-amber-100 text-amber-800 border border-amber-200"
-                            : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                         }`}
                       >
                         {appConfig.requirePostApproval ? "AKTIF (Wajib Lolos)" : "NONAKTIF (Langsung Tayang)"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                    <p className="text-[11px] text-neutral-400 mt-0.5">
                       {appConfig.requirePostApproval
                         ? "Kabar baru dari warga masuk antrean Menunggu sampai Admin menekan tombol Loloskan."
                         : "Setiap kabar baru dari warga langsung tayang otomatis di beranda tanpa antrean."}
@@ -1438,8 +1454,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onClick={handleToggleRequirePostApproval}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shrink-0 border ${
                     appConfig.requirePostApproval
-                      ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-sm"
-                      : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border-neutral-300"
+                      ? "bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 shadow-sm"
+                      : "bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border-neutral-700"
                   }`}
                 >
                   {appConfig.requirePostApproval ? (
@@ -1449,14 +1465,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </>
                   ) : (
                     <>
-                      <ToggleLeft className="w-5 h-5 text-neutral-500" />
+                      <ToggleLeft className="w-5 h-5 text-neutral-400" />
                       <span>OFF &bull; Nonaktif</span>
                     </>
                   )}
                 </button>
               </div>
 
-              <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   <div className="relative flex-1">
                     <input
@@ -1464,9 +1480,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={searchPostQuery}
                       onChange={(e) => setSearchPostQuery(e.target.value)}
                       placeholder="Cari postingan, caption, lokasi, atau penulis..."
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 pl-9 pr-3 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500"
                     />
-                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -1489,11 +1505,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
                             postMediaFilter === med
                               ? med === "pending"
-                                ? "bg-amber-500 text-white"
+                                ? "bg-amber-500 text-slate-950"
                                 : "bg-emerald-600 text-white"
                               : med === "pending" && pendingPostsCount > 0
-                              ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
-                              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                              ? "bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25"
+                              : "bg-neutral-900 text-neutral-300 border border-neutral-800 hover:bg-neutral-800"
                           }`}
                         >
                           <span>{label}</span>
@@ -1529,28 +1545,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         key={post.id}
                         className={`rounded-2xl p-4 space-y-3 flex flex-col justify-between border ${
                           isPending
-                            ? "bg-amber-50/70 border-amber-300"
+                            ? "bg-amber-500/10 border-amber-500/30"
                             : isRejected
-                            ? "bg-rose-50/60 border-rose-200"
-                            : "bg-neutral-50 border-neutral-200"
+                            ? "bg-rose-500/10 border-rose-500/30"
+                            : "bg-neutral-900 border-neutral-800"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-bold text-xs text-neutral-900 truncate">
+                            <span className="font-bold text-xs text-white truncate">
                               @{post.user || post.name || "warga"}
                             </span>
-                            <span className="text-[10px] text-slate-500">&bull; {post.time}</span>
+                            <span className="text-[10px] text-neutral-400">&bull; {post.time}</span>
                           </div>
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
                               isPending
-                                ? "bg-amber-500 text-white"
+                                ? "bg-amber-500 text-slate-950"
                                 : isRejected
-                                ? "bg-rose-500/20 text-rose-700"
+                                ? "bg-rose-500/20 text-rose-300"
                                 : post.isHidden
-                                ? "bg-amber-500/20 text-amber-700"
-                                : "bg-emerald-500/20 text-emerald-700"
+                                ? "bg-amber-500/20 text-amber-300"
+                                : "bg-emerald-500/20 text-emerald-300"
                             }`}
                           >
                             {isPending
@@ -1564,26 +1580,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
 
                         {post.img && (
-                          <div className="h-44 rounded-xl overflow-hidden bg-black/40 relative">
+                          <div className="h-44 rounded-xl overflow-hidden bg-black relative">
                             <img
                               src={post.thumbnail || post.img}
                               alt=""
                               className="w-full h-full object-cover"
                             />
                             {post.mediaType === "video" && (
-                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold">
+                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/75 text-white text-[10px] font-bold">
                                 Video
                               </span>
                             )}
                           </div>
                         )}
 
-                        <p className="text-xs text-neutral-800 line-clamp-3 leading-relaxed">
+                        <p className="text-xs text-neutral-200 line-clamp-3 leading-relaxed">
                           {post.text || "Tanpa teks"}
                         </p>
 
-                        <div className="pt-2 border-t border-neutral-200/80 flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5 text-[11px] text-neutral-500">
+                        <div className="pt-2 border-t border-neutral-800 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 text-[11px] text-neutral-400">
                             <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-neutral-400" /> {post.views || 0}</span>
                             <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-500" /> {post.like || 0}</span>
                           </div>
@@ -1610,7 +1626,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   });
                                   showToast(`Kabar @${post.user || post.name || "warga"} diloloskan & langsung tayang!`);
                                 }}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 shadow-xs"
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 shadow-xs"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" />
                                 <span>Loloskan</span>
@@ -1631,7 +1647,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   await approvePostInFirestore(post.id, "rejected");
                                   showToast(`Kabar @${post.user || post.name || "warga"} ditolak dan tidak ditayangkan.`);
                                 }}
-                                className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1"
+                                className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1"
                               >
                                 <XCircle className="w-3.5 h-3.5" />
                                 <span>Tolak</span>
@@ -1661,7 +1677,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       : "Postingan dipulihkan ke beranda warga."
                                   );
                                 }}
-                                className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg transition cursor-pointer"
+                                className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg transition cursor-pointer"
                               >
                                 {post.isHidden ? "Pulihkan" : "Sembunyikan"}
                               </button>
@@ -1675,7 +1691,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 setEditPostCaption(post.text || "");
                                 setEditPostLocation(post.location || "");
                               }}
-                              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-sky-400 rounded-lg transition"
+                              className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-sky-400 rounded-lg transition"
                               aria-label="Edit Postingan"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
@@ -1695,7 +1711,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   },
                                 });
                               }}
-                              className="p-1.5 bg-neutral-100 hover:bg-rose-50 text-rose-600 rounded-lg transition cursor-pointer"
+                              className="p-1.5 bg-neutral-800 hover:bg-rose-500/20 text-rose-400 rounded-lg transition cursor-pointer"
                               aria-label="Hapus Postingan"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1711,31 +1727,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* MODAL EDIT POSTINGAN */}
               {selectedPostForEdit && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 box-border">
-                  <div className="bg-white border border-neutral-200 rounded-3xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-5 space-y-4">
-                    <h3 className="text-sm font-black text-neutral-900">Edit Postingan Warga</h3>
+                  <div className="bg-neutral-950 border border-neutral-800 rounded-3xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-5 space-y-4">
+                    <h3 className="text-sm font-black text-white">Edit Postingan Warga</h3>
                     <div>
-                      <label className="text-xs text-neutral-500 block mb-1">Isi Teks / Berita</label>
+                      <label className="text-xs text-neutral-400 block mb-1">Isi Teks / Berita</label>
                       <textarea
                         rows={3}
                         value={editPostCaption}
                         onChange={(e) => setEditPostCaption(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 box-border"
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 box-border"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-neutral-500 block mb-1">Lokasi</label>
+                      <label className="text-xs text-neutral-400 block mb-1">Lokasi</label>
                       <input
                         type="text"
                         value={editPostLocation}
                         onChange={(e) => setEditPostLocation(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 box-border"
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 box-border"
                       />
                     </div>
                     <div className="flex flex-wrap justify-end gap-2 pt-2">
                       <button
                         type="button"
                         onClick={() => setSelectedPostForEdit(null)}
-                        className="px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-900"
+                        className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
                       >
                         Batal
                       </button>
@@ -1779,10 +1795,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "reports" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-white border border-neutral-200 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                     <span>Laporan Pelanggaran Komunitas Warga</span>
                   </h3>
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -1794,7 +1810,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition capitalize cursor-pointer ${
                           reportFilter === rf
                             ? "bg-emerald-600 text-white"
-                            : "bg-neutral-100 text-neutral-600"
+                            : "bg-neutral-900 text-neutral-300 border border-neutral-800 hover:bg-neutral-800"
                         }`}
                       >
                         {rf === "all" ? "Semua" : rf === "pending" ? "Menunggu" : "Selesai"}
@@ -1804,10 +1820,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {reportsList.length === 0 ? (
-                  <div className="text-center py-12 border border-dashed border-neutral-200 rounded-2xl">
+                  <div className="text-center py-12 border border-dashed border-neutral-800 rounded-2xl">
                     <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                    <p className="text-sm font-bold text-neutral-900">Tidak Ada Laporan Pelanggaran</p>
-                    <p className="text-xs text-neutral-500 mt-1">
+                    <p className="text-sm font-bold text-white">Tidak Ada Laporan Pelanggaran</p>
+                    <p className="text-xs text-neutral-400 mt-1">
                       Komunitas Kareba'Ta saat ini kondusif dan tertib.
                     </p>
                   </div>
@@ -1818,32 +1834,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       .map((report) => (
                         <div
                           key={report.id}
-                          className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 space-y-3 box-border"
+                          className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3 box-border"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-xs font-black text-rose-600 uppercase tracking-wide flex items-center gap-1">
+                            <span className="text-xs font-black text-rose-400 uppercase tracking-wide flex items-center gap-1">
                               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                               <span>{report.reason}</span>
                             </span>
-                            <span className="text-[10px] text-slate-500">{report.timeString}</span>
+                            <span className="text-[10px] text-neutral-400">{report.timeString}</span>
                           </div>
 
-                          <p className="text-xs text-neutral-600">
-                            Target Pengguna: <b>@{report.targetUser}</b>
+                          <p className="text-xs text-neutral-300">
+                            Target Pengguna: <b className="text-white">@{report.targetUser}</b>
                           </p>
 
                           {report.postText && (
-                            <blockquote className="p-3 bg-amber-50/70 border-l-2 border-amber-400 text-xs text-neutral-700 italic rounded-r-xl break-words">
+                            <blockquote className="p-3 bg-amber-500/10 border-l-2 border-amber-400 text-xs text-neutral-200 italic rounded-r-xl break-words">
                               "{report.postText}"
                             </blockquote>
                           )}
 
-                          <div className="pt-2 border-t border-neutral-200 flex flex-wrap items-center justify-between gap-2">
+                          <div className="pt-2 border-t border-neutral-800 flex flex-wrap items-center justify-between gap-2">
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                 report.status === "resolved"
-                                  ? "bg-emerald-500/20 text-emerald-700"
-                                  : "bg-amber-500/20 text-amber-700"
+                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  : "bg-amber-500/20 text-amber-300"
                               }`}
                             >
                               Status: {report.status === "resolved" ? "Selesai Ditinjau" : "Menunggu Aksi"}
@@ -1903,14 +1919,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "bulletins" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-neutral-200 pb-3">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-neutral-800 pb-3">
                   <div>
-                    <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                      <Megaphone className="w-4 h-4 text-emerald-600" />
+                    <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-emerald-400" />
                       <span>Kelola Teks Pengumuman & Promo Iklan Berjalan</span>
                     </h3>
-                    <p className="text-xs text-neutral-500 mt-0.5">
+                    <p className="text-xs text-neutral-400 mt-0.5">
                       Teks berjalan di bawah bar aplikasi untuk warta warga serta penawaran tarif iklan & promo UMKM.
                     </p>
                   </div>
@@ -1953,9 +1969,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {/* Tombol Templat Cepat 1-Klik Isi Form */}
-                <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl space-y-2">
-                  <p className="text-[11px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-2">
+                  <p className="text-[11px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>Templat Cepat Teks Iklan (Klik untuk Otomatis Mengisi Form):</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1969,7 +1985,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         );
                         showToast("Templat Tarif Iklan diterapkan ke formulir.");
                       }}
-                      className="px-2.5 py-1.5 bg-white hover:bg-amber-100 text-amber-950 text-[11px] font-bold rounded-lg border border-amber-300 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-neutral-900 hover:bg-amber-500/20 text-amber-300 text-[11px] font-bold rounded-lg border border-amber-500/30 transition shadow-2xs cursor-pointer flex items-center gap-1"
                     >
                       <span>Templat Tarif (Rp 25rb / 3 Hari)</span>
                     </button>
@@ -1984,7 +2000,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         );
                         showToast("Templat Iklan Video & Pop-up diterapkan ke formulir.");
                       }}
-                      className="px-2.5 py-1.5 bg-white hover:bg-purple-100 text-purple-950 text-[11px] font-bold rounded-lg border border-purple-300 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-neutral-900 hover:bg-purple-500/20 text-purple-300 text-[11px] font-bold rounded-lg border border-purple-500/30 transition shadow-2xs cursor-pointer flex items-center gap-1"
                     >
                       <span>Templat Iklan Video & Pop-up</span>
                     </button>
@@ -1999,7 +2015,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         );
                         showToast("Templat Promo UMKM diterapkan ke formulir.");
                       }}
-                      className="px-2.5 py-1.5 bg-white hover:bg-emerald-100 text-emerald-950 text-[11px] font-bold rounded-lg border border-emerald-300 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-neutral-900 hover:bg-emerald-500/20 text-emerald-300 text-[11px] font-bold rounded-lg border border-emerald-500/30 transition shadow-2xs cursor-pointer flex items-center gap-1"
                     >
                       <span>Templat Promo UMKM Warga</span>
                     </button>
@@ -2020,10 +2036,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     setNewBulletinText("");
                     showToast("Teks pengumuman berjalan berhasil diterbitkan!");
                   }}
-                  className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl space-y-3"
+                  className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl space-y-3"
                 >
                   <div>
-                    <label className="text-xs font-bold text-neutral-600 block mb-1">
+                    <label className="text-xs font-bold text-neutral-300 block mb-1">
                       Isi Teks Pengumuman Bebas (Bebas Ketik Apa Saja Tanpa Batas Huruf) *
                     </label>
                     <textarea
@@ -2032,36 +2048,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={newBulletinText}
                       onChange={(e) => setNewBulletinText(e.target.value)}
                       placeholder="Ketik pengumuman warga, himbauan darurat, warta daerah, atau info apa saja sesuka hati tanpa batas..."
-                      className="w-full bg-white border border-neutral-200 rounded-xl p-3 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 leading-relaxed resize-y"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 leading-relaxed resize-y"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-bold text-neutral-600 block mb-1">Kategori</label>
+                      <label className="text-xs font-bold text-neutral-300 block mb-1">Kategori</label>
                       <select
                         value={newBulletinCategory}
                         onChange={(e) => setNewBulletinCategory(e.target.value)}
-                        className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                        className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white"
                       >
-                        <option value="PASANG IKLAN">PASANG IKLAN (PROMO TARIF)</option>
-                        <option value="IKLAN VIDEO">IKLAN VIDEO & POP-UP</option>
-                        <option value="PROMO UMKM">PROMO UMKM & BISNIS</option>
-                        <option value="INFO RESMI">INFO RESMI</option>
-                        <option value="PERINGATAN">PERINGATAN</option>
-                        <option value="LALU LINTAS">LALU LINTAS</option>
-                        <option value="CUACA BMKG">CUACA BMKG</option>
-                        <option value="PENGUMUMAN">PENGUMUMAN</option>
+                        <option value="PASANG IKLAN" className="bg-neutral-900 text-white">PASANG IKLAN (PROMO TARIF)</option>
+                        <option value="IKLAN VIDEO" className="bg-neutral-900 text-white">IKLAN VIDEO & POP-UP</option>
+                        <option value="PROMO UMKM" className="bg-neutral-900 text-white">PROMO UMKM & BISNIS</option>
+                        <option value="INFO RESMI" className="bg-neutral-900 text-white">INFO RESMI</option>
+                        <option value="PERINGATAN" className="bg-neutral-900 text-white">PERINGATAN</option>
+                        <option value="LALU LINTAS" className="bg-neutral-900 text-white">LALU LINTAS</option>
+                        <option value="CUACA BMKG" className="bg-neutral-900 text-white">CUACA BMKG</option>
+                        <option value="PENGUMUMAN" className="bg-neutral-900 text-white">PENGUMUMAN</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-neutral-600 block mb-1">Lokasi / Keterangan Tag</label>
+                      <label className="text-xs font-bold text-neutral-300 block mb-1">Lokasi / Keterangan Tag</label>
                       <input
                         type="text"
                         value={newBulletinLocation}
                         onChange={(e) => setNewBulletinLocation(e.target.value)}
                         placeholder="Contoh: Layanan Iklan / Pesisir Pantai"
-                        className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                        className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500"
                       />
                     </div>
                   </div>
@@ -2079,30 +2095,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {bulletinsList.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-neutral-50 border border-neutral-200 p-3.5 rounded-2xl flex flex-wrap items-start sm:items-center justify-between gap-3 box-border"
+                      className="bg-neutral-900 border border-neutral-800 p-3.5 rounded-2xl flex flex-wrap items-start sm:items-center justify-between gap-3 box-border"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
                               item.category === "PASANG IKLAN"
-                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                                 : item.category === "IKLAN VIDEO"
-                                ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                                 : item.category === "PROMO UMKM"
-                                ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                                : "bg-neutral-200 text-neutral-800"
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                : "bg-neutral-800 text-neutral-200 border border-neutral-700"
                             }`}
                           >
                             {item.category}
                           </span>
                           {item.location && (
                             <span className="text-[10px] text-neutral-400 font-medium flex items-center gap-0.5">
-                              <MapPin className="w-3 h-3 text-amber-500 shrink-0" /> {item.location}
+                              <MapPin className="w-3 h-3 text-amber-400 shrink-0" /> {item.location}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-semibold text-neutral-900 mt-1 leading-snug">
+                        <p className="text-xs font-semibold text-neutral-100 mt-1 leading-snug">
                           {item.text}
                         </p>
                       </div>
@@ -2112,7 +2128,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           await deleteBulletinFromFirestore(item.id);
                           showToast("Pengumuman berhasil dihapus.");
                         }}
-                        className="p-1.5 text-slate-500 hover:text-rose-600 transition"
+                        className="p-1.5 text-neutral-400 hover:text-rose-400 transition"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -2128,14 +2144,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "ads" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-200 pb-4">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
                   <div>
-                    <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                      <Megaphone className="w-4 h-4 text-amber-600" />
+                    <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-amber-400" />
                       <span>Manajemen Slot Iklan Bersponsor</span>
                     </h3>
-                    <p className="text-xs text-neutral-500 mt-0.5">
+                    <p className="text-xs text-neutral-400 mt-0.5">
                       Iklan muncul di sela beranda kabar warga dengan tombol langsung ke WhatsApp toko.
                     </p>
                   </div>
@@ -2155,9 +2171,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           showToast("Belum ada iklan aktif yang dapat ditampilkan sebagai pop-up.");
                         }
                       }}
-                      className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs rounded-xl border border-purple-200 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      className="px-3.5 py-2 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 font-bold text-xs rounded-xl border border-purple-500/30 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                       <span>Uji Tampil Pop-up Sekarang</span>
                     </button>
                     <button
@@ -2186,10 +2202,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 {/* Saklar Global, Pop-up & Frekuensi */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex items-center justify-between">
+                  <div className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Status Iklan di Beranda</p>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-xs font-bold text-white">Status Iklan di Beranda</p>
+                      <p className="text-[11px] text-neutral-400">
                         {adSettings.isEnabled ? "Aktif tampil di HP warga" : "Nonaktif (disembunyikan)"}
                       </p>
                     </div>
@@ -2208,18 +2224,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="cursor-pointer"
                     >
                       {adSettings.isEnabled ? (
-                        <ToggleRight className="w-10 h-10 text-emerald-600" />
+                        <ToggleRight className="w-10 h-10 text-emerald-500" />
                       ) : (
-                        <ToggleLeft className="w-10 h-10 text-slate-600" />
+                        <ToggleLeft className="w-10 h-10 text-neutral-500" />
                       )}
                     </button>
                   </div>
 
-                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex flex-col justify-between gap-2.5">
+                  <div className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex flex-col justify-between gap-2.5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold text-neutral-900">Iklan Pop-up Otomatis</p>
-                        <p className="text-[11px] text-neutral-500">
+                        <p className="text-xs font-bold text-white">Iklan Pop-up Otomatis</p>
+                        <p className="text-[11px] text-neutral-400">
                           {adSettings.popupEnabled !== false ? "Aktif saat buka beranda" : "Nonaktif (pop-up mati)"}
                         </p>
                       </div>
@@ -2240,17 +2256,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         title={adSettings.popupEnabled !== false ? "Ketuk untuk Mematikan Pop-up" : "Ketuk untuk Mengaktifkan Pop-up"}
                       >
                         {adSettings.popupEnabled !== false ? (
-                          <ToggleRight className="w-10 h-10 text-emerald-600" />
+                          <ToggleRight className="w-10 h-10 text-emerald-500" />
                         ) : (
-                          <ToggleLeft className="w-10 h-10 text-slate-600" />
+                          <ToggleLeft className="w-10 h-10 text-neutral-500" />
                         )}
                       </button>
                     </div>
 
                     {/* Pengatur Waktu Jeda Pop-up saat aktif */}
                     {adSettings.popupEnabled !== false && (
-                      <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px]">
-                        <span className="text-neutral-500 font-medium">Jeda Pop-up:</span>
+                      <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-[11px]">
+                        <span className="text-neutral-400 font-medium">Jeda Pop-up:</span>
                         <div className="flex items-center gap-1">
                           {[1, 2, 3, 5].map((sec) => (
                             <button
@@ -2264,7 +2280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
                                 (adSettings.popupDelaySeconds || 2) === sec
                                   ? "bg-purple-600 text-white shadow-xs"
-                                  : "bg-neutral-200/70 text-neutral-700 hover:bg-neutral-200"
+                                  : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
                               }`}
                             >
                               {sec}s
@@ -2275,11 +2291,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                   </div>
 
-                  <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold text-neutral-900">Jarak / Frekuensi Iklan di Beranda</p>
-                      <p className="text-[11px] text-neutral-500">
-                        Diselingi setiap <b>{adSettings.frequency || 4} berita warga</b> (tidak menumpuk)
+                      <p className="text-xs font-bold text-white">Jarak / Frekuensi Iklan di Beranda</p>
+                      <p className="text-[11px] text-neutral-400">
+                        Diselingi setiap <b className="text-neutral-200">{adSettings.frequency || 4} berita warga</b> (tidak menumpuk)
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 self-start sm:self-auto">
@@ -2294,7 +2310,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                             (adSettings.frequency || 4) === num
                               ? "bg-amber-500 text-slate-950 shadow-xs"
-                              : "bg-neutral-200/70 text-neutral-700 hover:bg-neutral-200"
+                              : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
                           }`}
                         >
                           Tiap {num}
@@ -2309,9 +2325,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {adSettings.ads.map((ad) => (
                     <div
                       key={ad.id}
-                      className="bg-neutral-50 border border-neutral-200 rounded-2xl overflow-hidden flex flex-col justify-between"
+                      className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden flex flex-col justify-between"
                     >
-                      <div className="h-40 bg-black/60 overflow-hidden relative flex items-center justify-center">
+                      <div className="h-40 bg-black overflow-hidden relative flex items-center justify-center">
                         {ad.mediaType === "video" || ad.imageUrl?.includes(".mp4") || ad.imageUrl?.startsWith("data:video") ? (
                           <div className="w-full h-full relative flex items-center justify-center bg-black">
                             <video src={ad.imageUrl} className="w-full h-full object-cover" muted />
@@ -2336,15 +2352,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       <div className="p-4 space-y-2 flex-1">
                         <div>
-                          <h4 className="text-xs font-bold text-neutral-900">{ad.title}</h4>
-                          <p className="text-xs text-amber-600 font-semibold">{ad.advertiserName}</p>
+                          <h4 className="text-xs font-bold text-white">{ad.title}</h4>
+                          <p className="text-xs text-amber-400 font-semibold">{ad.advertiserName}</p>
                           {ad.location && (
-                            <p className="text-[11px] text-neutral-500 flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
+                            <p className="text-[11px] text-neutral-400 flex items-center gap-1 mt-0.5">
+                              <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                               <span>{ad.location}</span>
                             </p>
                           )}
-                          <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed mt-1">
+                          <p className="text-xs text-neutral-300 line-clamp-2 leading-relaxed mt-1">
                             {ad.description}
                           </p>
                         </div>
@@ -2352,17 +2368,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {/* Status Tombol Aksi / Hubungi */}
                         <div className="pt-1 flex items-center gap-1.5 flex-wrap">
                           {ad.actionType === "whatsapp" ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                              <MessageCircle className="w-3 h-3 text-emerald-600" />
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                              <MessageCircle className="w-3 h-3 text-emerald-400" />
                               <span>Tombol WA: {ad.actionTarget || "Tersedia"}</span>
                             </span>
                           ) : ad.actionType === "link" ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                              <Globe className="w-3 h-3 text-blue-600" />
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-300 bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 rounded-full">
+                              <Globe className="w-3 h-3 text-blue-400" />
                               <span>Link Website / Medsos</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-300 bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded-full">
                               <span>Spanduk Saja (Tanpa Tombol Hubungi)</span>
                             </span>
                           )}
@@ -2376,21 +2392,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             : null;
 
                           return (
-                            <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between text-[11px]">
-                              <span className="text-neutral-500 flex items-center gap-1 font-medium">
+                            <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-[11px]">
+                              <span className="text-neutral-400 flex items-center gap-1 font-medium">
                                 <Clock className="w-3.5 h-3.5 text-neutral-400" />
                                 <span>Masa Tayang:</span>
                               </span>
                               {isExpired ? (
-                                <span className="font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                <span className="font-extrabold text-rose-400 bg-rose-500/15 px-2 py-0.5 rounded-full border border-rose-500/30">
                                   Kedaluwarsa (Berhenti)
                                 </span>
                               ) : remainingDays !== null ? (
-                                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                <span className="font-extrabold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
                                   Sisa {remainingDays} hari
                                 </span>
                               ) : (
-                                <span className="font-semibold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded-full">
+                                <span className="font-semibold text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded-full">
                                   Aktif Selamanya
                                 </span>
                               )}
@@ -2399,7 +2415,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         })()}
                       </div>
 
-                      <div className="p-3 bg-white/60 border-t border-neutral-200 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="p-3 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
@@ -2409,8 +2425,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             }}
                             className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${
                               ad.isActive
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                                : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
                             }`}
                           >
                             {ad.isActive ? "Jeda Iklan" : "Aktifkan"}
@@ -2431,7 +2447,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 });
                                 showToast(`Iklan ${ad.advertiserName} diperpanjang 7 hari lagi!`);
                               }}
-                              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer shadow-xs"
+                              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer shadow-xs"
                               title="Perpanjang masa tayang 7 hari"
                             >
                               + Perpanjang 7 Hari
@@ -2441,10 +2457,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => setPreviewPopupAd(ad)}
-                            className="px-2 py-1 text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            className="px-2 py-1 text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
                             title="Lihat Pratinjau Pop-up Iklan Ini"
                           >
-                            <Eye className="w-3.5 h-3.5 text-purple-600" />
+                            <Eye className="w-3.5 h-3.5 text-purple-400" />
                             <span>Lihat Pop-up</span>
                           </button>
 
@@ -2465,7 +2481,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setAdFormLocation(ad.location || "");
                               setIsAdModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg hover:bg-neutral-100 transition cursor-pointer"
+                            className="p-1.5 text-neutral-400 hover:text-amber-400 rounded-lg hover:bg-neutral-800 transition cursor-pointer"
                             title="Edit Iklan"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -2486,7 +2502,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               },
                             });
                           }}
-                          className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                          className="p-1.5 text-neutral-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/15 transition cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -2499,8 +2515,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* MODAL TAMBAH / EDIT IKLAN */}
               {isAdModalOpen && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto box-border">
-                  <div className="bg-white border border-neutral-200 rounded-3xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-6 space-y-4 my-4 sm:my-8 max-h-[92dvh] overflow-y-auto">
-                    <h3 className="text-sm font-black text-neutral-900">
+                  <div className="bg-neutral-950 border border-neutral-800 rounded-3xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-6 space-y-4 my-4 sm:my-8 max-h-[92dvh] overflow-y-auto">
+                    <h3 className="text-sm font-black text-white">
                       {editingAd ? "Edit Iklan Sponsor" : "Pasang Iklan Sponsor Baru"}
                     </h3>
 
@@ -2548,8 +2564,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Pilihan Masa Tayang Iklan: Selamanya, 3 Hari, 7 Hari, 14 Hari, 30 Hari */}
                       <div>
                         <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                          <label className="text-xs font-bold text-neutral-800">Masa Tayang Iklan *</label>
-                          <span className="text-[10px] text-neutral-500 font-medium">
+                          <label className="text-xs font-bold text-neutral-200">Masa Tayang Iklan *</label>
+                          <span className="text-[10px] text-neutral-400 font-medium">
                             {adFormDuration === 0 ? "Tayang tanpa batas waktu" : `Otomatis berhenti setelah ${adFormDuration} hari`}
                           </span>
                         </div>
@@ -2568,7 +2584,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               className={`flex-1 min-w-[74px] py-2 px-2 rounded-xl border text-[11px] font-bold text-center transition cursor-pointer ${
                                 adFormDuration === opt.days
                                   ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
-                                  : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                  : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                               }`}
                             >
                               {opt.label}
@@ -2579,7 +2595,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       {/* Pilihan Format Tampilan: Feed, Pop-up, atau Keduanya */}
                       <div>
-                        <label className="text-xs font-bold text-neutral-800 block mb-1">Bentuk / Penempatan Iklan *</label>
+                        <label className="text-xs font-bold text-neutral-200 block mb-1">Bentuk / Penempatan Iklan *</label>
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
@@ -2587,7 +2603,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[95px] p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormFormat === "feed"
                                 ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <span>Di Sela Beranda</span>
@@ -2599,7 +2615,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[95px] p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormFormat === "popup"
                                 ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <span>Pop-up Layar</span>
@@ -2611,7 +2627,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[95px] p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormFormat === "both"
                                 ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <span>Keduanya</span>
@@ -2622,7 +2638,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       {/* Pilihan Jenis Media: Foto vs Video */}
                       <div>
-                        <label className="text-xs font-bold text-neutral-800 block mb-1">Jenis Media Iklan *</label>
+                        <label className="text-xs font-bold text-neutral-200 block mb-1">Jenis Media Iklan *</label>
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
@@ -2630,7 +2646,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[125px] p-2.5 rounded-xl border flex flex-wrap items-center justify-center gap-2 text-xs font-bold transition cursor-pointer ${
                               adFormMediaType === "image"
                                 ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <ImageIcon className="w-4 h-4 shrink-0" />
@@ -2642,7 +2658,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[125px] p-2.5 rounded-xl border flex flex-wrap items-center justify-center gap-2 text-xs font-bold transition cursor-pointer ${
                               adFormMediaType === "video"
                                 ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <VideoIcon className="w-4 h-4 shrink-0" />
@@ -2652,34 +2668,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
 
                       <div>
-                        <label className="text-xs text-neutral-600 block mb-1">Judul Promosi *</label>
+                        <label className="text-xs text-neutral-300 block mb-1">Judul Promosi *</label>
                         <input
                           type="text"
                           required
                           value={adFormTitle}
                           onChange={(e) => setAdFormTitle(e.target.value)}
                           placeholder="Diskon 20% Kopi Arabika Sulteng"
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                          className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500"
                         />
                       </div>
 
                       <div>
-                        <label className="text-xs text-neutral-600 block mb-1">Nama Toko / Usaha *</label>
+                        <label className="text-xs text-neutral-300 block mb-1">Nama Toko / Usaha *</label>
                         <input
                           type="text"
                           required
                           value={adFormAdvertiser}
                           onChange={(e) => setAdFormAdvertiser(e.target.value)}
                           placeholder="Warkop Sudirman & Roastery"
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                          className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500"
                         />
                       </div>
 
                       {/* Input Lokasi / Wilayah Toko (Opsional / Fleksibel) */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs font-bold text-neutral-800 flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                          <label className="text-xs font-bold text-neutral-200 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-amber-400" />
                             <span>Lokasi / Wilayah Toko</span>
                           </label>
                           <span className="text-[10px] text-neutral-400 font-medium">Opsional (bisa dikosongkan)</span>
@@ -2689,7 +2705,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           value={adFormLocation}
                           onChange={(e) => setAdFormLocation(e.target.value)}
                           placeholder="Contoh: Palu Timur, Kota Palu / Sekitar Sulteng"
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-emerald-600"
+                          className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-emerald-500"
                         />
                         <p className="text-[10px] text-neutral-400 mt-1">
                           Jika diisi, akan tampil pin lokasi di kartu iklan beranda dan pop-up.
@@ -2697,23 +2713,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
 
                       <div>
-                        <label className="text-xs text-neutral-600 block mb-1">Deskripsi Promosi *</label>
+                        <label className="text-xs text-neutral-300 block mb-1">Deskripsi Promosi *</label>
                         <textarea
                           rows={2}
                           required
                           value={adFormDesc}
                           onChange={(e) => setAdFormDesc(e.target.value)}
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                          className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500"
                         />
                       </div>
 
                       {/* Pemilih Media Foto / Video Langsung dari Galeri HP (Tanpa Perlu Link) */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-bold text-neutral-800">
+                          <label className="text-xs font-bold text-neutral-200">
                             {adFormMediaType === "video" ? "Ambil Video Iklan (MP4) *" : "Ambil Foto / Poster Iklan *"}
                           </label>
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                             ✓ Langsung Galeri HP (Tanpa Link)
                           </span>
                         </div>
@@ -2783,23 +2799,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           /* KOTAK BESAR BUKA GALERI HP DENGAN TOUCH TARGET LUAS UNTUK MOBILE */
                           <label
                             htmlFor="ad-gallery-file-input"
-                            className="w-full rounded-2xl border-2 border-dashed border-amber-400 hover:border-amber-500 bg-amber-50/70 hover:bg-amber-50 p-5 flex flex-col items-center justify-center cursor-pointer transition active:scale-[0.99] group text-center shadow-2xs select-none block"
+                            className="w-full rounded-2xl border-2 border-dashed border-amber-500/50 hover:border-amber-400 bg-amber-500/10 hover:bg-amber-500/15 p-5 flex flex-col items-center justify-center cursor-pointer transition active:scale-[0.99] group text-center shadow-2xs select-none block"
                           >
-                            <div className="w-12 h-12 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition mx-auto">
+                            <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition mx-auto">
                               {isAdMediaUploading ? (
-                                <RefreshCw className="w-6 h-6 animate-spin text-amber-700" />
+                                <RefreshCw className="w-6 h-6 animate-spin text-amber-400" />
                               ) : adFormMediaType === "video" ? (
-                                <VideoIcon className="w-6 h-6 text-emerald-700" />
+                                <VideoIcon className="w-6 h-6 text-emerald-400" />
                               ) : (
-                                <ImageIcon className="w-6 h-6 text-amber-800" />
+                                <ImageIcon className="w-6 h-6 text-amber-400" />
                               )}
                             </div>
-                            <p className="text-xs sm:text-sm font-extrabold text-neutral-900">
+                            <p className="text-xs sm:text-sm font-extrabold text-white">
                               {isAdMediaUploading
                                 ? "Sedang Mengunggah dari Galeri..."
                                 : `Ketuk untuk Memilih ${adFormMediaType === "video" ? "Video (MP4)" : "Foto"} dari Galeri HP`}
                             </p>
-                            <p className="text-[11px] text-neutral-500 mt-1 font-medium">
+                            <p className="text-[11px] text-neutral-400 mt-1 font-medium">
                               {adFormMediaType === "video"
                                 ? `Maksimal durasi ${MAX_VIDEO_DURATION_SECONDS} detik & ukuran ${MAX_VIDEO_FILE_SIZE_MB} MB agar cepat diputar di semua HP`
                                 : "Membuka album foto & video di HP Anda secara otomatis (maks. 30 detik / 20 MB untuk video)"}
@@ -2812,7 +2828,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         ) : (
                           /* PRATINJAU MEDIA DARI GALERI DENGAN TOMBOL GANTI & HAPUS */
                           <div className="space-y-2">
-                            <div className="relative rounded-2xl overflow-hidden bg-black h-44 flex items-center justify-center border border-neutral-200 shadow-xs">
+                            <div className="relative rounded-2xl overflow-hidden bg-black h-44 flex items-center justify-center border border-neutral-800 shadow-xs">
                               {adFormMediaType === "video" || adFormImg.includes(".mp4") || adFormImg.startsWith("data:video") ? (
                                 <video src={adFormImg} className="w-full h-full object-contain" controls autoPlay muted />
                               ) : (
@@ -2828,15 +2844,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <button
                                 type="button"
                                 onClick={() => adFileInputRef.current?.click()}
-                                className="flex-1 min-w-[150px] py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-300 cursor-pointer flex flex-wrap items-center justify-center gap-1.5 transition active:scale-95 text-center"
+                                className="flex-1 min-w-[150px] py-2 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-100 text-xs font-bold rounded-xl border border-neutral-700 cursor-pointer flex flex-wrap items-center justify-center gap-1.5 transition active:scale-95 text-center"
                               >
-                                <Upload className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                                <Upload className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                 <span>{isAdMediaUploading ? "Sedang Mengunggah..." : "Ganti dari Galeri HP"}</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setAdFormImg("")}
-                                className="py-2 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-200 cursor-pointer transition active:scale-95 shrink-0"
+                                className="py-2 px-3.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-bold rounded-xl border border-rose-500/30 cursor-pointer transition active:scale-95 shrink-0"
                               >
                                 Hapus
                               </button>
@@ -2846,12 +2862,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
 
                       {/* Tujuan Klik Iklan Saat Warga Mengetuk Tombol */}
-                      <div className="space-y-2 pt-2 border-t border-neutral-200">
+                      <div className="space-y-2 pt-2 border-t border-neutral-800">
                         <div className="flex flex-wrap items-center justify-between gap-1">
-                          <label className="text-xs font-bold text-neutral-800 block">
+                          <label className="text-xs font-bold text-neutral-200 block">
                             Tombol Aksi Iklan
                           </label>
-                          <span className="text-[10px] text-neutral-500">
+                          <span className="text-[10px] text-neutral-400">
                             {adFormActionType === "none" ? "Bisa dipasang tanpa link" : "Dengan tombol klik"}
                           </span>
                         </div>
@@ -2867,7 +2883,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[90px] py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormActionType === "whatsapp"
                                 ? "bg-[#25D366] text-white border-[#25D366] shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <span className="flex items-center gap-1">
@@ -2887,7 +2903,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[90px] py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormActionType === "link"
                                 ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <span className="flex items-center gap-1">
@@ -2906,7 +2922,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className={`flex-1 min-w-[90px] py-2 px-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition cursor-pointer text-center ${
                               adFormActionType === "none"
                                 ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs"
-                                : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                : "bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800"
                             }`}
                           >
                             <span>Tanpa Link</span>
@@ -2915,14 +2931,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
 
                         {adFormActionType === "none" ? (
-                          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <div className="p-2.5 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-300 text-xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                             <span>Iklan ini tayang sebagai spanduk informasi <b>100% tanpa link</b> (hanya foto/video, judul &amp; nama usaha).</span>
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                             <div>
-                              <label className="text-xs text-neutral-600 block mb-1">
+                              <label className="text-xs text-neutral-300 block mb-1">
                                 {adFormActionType === "whatsapp" ? "Nomor WhatsApp Toko *" : "Tautan Website / Akun Medsos *"}
                               </label>
                               <input
@@ -2931,7 +2947,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 value={adFormTarget}
                                 onChange={(e) => setAdFormTarget(e.target.value)}
                                 placeholder={adFormActionType === "whatsapp" ? "Contoh: 081234567890" : "Contoh: https://instagram.com/toko"}
-                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 box-border"
+                                className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500 box-border"
                               />
                               <p className="text-[10px] text-neutral-400 mt-0.5">
                                 {adFormActionType === "whatsapp"
@@ -2940,24 +2956,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               </p>
                             </div>
                             <div>
-                              <label className="text-xs text-neutral-600 block mb-1">Teks di Tombol Aksi</label>
+                              <label className="text-xs text-neutral-300 block mb-1">Teks di Tombol Aksi</label>
                               <input
                                 type="text"
                                 value={adFormBtnText}
                                 onChange={(e) => setAdFormBtnText(e.target.value)}
                                 placeholder={adFormActionType === "whatsapp" ? "Pesan via WhatsApp" : "Kunjungi Website"}
-                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 box-border"
+                                className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500 box-border"
                               />
                             </div>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex flex-wrap justify-end gap-2 pt-3 border-t border-neutral-200">
+                      <div className="flex flex-wrap justify-end gap-2 pt-3 border-t border-neutral-800">
                         <button
                           type="button"
                           onClick={() => setIsAdModalOpen(false)}
-                          className="px-4 py-2 text-xs text-neutral-500"
+                          className="px-4 py-2 text-xs text-neutral-400 hover:text-white"
                         >
                           Batal
                         </button>
@@ -2982,33 +2998,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="space-y-6 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Pertumbuhan Warga & Aktivitas */}
-                <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
                     <span>Statistik Pertumbuhan Komunitas</span>
                   </h3>
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-neutral-500">Total Akun Terdaftar</span>
-                        <span className="font-bold text-neutral-900">{totalUsersCount}</span>
+                        <span className="text-neutral-400">Total Akun Terdaftar</span>
+                        <span className="font-bold text-white">{totalUsersCount}</span>
                       </div>
-                      <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
                         <div className="w-[85%] h-full bg-emerald-500 rounded-full" />
                       </div>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-neutral-500">Rasio Interaksi (Likes / Views)</span>
-                        <span className="font-bold text-neutral-900">
+                        <span className="text-neutral-400">Rasio Interaksi (Likes / Views)</span>
+                        <span className="font-bold text-white">
                           {totalViewsCount > 0
                             ? Math.round((totalLikesCount / totalViewsCount) * 100)
                             : 0}
                           %
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
                         <div className="w-[45%] h-full bg-indigo-500 rounded-full" />
                       </div>
                     </div>
@@ -3016,32 +3032,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {/* Perangkat Pengguna */}
-                <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
+                <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
                     <Smartphone className="w-4 h-4 text-sky-400" />
                     <span>Distribusi Perangkat Pengguna</span>
                   </h3>
                   <div className="space-y-4 pt-1">
-                    <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+                    <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-2xl border border-neutral-800">
                       <div className="flex items-center gap-3">
-                        <Smartphone className="w-5 h-5 text-emerald-600" />
+                        <Smartphone className="w-5 h-5 text-emerald-400" />
                         <div>
-                          <p className="text-xs font-bold text-neutral-900">Smartphone (Android & iOS)</p>
-                          <p className="text-[10px] text-neutral-500">PWA & Browser Mobile</p>
+                          <p className="text-xs font-bold text-white">Smartphone (Android & iOS)</p>
+                          <p className="text-[10px] text-neutral-400">PWA & Browser Mobile</p>
                         </div>
                       </div>
-                      <span className="text-sm font-black text-emerald-600">92%</span>
+                      <span className="text-sm font-black text-emerald-400">92%</span>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+                    <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-2xl border border-neutral-800">
                       <div className="flex items-center gap-3">
-                        <Laptop className="w-5 h-5 text-indigo-600" />
+                        <Laptop className="w-5 h-5 text-indigo-400" />
                         <div>
-                          <p className="text-xs font-bold text-neutral-900">Laptop & Komputer Desktop</p>
-                          <p className="text-[10px] text-neutral-500">Web Browser</p>
+                          <p className="text-xs font-bold text-white">Laptop & Komputer Desktop</p>
+                          <p className="text-[10px] text-neutral-400">Web Browser</p>
                         </div>
                       </div>
-                      <span className="text-sm font-black text-indigo-600">8%</span>
+                      <span className="text-sm font-black text-indigo-400">8%</span>
                     </div>
                   </div>
                 </div>
@@ -3055,34 +3071,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {activeMenu === "settings" && (
             <div className="space-y-6 animate-fade-in">
               {/* KARTU PENGATURAN PERSETUJUAN ADMIN (LOLOSKAN KABAR WARGA ON/OFF) */}
-              <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+              <div className="bg-neutral-950 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-xs ${
                         appConfig.requirePostApproval
-                          ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
-                          : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                          ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                          : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                       }`}
                     >
                       <ShieldCheck className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-black text-base text-neutral-900">
+                        <h3 className="font-black text-base text-white">
                           Persetujuan Admin Sebelum Kabar Warga Tayang
                         </h3>
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                             appConfig.requirePostApproval
-                              ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
-                              : "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                              ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                              : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                           }`}
                         >
                           {appConfig.requirePostApproval ? "AKTIF (ON)" : "NONAKTIF (OFF)"}
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-0.5">
+                      <p className="text-xs text-neutral-400 mt-0.5">
                         Atur apakah kabar yang dikirim warga harus diperiksa dan diloloskan oleh admin dulu atau langsung tayang otomatis.
                       </p>
                     </div>
@@ -3095,8 +3111,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onClick={handleToggleRequirePostApproval}
                     className={`flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs font-black transition cursor-pointer shrink-0 border shadow-sm active:scale-95 ${
                       appConfig.requirePostApproval
-                        ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600"
-                        : "bg-neutral-900 hover:bg-neutral-800 text-white border-neutral-900"
+                        ? "bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500"
+                        : "bg-neutral-900 hover:bg-neutral-800 text-white border-neutral-700"
                     }`}
                   >
                     {appConfig.requirePostApproval ? (
@@ -3117,28 +3133,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div
                     className={`p-3.5 rounded-2xl border ${
                       appConfig.requirePostApproval
-                        ? "bg-amber-50/80 border-amber-300 text-neutral-800"
-                        : "bg-neutral-50 border-neutral-200 text-neutral-600"
+                        ? "bg-amber-500/10 border-amber-500/40 text-neutral-200"
+                        : "bg-neutral-900 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <p className="font-extrabold text-neutral-900 flex items-center gap-1.5 mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                    <p className="font-extrabold text-white flex items-center gap-1.5 mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400" />
                       <span>Jika Mode AKTIF (ON)</span>
                     </p>
                     <p className="leading-relaxed">
-                      Kabar foto, video, maupun teks dari warga akan ditahan di antrean <b>Menunggu Persetujuan</b>. Kabar baru muncul di beranda umum dan teks berjalan setelah Admin menekan tombol <b>Loloskan</b> di menu <b>3. Postingan</b>. Postingan dari akun Admin tetap langsung tayang.
+                      Kabar foto, video, maupun teks dari warga akan ditahan di antrean <b className="text-white">Menunggu Persetujuan</b>. Kabar baru muncul di beranda umum dan teks berjalan setelah Admin menekan tombol <b className="text-white">Loloskan</b> di menu <b className="text-white">3. Postingan</b>. Postingan dari akun Admin tetap langsung tayang.
                     </p>
                   </div>
 
                   <div
                     className={`p-3.5 rounded-2xl border ${
                       !appConfig.requirePostApproval
-                        ? "bg-emerald-50/80 border-emerald-300 text-neutral-800"
-                        : "bg-neutral-50 border-neutral-200 text-neutral-600"
+                        ? "bg-emerald-500/10 border-emerald-500/40 text-neutral-200"
+                        : "bg-neutral-900 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <p className="font-extrabold text-neutral-900 flex items-center gap-1.5 mb-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <p className="font-extrabold text-white flex items-center gap-1.5 mb-1">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                       <span>Jika Mode NONAKTIF (OFF)</span>
                     </p>
                     <p className="leading-relaxed">
@@ -3148,9 +3164,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {pendingPostsCount > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 text-xs font-bold text-amber-900">
-                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 text-xs font-bold text-amber-300">
+                      <Clock className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>Saat ini ada {pendingPostsCount} kabar warga menunggu persetujuan Anda.</span>
                     </div>
                     <button
@@ -3159,7 +3175,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setPostMediaFilter("pending");
                         setActiveMenu("posts");
                       }}
-                      className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
+                      className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
                     >
                       Buka Antrean ({pendingPostsCount}) &rarr;
                     </button>
@@ -3168,43 +3184,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               {/* KARTU PENGATURAN PILIHAN JUMLAH PA'BERE (HADIAH) & AMBANG BATAS SUKA */}
-              <div className="bg-white border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+              <div className="bg-neutral-950 border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-xs">
                       <Gift className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-black text-base text-neutral-900">
+                        <h3 className="font-black text-base text-white">
                           Pengaturan Pilihan Jumlah Pa'bere & Syarat Suka (Like)
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 border border-amber-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
                           Aktif Real-time
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        Kelola pilihan nominal traktir apresiasi kreator serta batas minimal tanda Suka agar tombol <b>Pa'bere</b> muncul di postingan.
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Kelola pilihan nominal traktir apresiasi kreator serta batas minimal tanda Suka agar tombol <b className="text-neutral-200">Pa'bere</b> muncul di postingan.
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-amber-50 px-3.5 py-2 rounded-2xl border border-amber-200/60 shrink-0">
-                    <span className="text-[11px] font-bold text-neutral-500">Syarat Saat Ini:</span>
-                    <span className="font-mono text-sm sm:text-base font-black text-amber-700">
+                  <div className="flex items-center gap-2 bg-amber-500/10 px-3.5 py-2 rounded-2xl border border-amber-500/30 shrink-0">
+                    <span className="text-[11px] font-bold text-neutral-400">Syarat Saat Ini:</span>
+                    <span className="font-mono text-sm sm:text-base font-black text-amber-400">
                       &ge; {giftMinLikes} Suka
                     </span>
                   </div>
                 </div>
 
                 {/* Bagian 1: Syarat Minimal Suka (Like) */}
-                <div className="bg-neutral-50/80 p-4 rounded-2xl border border-neutral-200/80 space-y-2 box-border">
-                  <label className="text-xs font-bold text-neutral-700 flex flex-wrap items-center justify-between gap-1.5">
+                <div className="bg-neutral-900 p-4 rounded-2xl border border-neutral-800 space-y-2 box-border">
+                  <label className="text-xs font-bold text-neutral-200 flex flex-wrap items-center justify-between gap-1.5">
                     <span className="flex items-center gap-1.5">
                       <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 shrink-0" />
                       <span>Syarat Minimal Suka (Like) Postingan:</span>
                     </span>
-                    <span className="text-[11px] text-neutral-500 font-normal">
+                    <span className="text-[11px] text-neutral-400 font-normal">
                       Ketik 0 jika ingin tombol Pa'bere selalu muncul di semua postingan
                     </span>
                   </label>
@@ -3220,17 +3236,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           const val = Math.max(0, parseInt(e.target.value, 10) || 0);
                           setGiftMinLikes(val);
                         }}
-                        className="w-full bg-white border border-neutral-200 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-900 font-mono placeholder:text-neutral-400 focus:outline-none transition shadow-xs box-border"
+                        className="w-full bg-neutral-950 border border-neutral-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm font-bold text-white font-mono placeholder:text-neutral-500 focus:outline-none transition shadow-xs box-border"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-neutral-400">
                         Suka
                       </span>
                     </div>
-                    <div className="text-xs text-neutral-500 flex-1 min-w-[180px]">
+                    <div className="text-xs text-neutral-400 flex-1 min-w-[180px]">
                       {giftMinLikes === 0 ? (
-                        <span className="text-emerald-600 font-semibold">Semua postingan langsung ada tombol Pa'bere.</span>
+                        <span className="text-emerald-400 font-semibold">Semua postingan langsung ada tombol Pa'bere.</span>
                       ) : (
-                        <span>Hanya postingan dengan <b>&ge; {giftMinLikes.toLocaleString("id-ID")} Suka</b> yang menampilkan tombol Pa'bere.</span>
+                        <span>Hanya postingan dengan <b className="text-white">&ge; {giftMinLikes.toLocaleString("id-ID")} Suka</b> yang menampilkan tombol Pa'bere.</span>
                       )}
                     </div>
                   </div>
@@ -3239,11 +3255,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Bagian 2: Daftar Pilihan Nominal Pa'bere */}
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                      <Gift className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <label className="text-xs font-bold text-neutral-200 flex items-center gap-1.5">
+                      <Gift className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span>Daftar Pilihan Nominal Pa'bere ({giftNominals.length} Pilihan):</span>
                     </label>
-                    <span className="text-[11px] text-neutral-500">
+                    <span className="text-[11px] text-neutral-400">
                       Warga dapat memilih salah satu nominal ini saat mengirim apresiasi via DANA / QRIS
                     </span>
                   </div>
@@ -3252,10 +3268,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {giftNominals.map((nom, idx) => (
                       <div
                         key={idx}
-                        className="bg-white p-3.5 rounded-2xl border border-neutral-200/90 shadow-xs hover:border-amber-400/80 transition space-y-2.5 relative group box-border"
+                        className="bg-neutral-900 p-3.5 rounded-2xl border border-neutral-800 shadow-xs hover:border-amber-500/50 transition space-y-2.5 relative group box-border"
                       >
-                        <div className="flex items-center justify-between gap-2 border-b border-neutral-100 pb-2">
-                          <span className="text-[11px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                        <div className="flex items-center justify-between gap-2 border-b border-neutral-800 pb-2">
+                          <span className="text-[11px] font-black uppercase text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30">
                             Pilihan #{idx + 1}
                           </span>
                           {giftNominals.length > 1 && (
@@ -3264,7 +3280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               onClick={() => {
                                 setGiftNominals((prev) => prev.filter((_, i) => i !== idx));
                               }}
-                              className="text-neutral-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                              className="text-neutral-400 hover:text-rose-400 p-1 rounded-lg hover:bg-rose-500/15 transition cursor-pointer"
                               title="Hapus nominal ini"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -3274,7 +3290,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div className="flex flex-wrap gap-2">
                           <div className="flex-1 min-w-[120px]">
-                            <span className="text-[10px] font-semibold text-neutral-500 block mb-1">
+                            <span className="text-[10px] font-semibold text-neutral-400 block mb-1">
                               Nominal (Angka Rp):
                             </span>
                             <input
@@ -3298,12 +3314,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   )
                                 );
                               }}
-                              className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-neutral-900 focus:outline-none"
+                              className="w-full bg-neutral-950 border border-neutral-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-white focus:outline-none"
                             />
                           </div>
 
                           <div className="flex-1 min-w-[120px]">
-                            <span className="text-[10px] font-semibold text-neutral-500 block mb-1">
+                            <span className="text-[10px] font-semibold text-neutral-400 block mb-1">
                               Label Tombol:
                             </span>
                             <input
@@ -3317,13 +3333,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 );
                               }}
                               placeholder="Rp 2.000"
-                              className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-neutral-900 focus:outline-none"
+                              className="w-full bg-neutral-950 border border-neutral-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white placeholder:text-neutral-500 focus:outline-none"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <span className="text-[10px] font-semibold text-neutral-500 block mb-1">
+                          <span className="text-[10px] font-semibold text-neutral-400 block mb-1">
                             Deskripsi / Ucapan Apresiasi:
                           </span>
                           <input
@@ -3337,7 +3353,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               );
                             }}
                             placeholder="Contoh: Traktir Kopi"
-                            className="w-full bg-neutral-50 border border-neutral-200 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none"
+                            className="w-full bg-neutral-950 border border-neutral-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -3358,9 +3374,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           },
                         ]);
                       }}
-                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition cursor-pointer flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-100 text-xs font-bold rounded-xl border border-neutral-700 transition cursor-pointer flex items-center gap-1.5"
                     >
-                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                      <Plus className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Tambah Pilihan Nominal Baru</span>
                     </button>
 
@@ -3371,17 +3387,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setGiftMinLikes(500);
                         showToast("Pilihan nominal & syarat like dikembalikan ke standar awal.");
                       }}
-                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-semibold rounded-xl border border-neutral-200 transition cursor-pointer flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 text-xs font-semibold rounded-xl border border-neutral-700 transition cursor-pointer flex items-center gap-1.5"
                       title="Kembalikan ke Rp 2.000, Rp 5.000, Rp 10.000, Rp 25.000 & 500 likes"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-neutral-500" />
+                      <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
                       <span>Kembalikan ke Standar</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Tombol Simpan Pengaturan Pa'bere */}
-                <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-neutral-800">
                   <button
                     type="button"
                     disabled={isSavingGiftConfig}
@@ -3418,7 +3434,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         setIsSavingGiftConfig(false);
                       }
                     }}
-                    className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg shadow-amber-900/10 transition cursor-pointer flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-950/30 transition cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
                     <span>{isSavingGiftConfig ? "Menyimpan..." : "Simpan Pengaturan Pa'bere & Syarat Like"}</span>
@@ -3427,29 +3443,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               {/* KARTU KHUSUS: PENGATURAN NOMOR WHATSAPP & JAM RESPON ADMIN */}
-              <div className="bg-gradient-to-r from-[#0F172A] via-[#111C35] to-[#0F172A] border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 box-border">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 pb-4">
+              <div className="bg-neutral-950 border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 box-border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-4">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-[#25D366] border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-lg">
                       <Phone className="w-6 h-6" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-black text-base text-neutral-900">
+                        <h3 className="font-black text-base text-white">
                           Pengaturan Kontak WhatsApp & Jam Respon Admin
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-600 border border-emerald-500/40">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                           Aktif Real-time
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        Pengaturan ini langsung tersinkronisasi ke tombol <b>Layanan Pasang Iklan Sponsor</b> di aplikasi warga.
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Pengaturan ini langsung tersinkronisasi ke tombol <b className="text-neutral-200">Layanan Pasang Iklan Sponsor</b> di aplikasi warga.
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 bg-neutral-50 px-4 py-2 rounded-2xl border border-neutral-200 shrink-0 max-w-full box-border">
-                    <span className="text-[11px] font-bold text-neutral-500">Nomor Saat Ini:</span>
+                  <div className="flex flex-wrap items-center gap-2 bg-neutral-900 px-4 py-2 rounded-2xl border border-neutral-800 shrink-0 max-w-full box-border">
+                    <span className="text-[11px] font-bold text-neutral-400">Nomor Saat Ini:</span>
                     <span className="font-mono text-sm sm:text-base font-black text-[#25D366] tracking-wider select-all break-all">
                       {appConfig.adminWhatsapp || "085351037179"}
                     </span>
@@ -3459,8 +3475,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                   {/* Input Nomor WhatsApp */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-600 flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                    <label className="text-xs font-bold text-neutral-300 flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Nomor WhatsApp Admin (Tujuan Chat Iklan & Layanan)</span>
                     </label>
                     <div className="relative">
@@ -3469,15 +3485,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         value={settingsWhatsapp}
                         onChange={(e) => setSettingsWhatsapp(e.target.value)}
                         placeholder="Contoh: 081234567890 atau 6281234567890..."
-                        className="w-full bg-neutral-50 border border-neutral-200 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-neutral-900 font-mono placeholder:text-neutral-400 focus:outline-none transition"
+                        className="w-full bg-neutral-900 border border-neutral-700 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white font-mono placeholder:text-neutral-500 focus:outline-none transition"
                       />
                     </div>
                   </div>
 
                   {/* Input Jam Respon Admin */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-600 flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <label className="text-xs font-bold text-neutral-300 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
                       <span>Jam Respon Admin (Ditampilkan di Halaman Iklan)</span>
                     </label>
                     <div className="relative">
@@ -3486,13 +3502,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         value={settingsWorkingHours}
                         onChange={(e) => setSettingsWorkingHours(e.target.value)}
                         placeholder="Contoh: Setiap Hari: 08.00 - 21.00 WITA..."
-                        className="w-full bg-neutral-50 border border-neutral-200 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none transition"
+                        className="w-full bg-neutral-900 border border-neutral-700 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder:text-neutral-500 focus:outline-none transition"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-neutral-200/80">
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-neutral-800">
                   <button
                     type="button"
                     onClick={() => {
@@ -3500,7 +3516,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       const intl = digits.startsWith("0") ? "62" + digits.slice(1) : digits;
                       window.open(`https://wa.me/${intl}`, "_blank");
                     }}
-                    className="px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition cursor-pointer flex items-center justify-center gap-1.5"
+                    className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-100 text-xs font-bold rounded-xl border border-neutral-700 transition cursor-pointer flex items-center justify-center gap-1.5"
                     aria-label="Tes Tautan WhatsApp"
                   >
                     <ExternalLink className="w-4 h-4" />
@@ -3522,7 +3538,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       });
                       showToast(`Pengaturan WhatsApp (${cleanWa}) & Jam Respon berhasil diperbarui!`);
                     }}
-                    className="px-6 py-2.5 bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-900/10 transition cursor-pointer flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-950/30 transition cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
                     <span>Simpan Pengaturan WhatsApp & Jam Respon</span>
@@ -3532,9 +3548,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 1. Pengaturan Identitas Aplikasi & Kontak */}
-                <div className="bg-white border border-neutral-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-emerald-600" />
+                <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-emerald-400" />
                     <span>Identitas Aplikasi & Kontak Pengelola</span>
                   </h3>
 
@@ -3551,32 +3567,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="space-y-3"
                   >
                     <div>
-                      <label className="text-xs text-neutral-600 block mb-1">Nama Aplikasi</label>
+                      <label className="text-xs text-neutral-300 block mb-1">Nama Aplikasi</label>
                       <input
                         type="text"
                         value={settingsAppName}
                         onChange={(e) => setSettingsAppName(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs text-neutral-600 block mb-1">Nomor WhatsApp Admin</label>
+                      <label className="text-xs text-neutral-300 block mb-1">Nomor WhatsApp Admin</label>
                       <input
                         type="text"
                         value={settingsWhatsapp}
                         onChange={(e) => setSettingsWhatsapp(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs text-neutral-600 block mb-1">Email Resmi Admin</label>
+                      <label className="text-xs text-neutral-300 block mb-1">Email Resmi Admin</label>
                       <input
                         type="email"
                         value={settingsEmail}
                         onChange={(e) => setSettingsEmail(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900"
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
 
@@ -3592,23 +3608,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* 2. Keamanan Kunci Admin: Passcode */}
                 <div className="space-y-6">
                   {/* Status & Ganti Kunci PIN Pengelola Admin */}
-                  <div className="bg-white border border-neutral-200 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
+                  <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                        <Key className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                        <Key className="w-4 h-4 text-emerald-400 shrink-0" />
                         <span>Kunci PIN Keamanan Dasbor Admin</span>
                       </h3>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         PIN Wajib Aktif
                       </span>
                     </div>
-                    <p className="text-xs text-neutral-600 leading-relaxed">
+                    <p className="text-xs text-neutral-400 leading-relaxed">
                       Sesuai protokol keamanan, setiap kali admin keluar dan masuk kembali ke Dasbor Pengelola, admin wajib memasukkan 6 digit PIN ini demi mengamankan data warga.
                     </p>
 
                     <div className="pt-1 space-y-3">
                       <div>
-                        <label className="text-xs text-neutral-600 font-bold block mb-1">
+                        <label className="text-xs text-neutral-300 font-bold block mb-1">
                           Ganti PIN Baru (6 Digit Angka)
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -3621,14 +3637,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               value={newAdminPasscode}
                               onChange={(e) => setNewAdminPasscode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                               placeholder={`PIN saat ini: ${appConfig.adminPasscode || "123456"}`}
-                              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-3 pr-10 py-2 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500 font-mono tracking-widest box-border"
+                              className="w-full bg-neutral-900 border border-neutral-700 rounded-xl pl-3 pr-10 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500 font-mono tracking-widest box-border"
                             />
                             <button
                               type="button"
                               onClick={() => setShowNewAdminPasscode((prev) => !prev)}
                               aria-label={showNewAdminPasscode ? "Sembunyikan PIN baru" : "Lihat PIN baru"}
                               title={showNewAdminPasscode ? "Sembunyikan PIN baru" : "Lihat PIN baru"}
-                              className="absolute inset-y-0 right-2 flex items-center justify-center px-1 text-neutral-400 hover:text-neutral-700 transition cursor-pointer"
+                              className="absolute inset-y-0 right-2 flex items-center justify-center px-1 text-neutral-400 hover:text-white transition cursor-pointer"
                             >
                               {showNewAdminPasscode ? (
                                 <EyeOff className="w-4 h-4" />
@@ -3659,8 +3675,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             Simpan PIN
                           </button>
                         </div>
-                        <p className="text-[10px] text-neutral-500 mt-1">
-                          Default bawaan sistem: <span className="font-mono font-bold text-neutral-700">123456</span>
+                        <p className="text-[10px] text-neutral-400 mt-1">
+                          Default bawaan sistem: <span className="font-mono font-bold text-neutral-200">123456</span>
                         </p>
                       </div>
                     </div>
@@ -3669,23 +3685,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               {/* KARTU PENGATURAN MULTI-ADMIN & DAFTAR AKUN PENGELOLA */}
-              <div className="bg-white border-2 border-blue-500/30 rounded-3xl p-4 sm:p-6 shadow-xl space-y-5 box-border">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+              <div className="bg-neutral-950 border-2 border-blue-500/30 rounded-3xl p-4 sm:p-6 shadow-xl space-y-5 box-border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-xs">
                       <ShieldCheck className="w-6 h-6" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-black text-base text-neutral-900">
+                        <h3 className="font-black text-base text-white">
                           Pengaturan Akun Pengelola & Multi-Admin
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-700 border border-blue-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
                           {authorizedAdminEmails.length} Akun Berizin
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        Berapa pun akun Google yang Anda miliki, ketika memilih <b>Beralih Akun</b> di Dasbor Pengelola, otomatis diberikan hak akses Dasbor Admin penuh.
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Berapa pun akun Google yang Anda miliki, ketika memilih <b className="text-neutral-200">Beralih Akun</b> di Dasbor Pengelola, otomatis diberikan hak akses Dasbor Admin penuh.
                       </p>
                     </div>
                   </div>
@@ -3694,7 +3710,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     type="button"
                     onClick={handleSwitchAccount}
                     disabled={isSwitchingAccount}
-                    className="flex flex-wrap items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
+                    className="flex flex-wrap items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-4 h-4 shrink-0 ${isSwitchingAccount ? "animate-spin" : ""}`} />
                     <span>{isSwitchingAccount ? "Membuka Google..." : "Beralih Akun Google Sekarang"}</span>
@@ -3708,7 +3724,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     value={newAdminEmailInput}
                     onChange={(e) => setNewAdminEmailInput(e.target.value)}
                     placeholder="Ketik email Google admin baru (contoh: admin2@gmail.com)..."
-                    className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-blue-500 box-border"
+                    className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-blue-500 box-border"
                   />
                   <button
                     type="button"
@@ -3723,7 +3739,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       setNewAdminEmailInput("");
                       showToast(`Akun ${emailToAdd} berhasil didaftarkan sebagai Admin!`);
                     }}
-                    className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                    className="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
                   >
                     <Plus className="w-4 h-4 shrink-0" />
                     <span>Tambah Admin</span>
@@ -3732,32 +3748,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 {/* Daftar Akun Admin yang Terdaftar */}
                 <div className="space-y-2">
-                  <p className="text-xs font-bold text-neutral-700">Daftar Akun yang Memiliki Akses Penuh Dasbor Admin:</p>
-                  <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-50/50">
+                  <p className="text-xs font-bold text-neutral-300">Daftar Akun yang Memiliki Akses Penuh Dasbor Admin:</p>
+                  <div className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900">
                     {authorizedAdminEmails.map((email) => {
                       const isPrimary = email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
                       const isCurrent = currentUser?.email?.toLowerCase() === email.toLowerCase();
                       return (
-                        <div key={email} className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-white hover:bg-neutral-50/80 transition box-border">
+                        <div key={email} className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-neutral-900 hover:bg-neutral-800/70 transition box-border">
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-300 font-black text-xs flex items-center justify-center shrink-0">
                               {email.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-neutral-900 break-all flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-bold text-white break-all flex flex-wrap items-center gap-2">
                                 <span>{email}</span>
                                 {isCurrent && (
-                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                     Sedang Aktif
                                   </span>
                                 )}
                                 {isPrimary && (
-                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                                     Admin Utama
                                   </span>
                                 )}
                               </p>
-                              <p className="text-[10px] text-neutral-500">
+                              <p className="text-[10px] text-neutral-400">
                                 Akses Penuh Dasbor & Moderasi Warga
                               </p>
                             </div>
@@ -3771,7 +3787,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 setAuthorizedAdminEmails([...updated]);
                                 showToast(`Akun ${email} telah dicabut dari status Admin.`);
                               }}
-                              className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition shrink-0"
+                              className="p-1.5 text-neutral-400 hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition shrink-0"
                               title="Hapus hak admin"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -3791,20 +3807,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* =============================================================== */}
           {activeMenu === "logs" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-white border border-neutral-200 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
+              <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 box-border">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-extrabold text-sm text-neutral-900 flex items-center gap-2">
-                    <History className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                    <History className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>Audit Trail Log Aktivitas Admin</span>
                   </h3>
-                  <span className="text-xs text-neutral-500">{auditLogs.length} catatan aktivitas</span>
+                  <span className="text-xs text-neutral-400">{auditLogs.length} catatan aktivitas</span>
                 </div>
 
                 <div className="space-y-2.5">
                   {auditLogs.map((log) => (
                     <div
                       key={log.id}
-                      className="bg-neutral-50 border border-neutral-200 p-3.5 rounded-2xl flex flex-wrap items-start justify-between gap-2 box-border"
+                      className="bg-neutral-900 border border-neutral-800 p-3.5 rounded-2xl flex flex-wrap items-start justify-between gap-2 box-border"
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <span
@@ -3812,18 +3828,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             log.type === "LOGIN" || log.type === "LOGOUT"
                               ? "bg-blue-500/20 text-blue-300"
                               : log.type === "DELETE_DATA" || log.type === "BAN_USER"
-                              ? "bg-rose-500/20 text-rose-700"
-                              : "bg-emerald-500/20 text-emerald-700"
+                              ? "bg-rose-500/20 text-rose-300"
+                              : "bg-emerald-500/20 text-emerald-300"
                           }`}
                         >
                           {log.type}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-neutral-900 font-medium break-words">{log.description}</p>
-                          <p className="text-[10px] text-slate-500 break-all">{log.adminEmail}</p>
+                          <p className="text-xs text-neutral-100 font-medium break-words">{log.description}</p>
+                          <p className="text-[10px] text-neutral-400 break-all">{log.adminEmail}</p>
                         </div>
                       </div>
-                      <span className="text-[10px] text-slate-500 shrink-0">
+                      <span className="text-[10px] text-neutral-400 shrink-0">
                         {log.timeString}
                       </span>
                     </div>
@@ -3838,16 +3854,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* MODAL KONFIRMASI KUSTOM ADMIN (Bebas 100% dari confirm bawaan browser) */}
       {confirmDialog && confirmDialog.isOpen && (
         <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in select-none box-border">
-          <div className="bg-white border border-neutral-200/80 rounded-2xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-5 space-y-4 shadow-2xl">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-2xl w-full max-w-[500px] mx-auto box-border p-4 sm:p-5 space-y-4 shadow-2xl">
             <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-neutral-900">{confirmDialog.title}</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">{confirmDialog.message}</p>
+              <h3 className="text-base font-bold text-white">{confirmDialog.title}</h3>
+              <p className="text-xs text-neutral-300 leading-relaxed">{confirmDialog.message}</p>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-neutral-200">
+            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-neutral-800">
               <button
                 type="button"
                 onClick={() => setConfirmDialog(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 transition cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 transition cursor-pointer"
               >
                 Batal
               </button>

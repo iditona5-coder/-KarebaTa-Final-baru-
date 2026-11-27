@@ -794,7 +794,7 @@ export const FeedMedia: React.FC<FeedMediaProps> = ({
   return (
     <>
       <div
-        className={`w-full relative overflow-hidden bg-neutral-100/50 flex items-center justify-center select-none feed-media-wrapper ${className}`}
+        className={`w-full relative overflow-hidden bg-neutral-950 flex items-center justify-center select-none feed-media-wrapper ${className}`}
         style={{
           width: "100%",
           minWidth: "100%",

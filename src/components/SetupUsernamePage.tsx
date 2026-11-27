@@ -58,14 +58,14 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
 
   return (
     <div
-      className="fixed inset-0 w-full max-w-full h-[100dvh] max-h-[100dvh] bg-white text-neutral-900 flex flex-col justify-between overflow-y-auto overflow-x-hidden overscroll-none selection:bg-[#E5A000] selection:text-neutral-900 box-border"
+      className="fixed inset-0 w-full max-w-full h-[100dvh] max-h-[100dvh] bg-black text-neutral-100 flex flex-col justify-between overflow-y-auto overflow-x-hidden overscroll-none selection:bg-[#E5A000] selection:text-neutral-900 box-border"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
       {/* Header Atas Full Width (Tanpa tombol ganti akun) */}
-      <header className="w-full border-b border-neutral-100 bg-white sticky top-0 z-10">
+      <header className="w-full border-b border-neutral-800 bg-black sticky top-0 z-10">
         <div className="w-full max-w-[500px] mx-auto box-border px-4 sm:px-5 py-3.5 flex items-center flex-wrap justify-between gap-2">
           <KarebaTaLogo showSubtitle={true} />
         </div>
@@ -75,17 +75,17 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
       <main className="w-full max-w-[500px] mx-auto box-border px-4 sm:px-5 py-6 flex-1 flex flex-col justify-center space-y-6">
           {/* Info Status Akun Google Terhubung */}
           {currentUser && (
-            <div className="flex items-center flex-wrap justify-between gap-2.5 p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+            <div className="flex items-center flex-wrap justify-between gap-2.5 p-3 bg-neutral-950 rounded-2xl border border-neutral-800">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] text-white font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-[#E5A000] select-none">
                   {(usernameInput.trim().replace(/^@/, "")[0] || userInitial || "W").toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Akun Google Terhubung</span>
                   </div>
-                  <p className="text-xs text-neutral-500 truncate">
+                  <p className="text-xs text-neutral-400 truncate">
                     {currentUser.email}
                   </p>
                 </div>
@@ -94,10 +94,10 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1.5 rounded-xl transition active:scale-95 shrink-0 cursor-pointer shadow-2xs"
+                  className="flex items-center gap-1 text-[11px] font-bold text-rose-300 hover:text-rose-200 bg-rose-950/60 hover:bg-rose-900/60 border border-rose-800/70 px-2.5 py-1.5 rounded-xl transition active:scale-95 shrink-0 cursor-pointer shadow-2xs"
                   title="Ganti ke akun Google yang lain"
                 >
-                  <LogOut className="w-3 h-3 text-rose-600" />
+                  <LogOut className="w-3 h-3 text-rose-400" />
                   <span>Beralih Akun</span>
                 </button>
               )}
@@ -107,7 +107,7 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
           {/* Judul Bersih */}
           <div className="space-y-1 text-left">
             <h1
-              className="text-xl sm:text-2xl font-[900] text-neutral-900 tracking-tight"
+              className="text-xl sm:text-2xl font-[900] text-white tracking-tight"
               style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
             >
               Nama Pengguna
@@ -116,7 +116,7 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
 
           {/* Form Input Nama Pengguna (Tanpa Cincin / Bayangan Ring) */}
           <div className="space-y-2">
-            <div className="relative flex items-center bg-neutral-50 rounded-2xl border-2 border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all min-w-0">
+            <div className="relative flex items-center bg-neutral-900 rounded-2xl border-2 border-neutral-700 focus-within:border-emerald-500 focus-within:bg-neutral-950 transition-all min-w-0">
               <span className="pl-4 text-base sm:text-lg font-semibold select-none text-neutral-400 shrink-0">
                 @
               </span>
@@ -133,16 +133,16 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
                   }
                 }}
                 placeholder="nama_kamu"
-                className="flex-1 min-w-0 w-full py-3.5 pl-0.5 pr-2 bg-transparent text-base sm:text-lg font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
+                className="flex-1 min-w-0 w-full py-3.5 pl-0.5 pr-2 bg-transparent text-base sm:text-lg font-bold text-white placeholder:text-neutral-500 placeholder:font-normal outline-none"
               />
-              <span className={`pr-4 text-xs font-semibold shrink-0 ${usernameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
+              <span className={`pr-4 text-xs font-semibold shrink-0 ${usernameInput.length >= 13 ? "text-amber-400" : "text-neutral-400"}`}>
                 {usernameInput.length}/13
               </span>
             </div>
 
             {/* Error Message */}
             {errorMessage && (
-              <p className="text-xs text-rose-600 font-semibold pt-0.5 animate-shake">
+              <p className="text-xs text-rose-400 font-semibold pt-0.5 animate-shake">
                 {errorMessage}
               </p>
             )}
@@ -156,17 +156,17 @@ export const SetupUsernamePage: React.FC<SetupUsernamePageProps> = ({
             disabled={!isReady}
             className={`w-full py-3.5 px-4 sm:px-5 font-bold text-[clamp(13px,3.8vw,15.5px)] rounded-2xl flex flex-wrap items-center justify-center gap-2 text-center transition-all select-none ${
               isReady
-                ? "bg-[#00632B] hover:bg-[#004f22] text-white shadow-lg shadow-emerald-950/20 active:scale-[0.98] cursor-pointer"
-                : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
+                ? "bg-[#00632B] hover:bg-[#004f22] text-white shadow-lg shadow-emerald-950/30 active:scale-[0.98] cursor-pointer"
+                : "bg-neutral-800 text-neutral-500 cursor-not-allowed shadow-none"
             }`}
           >
             <span>Simpan & Masuk ke Beranda</span>
-            <ArrowRight className={`w-4 h-4 shrink-0 ${isReady ? "text-white" : "text-neutral-400"}`} />
+            <ArrowRight className={`w-4 h-4 shrink-0 ${isReady ? "text-white" : "text-neutral-500"}`} />
           </button>
       </main>
 
       {/* Footer */}
-      <footer className="w-full max-w-[500px] mx-auto box-border border-t border-neutral-100 py-3.5 px-4 text-center bg-white">
+      <footer className="w-full max-w-[500px] mx-auto box-border border-t border-neutral-800 py-3.5 px-4 text-center bg-black">
         <p className="text-[11px] text-neutral-500">
           © {new Date().getFullYear()} Kareba'Ta — Beritamu, Suaramu
         </p>

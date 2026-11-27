@@ -69,7 +69,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   return (
     <div
-      className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-white text-neutral-900 flex flex-col justify-between overflow-y-auto overflow-x-hidden touch-pan-y select-none overscroll-y-contain selection:bg-[#E5A000] selection:text-neutral-900 box-border"
+      className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-black text-neutral-100 flex flex-col justify-between overflow-y-auto overflow-x-hidden touch-pan-y select-none overscroll-y-contain selection:bg-[#E5A000] selection:text-neutral-900 box-border"
       style={{
         paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))",
         paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
@@ -91,7 +91,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 className="text-[clamp(26px,7.5vw,36px)] font-[900] tracking-tight leading-none"
                 style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
               >
-                <span className="text-[#00632B]">Kareba'</span>
+                <span className="text-emerald-500">Kareba'</span>
                 <span className="text-[#E5A000]">Ta</span>
               </h1>
               <p
@@ -103,38 +103,38 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          <p className="text-[clamp(13px,3.4vw,14.5px)] text-neutral-600 mt-1 max-w-xs leading-relaxed font-normal">
+          <p className="text-[clamp(13px,3.4vw,14.5px)] text-neutral-400 mt-1 max-w-xs leading-relaxed font-normal">
             Masuk dengan Akun Google terlebih dahulu untuk menikmati dan membagikan kabar warga terkini.
           </p>
         </div>
 
         {/* Info Banner Khusus (Jika dialihkan dari tombol kamera / galeri media) */}
         {initialMessage && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-medium shadow-xs animate-fade-in text-center leading-snug">
+          <div className="mb-4 p-3.5 rounded-2xl bg-amber-950/60 border border-amber-700/60 text-amber-200 text-xs font-medium shadow-xs animate-fade-in text-center leading-snug">
             <span>{initialMessage}</span>
           </div>
         )}
 
         {/* Panel Bantuan Khusus Unauthorized Domain */}
         {isDomainError ? (
-          <div className="mb-4 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 text-left text-xs space-y-2.5 animate-fade-in">
-            <div className="flex items-start gap-2 text-amber-900 font-semibold">
-              <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="mb-4 p-3.5 rounded-2xl bg-amber-950/60 border border-amber-700/60 text-left text-xs space-y-2.5 animate-fade-in">
+            <div className="flex items-start gap-2 text-amber-300 font-semibold">
+              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <span>Domain pratinjau belum diizinkan di Firebase Console</span>
             </div>
-            <p className="text-neutral-700 text-[11px] leading-relaxed">
+            <p className="text-neutral-300 text-[11px] leading-relaxed">
               Google membatasi autentikasi di domain ini. Silakan salin nama domain ini dan tambahkan ke <b>Authorized Domains</b> di Firebase Console:
             </p>
 
             {/* Box Salin Domain */}
-            <div className="flex items-center flex-wrap gap-1.5 bg-white border border-amber-200 rounded-xl p-1.5">
-              <span className="text-[11px] font-mono text-neutral-800 truncate flex-1 min-w-[140px] px-1">
+            <div className="flex items-center flex-wrap gap-1.5 bg-neutral-950 border border-amber-700/50 rounded-xl p-1.5">
+              <span className="text-[11px] font-mono text-neutral-200 truncate flex-1 min-w-[140px] px-1">
                 {currentHost}
               </span>
               <button
                 type="button"
                 onClick={handleCopyHost}
-                className="px-2.5 py-1 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center gap-1 transition shrink-0 cursor-pointer"
+                className="px-2.5 py-1 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-black rounded-lg flex items-center gap-1 transition shrink-0 cursor-pointer"
               >
                 {copiedDomain ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedDomain ? "Tersalin!" : "Salin"}</span>
@@ -142,7 +142,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
         ) : errorMessage ? (
-          <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs text-left font-medium">
+          <div className="mb-4 p-3 rounded-2xl bg-rose-950/60 border border-rose-800/60 text-rose-300 text-xs text-left font-medium">
             {errorMessage}
           </div>
         ) : null}
@@ -154,12 +154,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full py-3.5 sm:py-4 px-4 sm:px-5 bg-white hover:bg-neutral-50 active:bg-neutral-100 text-neutral-800 border-2 border-neutral-300 hover:border-neutral-400 rounded-xl font-bold text-[clamp(13px,3.8vw,15.5px)] flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-60"
+            className="w-full py-3.5 sm:py-4 px-4 sm:px-5 bg-neutral-900 hover:bg-neutral-800 active:bg-neutral-800 text-white border-2 border-neutral-700 hover:border-neutral-500 rounded-xl font-bold text-[clamp(13px,3.8vw,15.5px)] flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-center transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98] disabled:opacity-60"
           >
             {isLoading ? (
               <div className="flex flex-wrap items-center justify-center gap-2.5">
-                <div className="w-5 h-5 rounded-full border-2 border-neutral-400 border-t-[#00632B] animate-spin shrink-0" />
-                <span className="text-neutral-700 text-xs sm:text-sm font-semibold">Menghubungkan Akun Google...</span>
+                <div className="w-5 h-5 rounded-full border-2 border-neutral-600 border-t-emerald-400 animate-spin shrink-0" />
+                <span className="text-neutral-200 text-xs sm:text-sm font-semibold">Menghubungkan Akun Google...</span>
               </div>
             ) : (
               <>

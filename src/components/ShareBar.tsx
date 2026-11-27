@@ -91,11 +91,11 @@ export function ShareBar({ newsUrl, title, onShared, onShowToast }: ShareBarProp
         className={`flex flex-row items-center gap-1.5 px-3.5 py-2 rounded-full transition active:scale-95 cursor-pointer border shadow-2xs ${
           copied
             ? "bg-emerald-500 text-white border-emerald-500"
-            : "bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#374151] border-neutral-200"
+            : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700"
         }`}
         aria-label="Salin Tautan Berita"
       >
-        <Link2 size={15} className={copied ? "text-white" : "text-[#374151]"} />
+        <Link2 size={15} className={copied ? "text-white" : "text-neutral-200"} />
         <span className="text-xs font-semibold leading-none">
           {copied ? "Tersalin!" : "Salin"}
         </span>

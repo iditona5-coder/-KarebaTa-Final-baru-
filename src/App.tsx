@@ -9,6 +9,7 @@ import {
   Camera as CameraIcon,
   Image as ImageIcon,
   CheckCircle2,
+  XCircle,
   Check,
   Bookmark,
   X,
@@ -80,6 +81,8 @@ import {
   togglePostSaveInFirestore,
   addCommentToFirestore,
   updatePostCommentsInFirestore,
+  approvePostInFirestore,
+  addBulletinToFirestore,
   listenToFirestoreBulletins,
   submitReportToFirestore,
   subscribeToAuth,
@@ -105,6 +108,7 @@ import {
 import { RunningTextBar, BulletinItem } from "./components/RunningTextBar";
 import { CardCarousel } from "./components/CardCarousel";
 import { PullToRefresh } from "./components/PullToRefresh";
+import type { AdminMenuKey } from "./components/AdminDashboard";
 const AdminDashboard = lazy(() =>
   import("./components/AdminDashboard").then((m) => ({ default: m.AdminDashboard }))
 );
@@ -1218,6 +1222,13 @@ export default function KarebaFeedFinal() {
   const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
   const seenRealtimeNotifIdsRef = useRef<Set<string>>(new Set());
   const isNotifToastReadyRef = useRef(false);
+  const [adminInitialMenu, setAdminInitialMenu] = useState<AdminMenuKey | undefined>(undefined);
+  const [adminInitialPostFilter, setAdminInitialPostFilter] = useState<
+    "all" | "pending" | "image" | "video" | "hidden" | undefined
+  >(undefined);
+  const [processingApprovalPostId, setProcessingApprovalPostId] = useState<string | null>(null);
+  const seenPendingApprovalIdsRef = useRef<Set<string>>(new Set());
+  const isPendingApprovalToastReadyRef = useRef(false);
 
   const handleProfileAvatarClick = () => {
     setNewUserNameInput(userName);
@@ -1610,6 +1621,96 @@ export default function KarebaFeedFinal() {
     );
     return activePosts;
   }, [feed, hiddenPostIds]);
+
+  const isAdminApprovalActive = isCurrentUserAdmin && Boolean(appConfig.requirePostApproval);
+
+  // Daftar kabar warga yang menunggu persetujuan admin (hanya untuk Admin saat fitur Persetujuan Admin aktif di Dasbor)
+  const pendingApprovalPosts = useMemo(() => {
+    if (!isAdminApprovalActive) return [];
+    let deletedIds = new Set<string>();
+    try {
+      const stored = JSON.parse(localStorage.getItem("karebata_deleted_posts") || "[]");
+      if (Array.isArray(stored)) stored.forEach((id: string) => deletedIds.add(id));
+    } catch {}
+
+    return feed.filter(
+      (item) =>
+        item.approvalStatus === "pending" &&
+        !item.isHidden &&
+        !deletedIds.has(item.id)
+    );
+  }, [feed, isAdminApprovalActive]);
+
+  useEffect(() => {
+    seenPendingApprovalIdsRef.current = new Set();
+    isPendingApprovalToastReadyRef.current = false;
+    if (!isAdminApprovalActive) return;
+    const timer = window.setTimeout(() => {
+      isPendingApprovalToastReadyRef.current = true;
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [isAdminApprovalActive, currentUser?.uid]);
+
+  useEffect(() => {
+    if (!isAdminApprovalActive) return;
+    if (!isPendingApprovalToastReadyRef.current) {
+      pendingApprovalPosts.forEach((p) => seenPendingApprovalIdsRef.current.add(p.id));
+      return;
+    }
+    const newlyPending = pendingApprovalPosts.filter(
+      (p) => !seenPendingApprovalIdsRef.current.has(p.id)
+    );
+    pendingApprovalPosts.forEach((p) => seenPendingApprovalIdsRef.current.add(p.id));
+    if (newlyPending.length > 0) {
+      const latest = newlyPending[0];
+      showToast(
+        `Kabar baru dari @${(latest.user || latest.name || "warga").replace(/^@/, "")} menunggu persetujuan admin`
+      );
+    }
+  }, [pendingApprovalPosts, isAdminApprovalActive]);
+
+  const handleQuickApprovePost = async (post: FeedItem) => {
+    if (!isCurrentUserAdmin || processingApprovalPostId) return;
+    setProcessingApprovalPostId(post.id);
+    try {
+      setFeed((prev) =>
+        prev.map((p) =>
+          p.id === post.id ? { ...p, approvalStatus: "approved", isHidden: false } : p
+        )
+      );
+      await approvePostInFirestore(post.id, "approved");
+      await addBulletinToFirestore({
+        id: `b-approved-${post.id}-${Date.now()}`,
+        category: "KABAR WARGA",
+        text: `@${post.user || post.name || "warga"}: ${(post.text || "Kabar Warga").slice(0, 95)}`,
+        location: post.location || "Kawasan Sekitar",
+        time: "Baru saja",
+      });
+      showToast(`Kabar @${(post.user || post.name || "warga").replace(/^@/, "")} diloloskan & langsung tayang!`);
+    } catch {
+      showToast("Gagal meloloskan kabar, silakan coba lagi.");
+    } finally {
+      setProcessingApprovalPostId(null);
+    }
+  };
+
+  const handleQuickRejectPost = async (post: FeedItem) => {
+    if (!isCurrentUserAdmin || processingApprovalPostId) return;
+    setProcessingApprovalPostId(post.id);
+    try {
+      setFeed((prev) =>
+        prev.map((p) =>
+          p.id === post.id ? { ...p, approvalStatus: "rejected", isHidden: true } : p
+        )
+      );
+      await approvePostInFirestore(post.id, "rejected");
+      showToast(`Kabar @${(post.user || post.name || "warga").replace(/^@/, "")} ditolak dan tidak ditayangkan.`);
+    } catch {
+      showToast("Gagal menolak kabar, silakan coba lagi.");
+    } finally {
+      setProcessingApprovalPostId(null);
+    }
+  };
 
   // Muat daftar ID komentar masuk yang sudah dibaca per akun
   useEffect(() => {
@@ -3448,14 +3549,18 @@ export default function KarebaFeedFinal() {
     return (
       <Suspense
         fallback={
-          <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-            <div className="w-7 h-7 border-3 border-[#00632B] border-t-transparent rounded-full animate-spin" />
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
         }
       >
         <AdminDashboard
           feedPosts={feed}
+          initialMenu={adminInitialMenu}
+          initialPostFilter={adminInitialPostFilter}
           onBackToFeed={() => {
+            setAdminInitialMenu(undefined);
+            setAdminInitialPostFilter(undefined);
             if (typeof window !== "undefined") {
               try {
                 sessionStorage.removeItem("karebata_admin_pin_verified");
@@ -3550,8 +3655,8 @@ export default function KarebaFeedFinal() {
     return (
       <Suspense
         fallback={
-          <div className="min-h-screen bg-white flex items-center justify-center">
-            <div className="w-7 h-7 border-3 border-[#00632B] border-t-transparent rounded-full animate-spin" />
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
         }
       >
@@ -3575,8 +3680,8 @@ export default function KarebaFeedFinal() {
     return (
       <Suspense
         fallback={
-          <div className="min-h-screen bg-white flex items-center justify-center">
-            <div className="w-7 h-7 border-3 border-[#00632B] border-t-transparent rounded-full animate-spin" />
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
         }
       >
@@ -3599,8 +3704,8 @@ export default function KarebaFeedFinal() {
 
   return (
     <>
-    <div className="w-full box-border bg-neutral-100 text-neutral-900 flex justify-center selection:bg-[#00632B] selection:text-white min-h-screen">
-      <div id="karebata-feed-app" className={`w-full max-w-[500px] mx-auto box-border bg-white relative font-sans shadow-sm flex flex-col min-h-screen ${selectedImage ? "pb-36" : displayFeed.length === 0 ? "pb-28" : "pb-16"}`}>
+    <div className="w-full box-border bg-black text-neutral-100 flex justify-center selection:bg-[#00632B] selection:text-white min-h-screen">
+      <div id="karebata-feed-app" className={`w-full max-w-[500px] mx-auto box-border bg-black relative font-sans flex flex-col min-h-screen ${selectedImage ? "pb-36" : displayFeed.length === 0 ? "pb-28" : "pb-16"}`}>
         {/* INPUT TERSEMBUNYI - INI KUNCINYA, TIDAK KELIHATAN */}
         <input
           id="custom-file-input"
@@ -3642,7 +3747,7 @@ export default function KarebaFeedFinal() {
         {/* APP HEADER & PAPAN TEKS BERJALAN DI BAWAH BAR - Menempel Kokoh di Atas (Fixed Top) */}
         <div
           id="sticky-header-container"
-          className="fixed top-0 left-0 right-0 z-40 bg-white w-full max-w-[500px] mx-auto box-border shadow-xs border-b border-neutral-100 overflow-hidden"
+          className="fixed top-0 left-0 right-0 z-40 bg-black w-full max-w-[500px] mx-auto box-border border-b border-neutral-800 overflow-hidden"
           style={{
             paddingTop: "env(safe-area-inset-top, 0px)",
           }}
@@ -3650,12 +3755,12 @@ export default function KarebaFeedFinal() {
           <header
             id="karebata-feed-header"
             dir="ltr"
-            className="bg-white border-b border-neutral-200 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center flex-wrap justify-between gap-1.5 transition-all duration-150 min-h-[52px] w-full box-border"
+            className="bg-black border-b border-neutral-800 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center flex-wrap justify-between gap-1.5 transition-all duration-150 min-h-[52px] w-full box-border"
           >
             {isSearchOpen ? (
               /* SAAT PENCARIAN AKTIF: LOGO, ICON KAMERA, DAN ICON MEDIA HILANG, TAMPIL BAR PENCARIAN BERSIH */
               <div className="w-full flex items-center flex-wrap gap-2 py-0.5 animate-fade-in min-w-0">
-                <div className="flex-1 min-w-[150px] flex items-center gap-2 bg-neutral-100 rounded-full px-3 sm:px-3.5 py-1.5 border border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition">
+                <div className="flex-1 min-w-[150px] flex items-center gap-2 bg-neutral-900 rounded-full px-3 sm:px-3.5 py-1.5 border border-neutral-700 focus-within:border-emerald-500 focus-within:bg-neutral-950 transition">
                   <Search className="w-4 h-4 text-neutral-400 shrink-0" />
                   <input
                     id="header-search-input"
@@ -3664,7 +3769,7 @@ export default function KarebaFeedFinal() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Cari berita, lokasi, atau nama akun..."
-                    className="w-full min-w-0 bg-transparent text-sm text-neutral-900 placeholder-neutral-400 outline-none"
+                    className="w-full min-w-0 bg-transparent text-sm text-neutral-100 placeholder-neutral-500 outline-none"
                   />
                   {searchQuery && (
                     <button
@@ -3673,7 +3778,7 @@ export default function KarebaFeedFinal() {
                         setSearchQuery("");
                         setHighlightedPostId(null);
                       }}
-                      className="p-1 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-200 transition cursor-pointer"
+                      className="p-1 text-neutral-400 hover:text-neutral-200 rounded-full hover:bg-neutral-800 transition cursor-pointer"
                       aria-label="Hapus ketikan"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -3689,7 +3794,7 @@ export default function KarebaFeedFinal() {
                     setSearchQuery("");
                     setHighlightedPostId(null);
                   }}
-                  className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 px-2 py-1.5 rounded-lg hover:bg-neutral-100 transition cursor-pointer shrink-0"
+                  className="text-xs font-semibold text-neutral-300 hover:text-white px-2 py-1.5 rounded-lg hover:bg-neutral-800 transition cursor-pointer shrink-0"
                 >
                   Batal
                 </button>
@@ -3712,7 +3817,7 @@ export default function KarebaFeedFinal() {
                     onClick={() => {
                       setIsSearchOpen(true);
                     }}
-                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                    className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-200 hover:text-emerald-400 hover:bg-neutral-800 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
                     aria-label="Cari"
                   >
                     <Search className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
@@ -3722,12 +3827,44 @@ export default function KarebaFeedFinal() {
                     id="header-inbox-trigger"
                     type="button"
                     onClick={() => setIsInboxOpen(true)}
-                    className="relative w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] text-neutral-800 hover:text-[#00632B] hover:bg-neutral-100 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
-                    aria-label="Komentar Masuk"
+                    className={`relative w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer ${
+                      isAdminApprovalActive && pendingApprovalPosts.length > 0
+                        ? "text-amber-300 bg-amber-500/15 ring-1 ring-amber-400/60 hover:bg-amber-500/25"
+                        : "text-neutral-200 hover:text-emerald-400 hover:bg-neutral-800"
+                    }`}
+                    aria-label={
+                      isAdminApprovalActive && pendingApprovalPosts.length > 0
+                        ? `Notifikasi (${pendingApprovalPosts.length} kabar menunggu persetujuan admin)`
+                        : "Komentar Masuk"
+                    }
                   >
-                    <Mail className="w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)]" strokeWidth={2.2} />
+                    {isAdminApprovalActive && pendingApprovalPosts.length > 0 && (
+                      <span
+                        id="admin-pending-notif-badge"
+                        title={`${pendingApprovalPosts.length} kabar menunggu persetujuan admin`}
+                        className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 px-1.5 h-[15px] rounded-full bg-amber-400 text-black text-[9px] font-extrabold tracking-tight border border-black shadow-sm leading-none whitespace-nowrap pointer-events-none"
+                      >
+                        <span className="relative flex h-1.5 w-1.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-60" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-black" />
+                        </span>
+                        <span>ACC {pendingApprovalPosts.length > 9 ? "9+" : pendingApprovalPosts.length}</span>
+                      </span>
+                    )}
+                    <Mail
+                      className={`w-[clamp(20px,5.5vw,23px)] h-[clamp(20px,5.5vw,23px)] ${
+                        isAdminApprovalActive && pendingApprovalPosts.length > 0 ? "mt-1" : ""
+                      }`}
+                      strokeWidth={2.2}
+                    />
                     {unreadCommentNotifCount > 0 && (
-                      <span className="absolute top-0.5 right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white leading-none shadow-2xs">
+                      <span
+                        className={`absolute ${
+                          isAdminApprovalActive && pendingApprovalPosts.length > 0
+                            ? "bottom-0 right-0"
+                            : "top-0.5 right-0.5"
+                        } min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-black leading-none shadow-2xs`}
+                      >
                         {unreadCommentNotifCount > 9 ? "9+" : unreadCommentNotifCount}
                       </span>
                     )}
@@ -3746,10 +3883,10 @@ export default function KarebaFeedFinal() {
           {uploadStatus === "uploading" && (
             <div
               id="fb-style-upload-bar"
-              className="w-full box-border bg-white border-t border-neutral-200/90 px-3 sm:px-3.5 py-2 flex items-center flex-wrap gap-2.5 sm:gap-3 shadow-2xs animate-fade-in select-none"
+              className="w-full box-border bg-neutral-950 border-t border-neutral-800 px-3 sm:px-3.5 py-2 flex items-center flex-wrap gap-2.5 sm:gap-3 shadow-2xs animate-fade-in select-none"
             >
               {/* Thumbnail Media yang Sedang Diunggah */}
-              <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-neutral-200 bg-neutral-100 flex items-center justify-center">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-neutral-800 bg-neutral-900 flex items-center justify-center">
                 {uploadingItem?.mediaType === "video" ? (
                   <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-white">
                     <Video className="w-4 h-4 text-emerald-400" />
@@ -3764,7 +3901,7 @@ export default function KarebaFeedFinal() {
                   <ImageIcon className="w-5 h-5 text-neutral-400" />
                 )}
                 {/* Mini Spinner di overlay thumbnail */}
-                <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               </div>
@@ -3772,17 +3909,17 @@ export default function KarebaFeedFinal() {
               {/* Progress Bar & Keterangan Horizontal Ala FB */}
               <div className="flex-1 min-w-[140px] flex flex-col justify-center">
                 <div className="flex items-center flex-wrap justify-between gap-1.5">
-                  <span className="text-xs font-bold text-neutral-800 truncate">
+                  <span className="text-xs font-bold text-neutral-100 truncate">
                     {uploadingItem?.title || "Mengunggah kiriman..."}
                   </span>
-                  <span className="text-[11px] font-semibold text-[#00632B] shrink-0 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00632B] animate-ping" />
+                  <span className="text-[11px] font-semibold text-emerald-400 shrink-0 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                     Mengunggah...
                   </span>
                 </div>
 
                 {/* Garis Progres Berjalan Horizontal Ala FB */}
-                <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden mt-1.5 border border-neutral-200/60 relative">
+                <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden mt-1.5 border border-neutral-700 relative">
                   <div className="h-full bg-gradient-to-r from-[#00632B] via-emerald-400 to-[#00632B] rounded-full w-full animate-pulse" />
                 </div>
               </div>
@@ -3795,14 +3932,14 @@ export default function KarebaFeedFinal() {
               id="fb-style-upload-success-bar"
               className={`w-full box-border border-t px-3 sm:px-3.5 py-2 flex items-center flex-wrap gap-2.5 sm:gap-3 shadow-2xs animate-fade-in select-none ${
                 lastUploadedPost.approvalStatus === "pending"
-                  ? "bg-amber-50/95 border-amber-200"
-                  : "bg-emerald-50/90 border-emerald-200"
+                  ? "bg-amber-950/60 border-amber-700/60"
+                  : "bg-emerald-950/60 border-emerald-700/60"
               }`}
             >
               {/* Thumbnail Media Berhasil Diunggah */}
               <div
-                className={`relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border bg-white flex items-center justify-center shadow-2xs ${
-                  lastUploadedPost.approvalStatus === "pending" ? "border-amber-300" : "border-emerald-300"
+                className={`relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border bg-neutral-900 flex items-center justify-center shadow-2xs ${
+                  lastUploadedPost.approvalStatus === "pending" ? "border-amber-600/60" : "border-emerald-600/60"
                 }`}
               >
                 {lastUploadedPost.mediaType === "video" ? (
@@ -3816,9 +3953,9 @@ export default function KarebaFeedFinal() {
                     className="w-full h-full object-cover"
                   />
                 ) : lastUploadedPost.approvalStatus === "pending" ? (
-                  <Clock className="w-5 h-5 text-amber-600" />
+                  <Clock className="w-5 h-5 text-amber-400" />
                 ) : (
-                  <CheckCircle2 className="w-5 h-5 text-[#00632B]" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                 )}
                 <div
                   className={`absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 shadow-2xs ${
@@ -3837,7 +3974,7 @@ export default function KarebaFeedFinal() {
               <div className="flex-1 min-w-[140px]">
                 <div
                   className={`flex items-center gap-1 text-xs font-bold ${
-                    lastUploadedPost.approvalStatus === "pending" ? "text-amber-800" : "text-[#00632B]"
+                    lastUploadedPost.approvalStatus === "pending" ? "text-amber-300" : "text-emerald-300"
                   }`}
                 >
                   <span>
@@ -3846,7 +3983,7 @@ export default function KarebaFeedFinal() {
                       : "Berita berhasil diunggah"}
                   </span>
                 </div>
-                <p className="text-[11px] font-medium text-neutral-700 truncate mt-0.5">
+                <p className="text-[11px] font-medium text-neutral-200 truncate mt-0.5">
                   {lastUploadedPost.title}
                 </p>
               </div>
@@ -3877,7 +4014,7 @@ export default function KarebaFeedFinal() {
                     }
                     setLastUploadedPost(null);
                   }}
-                  className="p-1 text-neutral-400 hover:text-neutral-700 rounded-md transition cursor-pointer"
+                  className="p-1 text-neutral-400 hover:text-neutral-200 rounded-md transition cursor-pointer"
                   aria-label="Tutup notifikasi"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -3895,8 +4032,8 @@ export default function KarebaFeedFinal() {
                 ? "h-[108px]"
                 : "h-[54px]"
               : uploadStatus === "uploading" || lastUploadedPost
-              ? "h-[144px]"
-              : "h-[88px]"
+              ? "h-[134px] sm:h-[140px]"
+              : "h-[78px] sm:h-[84px]"
           } shrink-0 transition-all duration-200`}
           style={{
             marginTop: "env(safe-area-inset-top, 0px)",
@@ -3907,22 +4044,22 @@ export default function KarebaFeedFinal() {
         {/* FITUR TARIK/GESER KE BAWAH UNTUK MEMPERBARUI (PULL-TO-REFRESH KUSTOM DENGAN KONTEN TETAP KOKOH TANPA TERGESER TURUN) */}
         <PullToRefresh onRefresh={handlePullRefresh}>
           {/* PROFIL WARGA - Pengunjung bisa membaca bebas dan masuk Google saat ingin berinteraksi */}
-          <section id="profile-section" className="w-full box-border pt-6 pb-4 px-3 sm:px-4 flex items-center flex-wrap justify-between gap-2.5 bg-white border-b border-neutral-100">
+          <section id="profile-section" className="w-full box-border pt-6 pb-4 px-3 sm:px-4 flex items-center flex-wrap justify-between gap-2.5 bg-black border-b border-neutral-800">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Ikon Profil: Huruf Pertama Nama Pengguna (atau P untuk Pengunjung) */}
             <div className="shrink-0">
-              <div className="w-[clamp(46px,13vw,56px)] h-[clamp(46px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-2 ring-offset-white flex items-center justify-center text-[clamp(19px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
+              <div className="w-[clamp(46px,13vw,56px)] h-[clamp(46px,13vw,56px)] rounded-full bg-gradient-to-tr from-[#00632B] via-[#007A35] to-[#0A8742] ring-2 ring-emerald-500/35 ring-offset-2 ring-offset-black flex items-center justify-center text-[clamp(19px,5.5vw,24px)] font-bold shadow-xs text-white select-none tracking-tight">
                 {currentUser ? initial : "P"}
               </div>
             </div>
             <div className="min-w-0 flex-1">
               {currentUser ? (
                 <>
-                  <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate">
+                  <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-100 tracking-[-0.015em] truncate">
                     {userName ? (userName.startsWith("@") ? userName.replace(/^@/, "") : userName) : "Warga Kareba'Ta"}
                   </h2>
                   <p
-                    className="text-[clamp(12px,3.4vw,13.5px)] text-neutral-500 font-normal mt-0.5 truncate"
+                    className="text-[clamp(12px,3.4vw,13.5px)] text-neutral-400 font-normal mt-0.5 truncate"
                     title={userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
                   >
                     {userEmail || `@${userName.replace(/^@/, "").toLowerCase()}`}
@@ -3930,10 +4067,10 @@ export default function KarebaFeedFinal() {
                 </>
               ) : (
                 <>
-                  <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-900 tracking-[-0.015em] truncate">
+                  <h2 className="font-bold text-[clamp(15.5px,4.5vw,18.5px)] text-neutral-100 tracking-[-0.015em] truncate">
                     Pengunjung
                   </h2>
-                  <p className="text-[clamp(11.5px,3.2vw,13px)] text-neutral-500 font-normal mt-0.5 truncate">
+                  <p className="text-[clamp(11.5px,3.2vw,13px)] text-neutral-400 font-normal mt-0.5 truncate">
                     Masuk Google untuk posting, reaksi &amp; komentar
                   </p>
                 </>
@@ -3953,11 +4090,11 @@ export default function KarebaFeedFinal() {
                   }
                   setViewMode("admin");
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 transition active:scale-95 cursor-pointer shadow-2xs"
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl text-emerald-300 bg-emerald-950/70 hover:bg-emerald-900/70 border border-emerald-700/60 transition active:scale-95 cursor-pointer shadow-2xs"
                 title="Buka Dasbor Admin"
                 aria-label="Dasbor Admin"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Admin</span>
               </button>
             )}
@@ -3965,7 +4102,7 @@ export default function KarebaFeedFinal() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition active:scale-95 cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-300 bg-rose-950/60 hover:bg-rose-900/60 rounded-xl border border-rose-800/60 transition active:scale-95 cursor-pointer shadow-2xs"
                 aria-label="Keluar akun Google"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -3992,20 +4129,20 @@ export default function KarebaFeedFinal() {
 
         {/* PERINGATAN RESMI JIKA AKUN DITANGGUHKAN OLEH ADMIN */}
         {currentBanStatus.isBanned && (
-          <div id="banned-account-alert" className="mx-3 sm:mx-4 my-3 p-3.5 sm:p-4 box-border bg-gradient-to-r from-rose-50 via-red-50 to-rose-100/80 border-2 border-rose-300 rounded-2xl shadow-sm text-rose-950 animate-fade-in">
+          <div id="banned-account-alert" className="mx-3 sm:mx-4 my-3 p-3.5 sm:p-4 box-border bg-gradient-to-r from-rose-950/80 via-red-950/70 to-neutral-950 border-2 border-rose-700/70 rounded-2xl shadow-sm text-rose-100 animate-fade-in">
             <div className="flex items-start flex-wrap gap-3">
               <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-[180px]">
-                <h3 className="font-extrabold text-sm sm:text-base text-rose-950 leading-snug">
+                <h3 className="font-extrabold text-sm sm:text-base text-rose-100 leading-snug">
                   Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.
                 </h3>
-                <p className="text-xs text-rose-800 mt-1 leading-relaxed">
+                <p className="text-xs text-rose-300 mt-1 leading-relaxed">
                   Fitur untuk membuat postingan kabar baru dan mengirim komentar telah dinonaktifkan sementara oleh Pengelola.
                 </p>
                 {currentBanStatus.banRecord?.reason && (
-                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/90 border border-rose-200 rounded-lg text-xs font-semibold text-rose-900">
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 border border-rose-800/70 rounded-lg text-xs font-semibold text-rose-200">
                     <span>Alasan:</span>
                     <span className="font-normal">{currentBanStatus.banRecord.reason}</span>
                   </div>
@@ -4026,7 +4163,7 @@ export default function KarebaFeedFinal() {
         )}
 
         {/* PAPAN UNGGAH TEKS KABAR WARGA (MINIMALIS & PRAKTIS ALA SOSIAL MEDIA) */}
-        <section id="quick-text-composer-trigger" className="w-full box-border bg-white px-3 sm:px-3.5 py-3 border-b border-neutral-200">
+        <section id="quick-text-composer-trigger" className="w-full box-border bg-black px-3 sm:px-3.5 py-3 border-b border-neutral-800">
           <div
             onClick={(e) => {
               if (isScrollInteractionBlocked()) {
@@ -4042,16 +4179,16 @@ export default function KarebaFeedFinal() {
               }
               setIsTextPostModalOpen(true);
             }}
-            className="flex items-center flex-wrap gap-2.5 p-2 bg-neutral-50 hover:bg-neutral-100/90 rounded-xl border border-neutral-200/90 cursor-pointer transition active:scale-[0.99] group shadow-2xs"
+            className="flex items-center flex-wrap gap-2.5 p-2 bg-neutral-900 hover:bg-neutral-800 rounded-xl border border-neutral-800 cursor-pointer transition active:scale-[0.99] group shadow-2xs"
           >
             {/* Ikon Pensil Bulat di Sebelah Kiri Persis Seperti Gambar */}
-            <div className="w-8 h-8 rounded-full bg-emerald-50 text-[#00632B] border border-emerald-200/80 group-hover:bg-[#00632B] group-hover:text-white flex items-center justify-center shrink-0 transition shadow-2xs">
-              <PenLine className="w-4 h-4 text-[#00632B] group-hover:text-white transition" />
+            <div className="w-8 h-8 rounded-full bg-emerald-950/70 text-emerald-400 border border-emerald-700/60 group-hover:bg-[#00632B] group-hover:text-white flex items-center justify-center shrink-0 transition shadow-2xs">
+              <PenLine className="w-4 h-4 text-emerald-400 group-hover:text-white transition" />
             </div>
 
             {/* Input Trigger / Placeholder Teks */}
             <div className="flex-1 min-w-[140px]">
-              <span className="text-xs sm:text-sm text-neutral-600 font-medium block leading-snug">
+              <span className="text-xs sm:text-sm text-neutral-400 font-medium block leading-snug">
                 Tulis kabar warga hari ini...
               </span>
             </div>
@@ -4062,16 +4199,16 @@ export default function KarebaFeedFinal() {
         <PWAInstallBanner />
 
         {/* HORIZONTAL: KABAR KAMU & KABAR TERSIMPAN (SELALU MUNCUL, TIDAK PERNAH HILANG) */}
-        <section id="my-posts-carousel" className="w-full box-border py-3.5 border-b border-neutral-200 bg-white">
+        <section id="my-posts-carousel" className="w-full box-border py-3.5 border-b border-neutral-800 bg-black">
           <div className="flex items-center flex-wrap justify-between gap-2 mb-3 px-3 sm:px-4">
             {/* SISI KIRI: KABAR KAMU */}
             <div className="flex items-center gap-2">
               {showSavedSection ? (
                 <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-sm text-neutral-900">
+                  <h3 className="font-extrabold text-sm text-neutral-100">
                     Kabar Tersimpan
                   </h3>
-                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-[#00632B]">
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/50">
                     {savedItems.length}
                   </span>
                 </div>
@@ -4082,10 +4219,10 @@ export default function KarebaFeedFinal() {
                   className="flex items-center gap-2 text-left cursor-pointer group"
                   aria-label="Lihat Kabar Saya"
                 >
-                  <h3 className="font-extrabold text-sm text-neutral-900">
+                  <h3 className="font-extrabold text-sm text-neutral-100">
                     Kabar Saya
                   </h3>
-                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-[#00632B]/10 text-[#00632B]">
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/50">
                     {posts.length}
                   </span>
                 </button>
@@ -4098,7 +4235,7 @@ export default function KarebaFeedFinal() {
                 id="back-to-my-posts-btn"
                 type="button"
                 onClick={() => setShowSavedSection(false)}
-                className="text-xs font-bold flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition active:scale-95 cursor-pointer"
+                className="text-xs font-bold flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-900 text-neutral-200 hover:bg-neutral-800 border border-neutral-800 transition active:scale-95 cursor-pointer"
                 aria-label="Kembali ke Kabar Saya"
               >
                 <span>&larr; Kabar Saya</span>
@@ -4108,13 +4245,13 @@ export default function KarebaFeedFinal() {
                 id="saved-posts-count-badge"
                 type="button"
                 onClick={() => setShowSavedSection(true)}
-                className="text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer bg-emerald-50 text-[#00632B] border border-emerald-200/80 hover:bg-emerald-100/80"
+                className="text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition active:scale-95 cursor-pointer bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 hover:bg-emerald-900/60"
                 title="Kabar Tersimpan"
                 aria-label="Simpan"
               >
-                <Bookmark className="w-3.5 h-3.5 fill-[#00632B] text-[#00632B]" />
+                <Bookmark className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" />
                 <span>Simpan</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-[#00632B]/10 text-[#00632B]">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-900/70 text-emerald-300">
                   {savedItems.length}
                 </span>
               </button>
@@ -4125,16 +4262,16 @@ export default function KarebaFeedFinal() {
           {showSavedSection ? (
             savedItems.length === 0 ? (
               <div className="px-3">
-                <div className="p-4 rounded-xl bg-emerald-50/70 border border-dashed border-[#00632B]/30 text-center animate-fade-in">
-                  <Bookmark className="w-5 h-5 text-[#00632B] mx-auto mb-1.5" />
-                  <p className="text-xs text-neutral-900 font-bold">Belum ada kabar yang tersimpan</p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5 mb-2.5">
+                <div className="p-4 rounded-xl bg-emerald-950/30 border border-dashed border-emerald-700/40 text-center animate-fade-in">
+                  <Bookmark className="w-5 h-5 text-emerald-400 mx-auto mb-1.5" />
+                  <p className="text-xs text-neutral-100 font-bold">Belum ada kabar yang tersimpan</p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5 mb-2.5">
                     Tandai kabar dengan ikon simpan di berita untuk melihatnya di sini.
                   </p>
                   <button
                     type="button"
                     onClick={() => setShowSavedSection(false)}
-                    className="inline-flex items-center gap-1 text-xs text-[#00632B] font-bold hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 text-xs text-emerald-400 font-bold hover:underline cursor-pointer"
                   >
                     <span>Kembali ke Kabar Saya</span>
                     <span>&rarr;</span>
@@ -4163,12 +4300,12 @@ export default function KarebaFeedFinal() {
                         handleOpenCardInFeed(p);
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="relative w-[clamp(92px,25vw,112px)] h-[162px] bg-emerald-50/80 hover:bg-emerald-100/70 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-emerald-200/80 shadow-2xs shrink-0 select-none active:scale-[0.98] flex flex-col justify-between box-border"
+                      className="relative w-[clamp(92px,25vw,112px)] h-[162px] bg-neutral-900 hover:bg-neutral-800 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-emerald-800/60 shadow-2xs shrink-0 select-none active:scale-[0.98] flex flex-col justify-between box-border"
                       style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
                     >
-                      <div className="relative overflow-hidden rounded-none bg-neutral-100 h-[116px] w-full flex items-center justify-center select-none">
+                      <div className="relative overflow-hidden rounded-none bg-neutral-950 h-[116px] w-full flex items-center justify-center select-none">
                         {isVid && (p.thumbnail || p.img) ? (
-                          <div className="relative h-[116px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-none">
+                          <div className="relative h-[116px] w-full bg-neutral-950 flex items-center justify-center overflow-hidden rounded-none">
                             <img
                               src={p.thumbnail || p.img}
                               alt={p.title}
@@ -4196,9 +4333,9 @@ export default function KarebaFeedFinal() {
                             }}
                           />
                         ) : (
-                          <div className="w-full h-full p-2 bg-gradient-to-br from-emerald-100/60 to-emerald-200/50 flex flex-col items-center justify-center text-center rounded-none">
-                            <PenLine className="w-5 h-5 text-[#00632B] mb-1" />
-                            <span className="text-[10px] font-bold text-neutral-800 line-clamp-3 leading-tight">
+                          <div className="w-full h-full p-2 bg-gradient-to-br from-emerald-950/60 to-neutral-900 flex flex-col items-center justify-center text-center rounded-none">
+                            <PenLine className="w-5 h-5 text-emerald-400 mb-1" />
+                            <span className="text-[10px] font-bold text-neutral-200 line-clamp-3 leading-tight">
                               {p.caption || p.title}
                             </span>
                           </div>
@@ -4218,8 +4355,8 @@ export default function KarebaFeedFinal() {
                         </span>
                       </div>
                       <div className="w-full pt-1">
-                        <p className="text-[11.5px] font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
-                        <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
+                        <p className="text-[11.5px] font-bold text-neutral-100 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
+                        <p className="text-[9.5px] text-neutral-400 truncate leading-tight mt-0.5">{p.loc}</p>
                       </div>
                     </div>
                   );
@@ -4312,12 +4449,12 @@ export default function KarebaFeedFinal() {
               {posts.length === 0 ? (
                 <div
                   data-card-item="true"
-                  className="relative w-[clamp(100px,28vw,120px)] h-[162px] bg-neutral-50 rounded-none p-2 border border-dashed border-neutral-300 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center cursor-default pointer-events-none box-border"
+                  className="relative w-[clamp(100px,28vw,120px)] h-[162px] bg-neutral-950 rounded-none p-2 border border-dashed border-neutral-700 shadow-2xs shrink-0 select-none flex flex-col items-center justify-center text-center cursor-default pointer-events-none box-border"
                 >
-                  <p className="text-[11px] font-bold text-neutral-800 leading-tight">
+                  <p className="text-[11px] font-bold text-neutral-200 leading-tight">
                     Kabar Saya Masih Kosong
                   </p>
-                  <p className="text-[9.5px] text-neutral-500 mt-1 leading-snug">
+                  <p className="text-[9.5px] text-neutral-400 mt-1 leading-snug">
                     Klik Ebbu kareba untuk bagikan momen
                   </p>
                 </div>
@@ -4342,12 +4479,12 @@ export default function KarebaFeedFinal() {
                         handleOpenCardInFeed(p);
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="relative w-[clamp(92px,25vw,112px)] h-[162px] bg-neutral-50 hover:bg-neutral-100 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-neutral-200 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col justify-between box-border"
+                      className="relative w-[clamp(92px,25vw,112px)] h-[162px] bg-neutral-950 hover:bg-neutral-900 rounded-none p-1.5 cursor-pointer transition-all duration-150 border border-neutral-800 shadow-2xs shrink-0 select-none group active:scale-[0.98] flex flex-col justify-between box-border"
                       style={{ WebkitTouchCallout: "none", touchAction: "pan-x pan-y" }}
                     >
-                      <div className="relative overflow-hidden rounded-none bg-neutral-100 h-[116px] w-full flex items-center justify-center select-none">
+                      <div className="relative overflow-hidden rounded-none bg-neutral-900 h-[116px] w-full flex items-center justify-center select-none">
                         {isVid && (p.thumbnail || p.img) ? (
-                          <div className="relative h-[116px] w-full bg-neutral-100 flex items-center justify-center overflow-hidden rounded-none">
+                          <div className="relative h-[116px] w-full bg-neutral-900 flex items-center justify-center overflow-hidden rounded-none">
                             <img
                               src={p.thumbnail || p.img}
                               alt={p.title}
@@ -4379,9 +4516,9 @@ export default function KarebaFeedFinal() {
                             }}
                           />
                         ) : (
-                          <div className="w-full h-full p-2 bg-gradient-to-br from-amber-100/60 to-emerald-100/50 flex flex-col items-center justify-center text-center rounded-none">
-                            <PenLine className="w-5 h-5 text-[#00632B] mb-1" />
-                            <span className="text-[10px] font-bold text-neutral-800 line-clamp-3 leading-tight">
+                          <div className="w-full h-full p-2 bg-gradient-to-br from-amber-950/50 to-emerald-950/50 flex flex-col items-center justify-center text-center rounded-none">
+                            <PenLine className="w-5 h-5 text-emerald-400 mb-1" />
+                            <span className="text-[10px] font-bold text-neutral-200 line-clamp-3 leading-tight">
                               {p.caption || p.title}
                             </span>
                           </div>
@@ -4412,8 +4549,8 @@ export default function KarebaFeedFinal() {
                         </span>
                       </div>
                       <div className="w-full pt-1">
-                        <p className="text-[11.5px] font-bold text-neutral-900 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
-                        <p className="text-[9.5px] text-neutral-500 truncate leading-tight mt-0.5">{p.loc}</p>
+                        <p className="text-[11.5px] font-bold text-neutral-100 truncate leading-tight tracking-[-0.01em]">{p.title}</p>
+                        <p className="text-[9.5px] text-neutral-400 truncate leading-tight mt-0.5">{p.loc}</p>
                       </div>
                     </div>
                   );
@@ -4423,17 +4560,17 @@ export default function KarebaFeedFinal() {
           )}
         </section>
 
-        {/* PEMBATAS SECTION RAPAT & GARIS ABU-ABU TERANG */}
-        <div className="w-full h-[2px] bg-neutral-200" aria-hidden="true" />
+        {/* PEMBATAS SECTION RAPAT & GARIS PEMBATAS GELAP */}
+        <div className="w-full h-[2px] bg-neutral-800" aria-hidden="true" />
 
         {/* FORM KABAR MEDIA - MUNCUL SAAT FOTO/VIDEO DIPILIH */}
         {selectedImage && (
           <>
-            <section id="media-post-composer-card" className="w-full box-border bg-white p-3.5 sm:p-4 space-y-3">
+            <section id="media-post-composer-card" className="w-full box-border bg-black p-3.5 sm:p-4 space-y-3">
               {/* Pratinjau Foto/Video Bersih & Sederhana */}
-              <div id="composer-thumbnail-card" className="flex items-center flex-wrap gap-3 bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
+              <div id="composer-thumbnail-card" className="flex items-center flex-wrap gap-3 bg-neutral-950 p-2.5 rounded-xl border border-neutral-800">
                 {/* Kotak Foto / Video Terpilih (Tidak dapat diklik) */}
-                <div className="relative w-20 h-20 rounded-lg bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200 shadow-2xs select-none">
+                <div className="relative w-20 h-20 rounded-lg bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800 shadow-2xs select-none">
                   {selectedMediaType === "video" ? (
                     selectedThumbnail ? (
                       <img
@@ -4464,7 +4601,7 @@ export default function KarebaFeedFinal() {
 
                 {/* Keterangan & Tombol Ganti / Hapus */}
                 <div className="flex-1 min-w-[140px] space-y-1">
-                  <p className="text-xs font-semibold text-neutral-800 leading-snug">
+                  <p className="text-xs font-semibold text-neutral-100 leading-snug">
                     {selectedMediaType === "video"
                       ? `Video siap dibagikan ${selectedVideoDuration ? `(${formatDuration(selectedVideoDuration)} / maks 01:00)` : "(Maks 60 dtk)"}`
                       : "Foto siap dibagikan"}
@@ -4473,11 +4610,11 @@ export default function KarebaFeedFinal() {
                     <button
                       type="button"
                       onClick={handleGalleryClick}
-                      className="text-xs text-[#00632B] hover:text-[#004f22] font-semibold cursor-pointer"
+                      className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer"
                     >
                       {selectedMediaType === "video" ? "Ganti Video" : "Ganti Foto"}
                     </button>
-                    <span className="text-neutral-300">•</span>
+                    <span className="text-neutral-600">•</span>
                     <button
                       id="delete-selected-image-btn"
                       type="button"
@@ -4488,7 +4625,7 @@ export default function KarebaFeedFinal() {
                         setSelectedVideoDuration(null);
                         setDescription("");
                       }}
-                      className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
+                      className="text-xs text-rose-400 hover:text-rose-300 font-semibold cursor-pointer"
                     >
                       Hapus
                     </button>
@@ -4497,24 +4634,24 @@ export default function KarebaFeedFinal() {
               </div>
 
               {/* Peringatan Pedoman Komunitas Bebas Asusila & Santun (100% Gratis) */}
-              <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-2.5 text-xs text-emerald-950 flex items-start gap-2 select-none">
-                <ShieldCheck className="w-4 h-4 text-[#00632B] shrink-0 mt-0.5" />
+              <div className="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-2.5 text-xs text-emerald-200 flex items-start gap-2 select-none">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-relaxed min-w-0 flex-1">
-                  <span className="font-bold text-neutral-900">Pedoman Konten Santun Kareba&apos;Ta:</span> Dilarang keras mempublikasikan pornografi, busana seksi/terbuka berlebihan, goyangan erotis, pose julur lidah sensual, serta kata jorok atau makian.
+                  <span className="font-bold text-white">Pedoman Konten Santun Kareba&apos;Ta:</span> Dilarang keras mempublikasikan pornografi, busana seksi/terbuka berlebihan, goyangan erotis, pose julur lidah sensual, serta kata jorok atau makian.
                 </div>
               </div>
 
               {/* KETIK DESKRIPSI KABAR (BATAS 3000 HURUF) */}
               <div className={`rounded-xl p-3 border transition space-y-1.5 ${
                 moderationWarning
-                  ? "border-red-400 bg-red-50/40"
-                  : "bg-neutral-50 border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white"
+                  ? "border-red-500/70 bg-red-950/40"
+                  : "bg-neutral-900 border-neutral-800 focus-within:border-emerald-500 focus-within:bg-neutral-950"
               }`}>
                 <div className="flex items-center flex-wrap justify-between gap-1.5">
-                  <label htmlFor="post-description-input" className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
-                    <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Deskripsi Kabar:
+                  <label htmlFor="post-description-input" className="text-xs font-bold text-neutral-200 flex items-center gap-1.5">
+                    <PenLine className="w-3.5 h-3.5 text-emerald-400" /> Deskripsi Kabar:
                   </label>
-                  <span className={`text-[11px] font-semibold ${description.trim().length >= 99 ? "text-emerald-700" : "text-amber-700"}`}>
+                  <span className={`text-[11px] font-semibold ${description.trim().length >= 99 ? "text-emerald-400" : "text-amber-400"}`}>
                     {description.trim().length}/3000 {description.trim().length < 99 ? `(kurang ${99 - description.trim().length})` : "✓ Lolos (≥99 huruf)"}
                   </span>
                 </div>
@@ -4525,29 +4662,29 @@ export default function KarebaFeedFinal() {
                   rows={3}
                   onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
                   placeholder="Ketik deskripsi kabar minimal 99 huruf (maks. 3000 huruf) agar dapat dibagikan..."
-                  className="bg-transparent w-full min-w-0 outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none"
+                  className="bg-transparent w-full min-w-0 outline-none text-base sm:text-sm text-neutral-100 placeholder-neutral-500 resize-none"
                   autoFocus
                 />
 
                 {/* Indikator Peringatan Kata Terlarang / Jorok */}
                 {moderationWarning && (
-                  <div className="mt-2 p-2.5 rounded-lg bg-red-100/90 border border-red-300 text-red-900 text-xs flex items-start gap-2 animate-fade-in">
-                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <div className="mt-2 p-2.5 rounded-lg bg-red-950/80 border border-red-700/60 text-red-200 text-xs flex items-start gap-2 animate-fade-in">
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                     <div className="space-y-0.5 min-w-0 flex-1">
                       <p className="font-bold text-[11px]">Terdeteksi kata dilarang: &ldquo;{moderationWarning.flaggedWord}&rdquo;</p>
-                      <p className="text-[10px] text-red-700 leading-tight">{moderationWarning.reason}</p>
+                      <p className="text-[10px] text-red-300 leading-tight">{moderationWarning.reason}</p>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* KETIK LOKASI MANUAL (BATAS 30 HURUF) */}
-              <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white transition space-y-2">
+              <div className="bg-neutral-900 rounded-xl p-3 border border-neutral-800 focus-within:border-emerald-500 focus-within:bg-neutral-950 transition space-y-2">
                 <div className="flex items-center flex-wrap justify-between gap-1.5">
-                  <label htmlFor="post-location-input" className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+                  <label htmlFor="post-location-input" className="text-xs font-bold text-neutral-200 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-yellow-500" /> Ketik Lokasi Manual:
                   </label>
-                  <span className={`text-[11px] font-medium ${selectedLocation.length >= 30 ? "text-red-600 font-bold" : "text-neutral-400"}`}>
+                  <span className={`text-[11px] font-medium ${selectedLocation.length >= 30 ? "text-rose-400 font-bold" : "text-neutral-400"}`}>
                     {selectedLocation.length}/30
                   </span>
                 </div>
@@ -4558,7 +4695,7 @@ export default function KarebaFeedFinal() {
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value.slice(0, 30))}
                   placeholder="Ketik lokasi (contoh: Danau Tempe, Sengkang)..."
-                  className="bg-transparent w-full min-w-0 outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400"
+                  className="bg-transparent w-full min-w-0 outline-none text-base sm:text-sm text-neutral-100 placeholder-neutral-500"
                 />
               </div>
 
@@ -4577,21 +4714,21 @@ export default function KarebaFeedFinal() {
 
               {/* Indikator Proses Loading Upload di Bawah Papan Tombol */}
               {uploadingCount > 0 && (
-                <div className="w-full mt-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center flex-wrap justify-between gap-2 text-xs text-emerald-900 shadow-xs animate-fade-in">
+                <div className="w-full mt-2.5 p-3 rounded-xl bg-emerald-950/50 border border-emerald-800/60 flex items-center flex-wrap justify-between gap-2 text-xs text-emerald-200 shadow-xs animate-fade-in">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="w-4 h-4 border-2 border-[#00632B] border-t-transparent rounded-full animate-spin shrink-0" />
+                    <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin shrink-0" />
                     <div className="flex flex-col min-w-0 leading-tight">
-                      <span className="font-bold text-neutral-900 text-xs">
+                      <span className="font-bold text-neutral-100 text-xs">
                         {uploadingCount > 1
                           ? `Sedang mengunggah ${uploadingCount} berita...`
                           : "Sedang mengunggah berita..."}
                       </span>
-                      <span className="text-[11px] text-neutral-500 mt-0.5">
+                      <span className="text-[11px] text-neutral-400 mt-0.5">
                         Formulir kosong & siap dipakai untuk posting lagi.
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-[#00632B] bg-white px-2 py-0.5 rounded-full border border-emerald-100 shadow-2xs shrink-0">
+                  <span className="text-[10px] font-semibold text-emerald-300 bg-neutral-900 px-2 py-0.5 rounded-full border border-emerald-700/60 shadow-2xs shrink-0">
                     Latar Belakang
                   </span>
                 </div>
@@ -4600,15 +4737,15 @@ export default function KarebaFeedFinal() {
           </>
         )}
 
-        {/* PEMBATAS SECTION RAPAT & GARIS ABU-ABU TERANG */}
-        <div className="w-full h-[2px] bg-neutral-200" aria-hidden="true" />
+        {/* PEMBATAS SECTION RAPAT & GARIS PEMBATAS GELAP */}
+        <div className="w-full h-[2px] bg-neutral-800" aria-hidden="true" />
 
         {/* FEED VERTIKAL WARGA - SEMUA KARTU RAPAT & DIBERI GARIS PEMBATAS ABU-ABU TERANG */}
-        <section id="feed-vertical-container" className="w-full box-border bg-white">
-          <div className="w-full px-3.5 sm:px-4 pt-3.5 pb-2.5 bg-white border-b border-neutral-200">
+        <section id="feed-vertical-container" className="w-full box-border bg-black">
+          <div className="w-full px-3.5 sm:px-4 pt-3.5 pb-2.5 bg-black border-b border-neutral-800">
             <div className="flex items-center flex-wrap justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <h2 className="font-bold text-sm tracking-tight text-neutral-900">
+                <h2 className="font-bold text-sm tracking-tight text-neutral-100">
                   Kabar Warga
                 </h2>
               </div>
@@ -4646,44 +4783,44 @@ export default function KarebaFeedFinal() {
                       setIsHelpOpen(true);
                     }
                   }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-amber-950 bg-gradient-to-r from-amber-100 via-amber-50 to-yellow-100 hover:from-amber-200 hover:to-yellow-200 active:from-amber-300 active:to-yellow-300 rounded-lg border border-amber-300/80 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-amber-300 bg-amber-950/70 hover:bg-amber-900/70 active:bg-amber-900 rounded-lg border border-amber-700/60 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
                   aria-label="Layanan Pasang Iklan Sponsor & Promosi UMKM"
                 >
-                  <Megaphone className="w-3 h-3 text-amber-700" />
+                  <Megaphone className="w-3 h-3 text-amber-400" />
                   <span>Pasang Iklan</span>
                 </button>
             </div>
           </div>
 
-          <div className="w-full bg-white">
+          <div className="w-full bg-black">
             {displayFeed.length === 0 ? (
               isInitialFeedLoading ? (
-                <div className="divide-y-2 divide-neutral-100">
+                <div className="divide-y-2 divide-neutral-800">
                   {[0, 1].map((idx) => (
                     <div key={idx} className="p-4 space-y-3 animate-pulse">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full bg-neutral-200 shrink-0" />
+                        <div className="w-11 h-11 rounded-full bg-neutral-800 shrink-0" />
                         <div className="flex-1 space-y-1.5">
-                          <div className="h-3.5 w-32 bg-neutral-200 rounded" />
-                          <div className="h-2.5 w-24 bg-neutral-100 rounded" />
+                          <div className="h-3.5 w-32 bg-neutral-800 rounded" />
+                          <div className="h-2.5 w-24 bg-neutral-900 rounded" />
                         </div>
                       </div>
-                      <div className="w-full h-48 rounded-2xl bg-neutral-100" />
+                      <div className="w-full h-48 rounded-2xl bg-neutral-900" />
                       <div className="space-y-1.5">
-                        <div className="h-4 w-5/6 bg-neutral-200 rounded" />
-                        <div className="h-4 w-2/3 bg-neutral-100 rounded" />
+                        <div className="h-4 w-5/6 bg-neutral-800 rounded" />
+                        <div className="h-4 w-2/3 bg-neutral-900 rounded" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="py-5 sm:py-6 px-4 text-center flex flex-col items-center justify-center space-y-2.5 animate-fade-in">
-                  <div className="w-14 h-14 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-400 shadow-2xs">
+                  <div className="w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-2xs">
                     <Newspaper className="w-7 h-7 stroke-[1.75] text-neutral-400" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-sm sm:text-base font-bold text-neutral-900">Belum Ada Kabar Warga</h3>
-                    <p className="text-xs text-neutral-500 max-w-xs leading-normal">
+                    <h3 className="text-sm sm:text-base font-bold text-neutral-100">Belum Ada Kabar Warga</h3>
+                    <p className="text-xs text-neutral-400 max-w-xs leading-normal">
                       Aplikasi siap digunakan. Belum ada postingan warga yang diterbitkan. Jadilah yang pertama membagikan kabar!
                     </p>
                   </div>
@@ -4695,16 +4832,16 @@ export default function KarebaFeedFinal() {
                 {index > 0 && (
                   <div
                     id={`post-divider-${index}`}
-                    className="w-full h-[2px] bg-neutral-200"
+                    className="w-full h-[2px] bg-neutral-800"
                     aria-hidden="true"
                   />
                 )}
                 <article
                   id={`feed-post-${f.id}`}
                   data-post-id={f.id}
-                  className={`w-full bg-white space-y-3 pt-3.5 pb-4 ${
+                  className={`w-full bg-black space-y-3 pt-3.5 pb-4 ${
                     highlightedPostId === f.id
-                      ? "ring-2 ring-[#00632B] bg-[#00632B]/5 shadow-md rounded-2xl"
+                      ? "ring-2 ring-emerald-500 bg-emerald-950/20 shadow-md rounded-2xl"
                       : ""
                   }`}
                 >
@@ -4744,7 +4881,7 @@ export default function KarebaFeedFinal() {
                 <div className="px-3.5 sm:px-4 flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                     {/* Ikon Profil Penulis Kabar: Selalu Huruf Pertama Nama Pengguna */}
-                    <div className="w-[clamp(42px,11.5vw,52px)] h-[clamp(42px,11.5vw,52px)] rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-600/25 ring-offset-1 ring-offset-white flex items-center justify-center text-[clamp(17px,4.8vw,22px)] font-bold text-white shadow-xs shrink-0 select-none">
+                    <div className="w-[clamp(42px,11.5vw,52px)] h-[clamp(42px,11.5vw,52px)] rounded-full bg-gradient-to-tr from-[#00632B] to-[#0A8742] ring-2 ring-emerald-500/35 ring-offset-1 ring-offset-black flex items-center justify-center text-[clamp(17px,4.8vw,22px)] font-bold text-white shadow-xs shrink-0 select-none">
                       {(f.user.replace(/^@/, "").trim()[0] || f.init || "W").toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -4757,12 +4894,12 @@ export default function KarebaFeedFinal() {
                             setSearchQuery(`@${targetUser.replace(/^@/, "")}`);
                             setIsSearchOpen(true);
                           }}
-                          className="text-[clamp(14.5px,4.2vw,17.5px)] font-bold text-neutral-900 tracking-[-0.01em] truncate max-w-full hover:text-[#00632B] transition-colors cursor-pointer text-left"
+                          className="text-[clamp(14.5px,4.2vw,17.5px)] font-bold text-neutral-100 tracking-[-0.01em] truncate max-w-full hover:text-emerald-400 transition-colors cursor-pointer text-left"
                           aria-label={`Lihat hanya postingan @${f.user}`}
                         >
                           {f.user.startsWith("@") ? f.user : `@${f.user}`}
                         </button>
-                        <span className="text-neutral-300 text-[10px] shrink-0 select-none">·</span>
+                        <span className="text-neutral-600 text-[10px] shrink-0 select-none">·</span>
                         <span className="text-[clamp(11.5px,3vw,13px)] text-neutral-400 font-normal shrink-0 whitespace-nowrap">
                           {f.time}
                         </span>
@@ -4773,7 +4910,7 @@ export default function KarebaFeedFinal() {
                         )}
                       </div>
                       {f.location && (
-                        <div className="flex items-center gap-1 text-[clamp(11.5px,3vw,13px)] text-neutral-500 mt-0.5 min-w-0">
+                        <div className="flex items-center gap-1 text-[clamp(11.5px,3vw,13px)] text-neutral-400 mt-0.5 min-w-0">
                           <button
                             type="button"
                             onClick={() => {
@@ -4781,7 +4918,7 @@ export default function KarebaFeedFinal() {
                               setSearchQuery(f.location!);
                               setIsSearchOpen(true);
                             }}
-                            className="flex items-center gap-1 text-neutral-500 hover:text-[#00632B] font-normal truncate max-w-full transition cursor-pointer text-left min-w-0"
+                            className="flex items-center gap-1 text-neutral-400 hover:text-emerald-400 font-normal truncate max-w-full transition cursor-pointer text-left min-w-0"
                             aria-label={`Lihat semua postingan di ${f.location}`}
                           >
                             <MapPin className="w-[clamp(12px,3.2vw,13.5px)] h-[clamp(12px,3.2vw,13.5px)] text-yellow-500 shrink-0 inline" />
@@ -4798,10 +4935,10 @@ export default function KarebaFeedFinal() {
                       id={`post-menu-btn-${f.id}`}
                       type="button"
                       onClick={() => setActiveMenuPostId((prev) => (prev === f.id ? null : f.id))}
-                      className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition cursor-pointer"
+                      className="w-[clamp(36px,9.5vw,40px)] h-[clamp(36px,9.5vw,40px)] flex items-center justify-center text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 rounded-full transition cursor-pointer"
                       aria-label="Opsi postingan"
                     >
-                      <MoreHorizontal className="w-[clamp(19px,5vw,22px)] h-[clamp(19px,5vw,22px)] text-neutral-600" />
+                      <MoreHorizontal className="w-[clamp(19px,5vw,22px)] h-[clamp(19px,5vw,22px)] text-neutral-400" />
                     </button>
 
                     {/* Menu Dropdown Opsi Postingan (Simpan, Laporkan, Hapus, Edit, Salin) */}
@@ -4815,7 +4952,7 @@ export default function KarebaFeedFinal() {
                         />
 
                         <div
-                          className="absolute right-0 top-9 z-40 w-52 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
+                          className="absolute right-0 top-9 z-40 w-52 max-w-[calc(100vw-2rem)] bg-neutral-900 rounded-2xl shadow-xl border border-neutral-700 py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden"
                         >
                           {/* 1. Opsi Simpan Kabar */}
                           <button
@@ -4825,17 +4962,17 @@ export default function KarebaFeedFinal() {
                               handleToggleSave(f.id);
                               setActiveMenuPostId(null);
                             }}
-                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                            className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-800 transition cursor-pointer group"
                           >
                             <Bookmark
                               className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
                                 savedPostIds.includes(f.id)
-                                  ? "fill-[#00632B] text-[#00632B]"
-                                  : "text-neutral-600"
+                                  ? "fill-emerald-400 text-emerald-400"
+                                  : "text-neutral-300"
                               }`}
                             />
                             <div className="min-w-0 flex-1">
-                              <p className={`text-xs font-bold leading-tight ${savedPostIds.includes(f.id) ? "text-[#00632B]" : "text-neutral-800"}`}>
+                              <p className={`text-xs font-bold leading-tight ${savedPostIds.includes(f.id) ? "text-emerald-400" : "text-neutral-100"}`}>
                                 {savedPostIds.includes(f.id) ? "Batal Simpan" : "Simpan Kabar"}
                               </p>
                               <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
@@ -4854,14 +4991,14 @@ export default function KarebaFeedFinal() {
                                   handleStartEditPost(f);
                                   setActiveMenuPostId(null);
                                 }}
-                                className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group text-emerald-700"
+                                className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-neutral-800 transition cursor-pointer group text-emerald-400"
                               >
-                                <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-[#00632B]" />
+                                <Edit3 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-emerald-400" />
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-bold leading-tight text-[#00632B]">
+                                  <p className="text-xs font-bold leading-tight text-emerald-400">
                                     Edit Kabar
                                   </p>
-                                  <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                                  <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
                                     Ubah teks, foto/video, atau lokasi
                                   </p>
                                 </div>
@@ -4874,14 +5011,14 @@ export default function KarebaFeedFinal() {
                                   setPostToDelete({ id: f.id, title: f.text, img: f.img });
                                   setActiveMenuPostId(null);
                                 }}
-                                className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                                className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-950/50 transition cursor-pointer group text-rose-400"
                               >
-                                <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                                <Trash2 className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-400" />
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-bold leading-tight text-rose-600">
+                                  <p className="text-xs font-bold leading-tight text-rose-400">
                                     Hapus Kabar
                                   </p>
-                                  <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                                  <p className="text-[10px] text-rose-300/80 leading-tight mt-0.5">
                                     Hapus postingan Anda
                                   </p>
                                 </div>
@@ -4895,21 +5032,21 @@ export default function KarebaFeedFinal() {
                                 handleReportPost(f.id, f.user, f.text);
                                 setActiveMenuPostId(null);
                               }}
-                              className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-50 transition cursor-pointer group text-rose-600"
+                              className="w-full px-3.5 py-2.5 text-left flex items-center gap-2.5 hover:bg-rose-950/50 transition cursor-pointer group text-rose-400"
                             >
-                              <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-600" />
+                              <Flag className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-rose-400" />
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold leading-tight text-rose-600">
+                                <p className="text-xs font-bold leading-tight text-rose-400">
                                   Laporkan Kabar
                                 </p>
-                                <p className="text-[10px] text-rose-400 leading-tight mt-0.5">
+                                <p className="text-[10px] text-rose-300/80 leading-tight mt-0.5">
                                   Laporkan jika melanggar
                                 </p>
                               </div>
                             </button>
                           )}
 
-                          <div className="my-1 border-t border-neutral-100" />
+                          <div className="my-1 border-t border-neutral-800" />
 
                           {/* 3. Salin Tautan */}
                           <button
@@ -4921,10 +5058,10 @@ export default function KarebaFeedFinal() {
                               showToast("Tautan kabar berhasil disalin");
                               setActiveMenuPostId(null);
                             }}
-                            className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-50 transition cursor-pointer group"
+                            className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-800 transition cursor-pointer group"
                           >
-                            <Link2 className="w-4 h-4 shrink-0 text-neutral-600 transition-transform group-hover:scale-110" />
-                            <span className="text-xs font-medium text-neutral-700">Salin Tautan</span>
+                            <Link2 className="w-4 h-4 shrink-0 text-neutral-300 transition-transform group-hover:scale-110" />
+                            <span className="text-xs font-medium text-neutral-200">Salin Tautan</span>
                           </button>
 
                           {/* 4. Salin Link Aplikasi Kareba'Ta */}
@@ -4936,14 +5073,14 @@ export default function KarebaFeedFinal() {
                               showToast("Link Kareba'Ta berhasil disalin!");
                               setActiveMenuPostId(null);
                             }}
-                            className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-emerald-50 transition cursor-pointer group"
+                            className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-neutral-800 transition cursor-pointer group"
                           >
                             <KarebaPinIcon size={16} className="shrink-0 transition-transform group-hover:scale-110" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold leading-tight text-[#00632B]">
+                              <p className="text-xs font-bold leading-tight text-emerald-400">
                                 Link Kareba&apos;Ta
                               </p>
-                              <p className="text-[10px] text-neutral-500 leading-tight mt-0.5">
+                              <p className="text-[10px] text-neutral-400 leading-tight mt-0.5">
                                 Klik untuk salin link aplikasi
                               </p>
                             </div>
@@ -5024,7 +5161,7 @@ export default function KarebaFeedFinal() {
 
                 {/* Baris Ringkasan Reaksi (Kiri) & Jumlah Komentar (Kanan) */}
                 {(f.like > 0 || (f.comments?.length || 0) > 0) && (
-                  <div className="px-3.5 sm:px-4 pb-1.5 flex items-center flex-wrap justify-between gap-2 text-xs text-neutral-500">
+                  <div className="px-3.5 sm:px-4 pb-1.5 flex items-center flex-wrap justify-between gap-2 text-xs text-neutral-400">
                     <div className="min-w-0">
                       {f.like > 0 && (
                         <ReactionBadge
@@ -5043,7 +5180,7 @@ export default function KarebaFeedFinal() {
                             setActiveCommentItem(f);
                           }
                         }}
-                        className="text-xs font-medium text-neutral-500 hover:text-[#00632B] hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                        className="text-xs font-medium text-neutral-400 hover:text-emerald-400 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
                       >
                         {f.comments!.length.toLocaleString("id-ID")} Komentar
                       </button>
@@ -5052,7 +5189,7 @@ export default function KarebaFeedFinal() {
                 )}
 
                 {/* Post Actions: Suka / Reaksi, Komentar, Bagikan (Kiri) & Jumlah Share (Kanan Sejajar Icon Share) */}
-                <div className="px-3.5 sm:px-4 flex items-center flex-wrap justify-between gap-x-2 gap-y-1 text-[clamp(12.5px,3.4vw,14px)] font-bold text-neutral-700">
+                <div className="px-3.5 sm:px-4 flex items-center flex-wrap justify-between gap-x-2 gap-y-1 text-[clamp(12.5px,3.4vw,14px)] font-bold text-neutral-300">
                   <div className="flex items-center flex-wrap gap-x-3.5 sm:gap-x-6 gap-y-1 min-w-0">
                     <ReactionButton
                       postId={f.id}
@@ -5070,10 +5207,10 @@ export default function KarebaFeedFinal() {
                           setActiveCommentItem(f);
                         }
                       }}
-                      className="flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition hover:text-[#00632B] text-neutral-600"
+                      className="flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition hover:text-emerald-400 text-neutral-400"
                       aria-label="Komentar"
                     >
-                      <MessageSquare className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
+                      <MessageSquare className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-400" />
                       <span className="whitespace-nowrap font-bold">Komentar</span>
                     </button>
 
@@ -5082,11 +5219,11 @@ export default function KarebaFeedFinal() {
                       type="button"
                       onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
                       className={`flex items-center gap-1.5 py-1.5 min-h-[40px] cursor-pointer transition ${
-                        activeSharePostId === f.id ? "text-emerald-600 font-bold" : "hover:text-emerald-600 text-neutral-600"
+                        activeSharePostId === f.id ? "text-emerald-400 font-bold" : "hover:text-emerald-400 text-neutral-400"
                       }`}
                       aria-label="Bagikan"
                     >
-                      <Share2 className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-500" />
+                      <Share2 className="w-[clamp(18px,4.8vw,21px)] h-[clamp(18px,4.8vw,21px)] text-neutral-400" />
                       <span className="whitespace-nowrap font-bold">Bagikan</span>
                     </button>
                   </div>
@@ -5096,7 +5233,7 @@ export default function KarebaFeedFinal() {
                       id={`share-count-${f.id}`}
                       type="button"
                       onClick={() => setActiveSharePostId((prev) => (prev === f.id ? null : f.id))}
-                      className="text-xs font-medium text-neutral-500 hover:text-emerald-600 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
+                      className="text-xs font-medium text-neutral-400 hover:text-emerald-400 hover:underline transition cursor-pointer ml-auto shrink-0 whitespace-nowrap"
                       aria-label={`Dibagikan ${f.shares!.toLocaleString("id-ID")} kali`}
                       title={`Dibagikan ${f.shares!.toLocaleString("id-ID")} kali`}
                     >
@@ -5107,7 +5244,7 @@ export default function KarebaFeedFinal() {
 
                 {/* Bar Bagikan Interaktif (FB, WA, Salin) */}
                 {activeSharePostId === f.id && (
-                  <div className="mx-3.5 sm:mx-4 mt-2.5 px-3 py-0.5 bg-neutral-50 rounded-2xl border border-neutral-200 flex items-center flex-wrap justify-between gap-2 animate-fade-in">
+                  <div className="mx-3.5 sm:mx-4 mt-2.5 px-3 py-0.5 bg-neutral-900 rounded-2xl border border-neutral-800 flex items-center flex-wrap justify-between gap-2 animate-fade-in">
                     <ShareBar
                       newsUrl={`${window.location.origin}/#post-${f.id}`}
                       title={f.text}
@@ -5119,7 +5256,7 @@ export default function KarebaFeedFinal() {
                     <button
                       type="button"
                       onClick={() => setActiveSharePostId(null)}
-                      className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200 transition shrink-0"
+                      className="p-1 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition shrink-0"
                       aria-label="Tutup"
                     >
                       <X className="w-4 h-4" />
@@ -5150,7 +5287,7 @@ export default function KarebaFeedFinal() {
 
                 return (
                   <div key={`ad-slot-${f.id}-${adToShow.id}`} className="w-full">
-                    <div className="w-full h-[2px] bg-neutral-200" aria-hidden="true" />
+                    <div className="w-full h-[2px] bg-neutral-800" aria-hidden="true" />
                     <SponsorAdCard
                       ad={adToShow}
                       onOpenHelp={() => setIsHelpOpen(true)}
@@ -5195,24 +5332,24 @@ export default function KarebaFeedFinal() {
             onWheel={(e) => e.preventDefault()}
           >
             <div
-              className="bg-white border border-neutral-200 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border"
+              className="bg-neutral-950 border border-neutral-800 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border"
               onClick={(e) => e.stopPropagation()}
               onTouchMove={(e) => e.stopPropagation()}
               onWheel={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-base text-neutral-900">Hapus Kabar</h3>
+                <h3 className="font-bold text-base text-neutral-100">Hapus Kabar</h3>
                 <button
                   type="button"
                   onClick={() => setPostToDelete(null)}
-                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer shrink-0"
+                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition cursor-pointer shrink-0"
                   aria-label="Tutup"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <p className="text-sm text-neutral-600 leading-relaxed">
+              <p className="text-sm text-neutral-300 leading-relaxed">
                 Apakah Anda yakin ingin menghapus kabar ini? Kabar akan dihapus dari Kareba&apos;Ta.
               </p>
 
@@ -5221,7 +5358,7 @@ export default function KarebaFeedFinal() {
                   id="cancel-delete-post-btn"
                   type="button"
                   onClick={() => setPostToDelete(null)}
-                  className="flex-1 min-w-[100px] py-2 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer"
+                  className="flex-1 min-w-[100px] py-2 text-xs font-semibold text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -5246,7 +5383,7 @@ export default function KarebaFeedFinal() {
         {editingPost && (
           <div
             id="edit-post-modal-overlay"
-            className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
+            className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
             onClick={() => {
               if (!isSavingPostEdit && !isProcessingEditMedia) {
                 closeEditPostModal();
@@ -5256,7 +5393,7 @@ export default function KarebaFeedFinal() {
             onWheel={(e) => e.preventDefault()}
           >
             <div
-              className="bg-white border border-neutral-200 rounded-3xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto animate-in zoom-in-95 duration-150 box-border max-h-[90dvh] overflow-y-auto"
+              className="bg-neutral-950 border border-neutral-800 rounded-3xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto animate-in zoom-in-95 duration-150 box-border max-h-[90dvh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               onTouchMove={(e) => e.stopPropagation()}
               onWheel={(e) => e.stopPropagation()}
@@ -5271,21 +5408,21 @@ export default function KarebaFeedFinal() {
               />
 
               {/* Header Modal */}
-              <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-100">
+              <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-800">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-[#00632B] flex items-center justify-center border border-emerald-200 shadow-2xs shrink-0">
-                    <Edit3 className="w-5 h-5 text-[#00632B]" />
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-950/70 text-emerald-400 flex items-center justify-center border border-emerald-700/60 shadow-2xs shrink-0">
+                    <Edit3 className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-base text-neutral-900 leading-tight">Edit Kabar</h3>
-                    <p className="text-xs text-neutral-500 mt-0.5">Ubah tulisan, foto/video, atau lokasi kabar</p>
+                    <h3 className="font-bold text-base text-neutral-100 leading-tight">Edit Kabar</h3>
+                    <p className="text-xs text-neutral-400 mt-0.5">Ubah tulisan, foto/video, atau lokasi kabar</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   disabled={isSavingPostEdit || isProcessingEditMedia}
                   onClick={closeEditPostModal}
-                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer disabled:opacity-40 shrink-0"
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition cursor-pointer disabled:opacity-40 shrink-0"
                   aria-label="Tutup"
                 >
                   <X className="w-5 h-5" />
@@ -5295,14 +5432,14 @@ export default function KarebaFeedFinal() {
               {/* Area Ganti / Tambah Foto atau Video */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-neutral-700">Foto / Video</span>
+                  <span className="text-xs font-semibold text-neutral-300">Foto / Video</span>
                   <div className="flex items-center gap-1.5">
                     {editingPostMediaChanged && (
                       <button
                         type="button"
                         disabled={isSavingPostEdit || isProcessingEditMedia}
                         onClick={handleRevertEditMedia}
-                        className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition cursor-pointer disabled:opacity-50"
+                        className="text-[11px] font-semibold text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition cursor-pointer disabled:opacity-50"
                       >
                         Batal Ganti
                       </button>
@@ -5312,7 +5449,7 @@ export default function KarebaFeedFinal() {
                       type="button"
                       disabled={isSavingPostEdit || isProcessingEditMedia}
                       onClick={() => editMediaInputRef.current?.click()}
-                      className="text-[11px] font-bold text-[#00632B] hover:text-white bg-emerald-50 hover:bg-[#00632B] border border-emerald-200 px-2.5 py-1 rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                      className="text-[11px] font-bold text-emerald-400 hover:text-white bg-emerald-950/60 hover:bg-[#00632B] border border-emerald-700/60 px-2.5 py-1 rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       <span>{editingPostMediaUrl ? "Ganti Foto / Video" : "Tambah Foto / Video"}</span>
@@ -5321,12 +5458,12 @@ export default function KarebaFeedFinal() {
                 </div>
 
                 {isProcessingEditMedia ? (
-                  <div className="w-full h-36 rounded-2xl bg-neutral-50 border border-neutral-200 flex flex-col items-center justify-center gap-2 text-xs text-neutral-500">
-                    <div className="w-5 h-5 border-2 border-[#00632B]/30 border-t-[#00632B] rounded-full animate-spin" />
+                  <div className="w-full h-36 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center gap-2 text-xs text-neutral-400">
+                    <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
                     <span>Memproses media...</span>
                   </div>
                 ) : editingPostMediaUrl ? (
-                  <div className="relative w-full rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-200 max-h-56 flex items-center justify-center">
+                  <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-neutral-800 max-h-56 flex items-center justify-center">
                     {editingPostMediaType === "video" ? (
                       <video
                         src={editingPostMediaUrl}
@@ -5339,7 +5476,7 @@ export default function KarebaFeedFinal() {
                       <img
                         src={editingPostMediaUrl}
                         alt="Pratinjau edit media"
-                        className="w-full max-h-56 object-contain bg-neutral-100"
+                        className="w-full max-h-56 object-contain bg-black"
                       />
                     )}
                     {editingPostMediaChanged && (
@@ -5353,7 +5490,7 @@ export default function KarebaFeedFinal() {
 
               {/* Area Input Teks */}
               <div className="space-y-1.5">
-                <label htmlFor="edit-post-textarea" className="block text-xs font-semibold text-neutral-700">
+                <label htmlFor="edit-post-textarea" className="block text-xs font-semibold text-neutral-300">
                   Teks / Deskripsi Kabar
                 </label>
                 <div className="relative">
@@ -5365,7 +5502,7 @@ export default function KarebaFeedFinal() {
                     placeholder="Tuliskan perbaikan teks kabar Anda..."
                     disabled={isSavingPostEdit}
                     maxLength={3000}
-                    className="w-full min-w-0 p-3.5 text-sm text-neutral-800 bg-neutral-50/80 rounded-2xl border border-neutral-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#00632B] focus:border-transparent transition-all placeholder:text-neutral-400 resize-none"
+                    className="w-full min-w-0 p-3.5 text-sm text-neutral-100 bg-neutral-900 rounded-2xl border border-neutral-800 focus:bg-neutral-950 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-neutral-500 resize-none"
                     autoFocus
                   />
                   <div className="flex justify-end pr-1 text-[11px] text-neutral-400 font-medium">
@@ -5373,7 +5510,7 @@ export default function KarebaFeedFinal() {
                   </div>
                 </div>
                 {!checkContentModeration(editingPostText).isClean && (
-                  <p className="text-[11px] text-rose-600 font-medium">
+                  <p className="text-[11px] text-rose-400 font-medium">
                     Peringatan: Teks terdeteksi mengandung kata tidak pantas ("{checkContentModeration(editingPostText).flaggedWord}").
                   </p>
                 )}
@@ -5382,7 +5519,7 @@ export default function KarebaFeedFinal() {
               {/* Area Input Lokasi */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="edit-post-location-input" className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
+                  <label htmlFor="edit-post-location-input" className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
                     <MapPin className="w-3.5 h-3.5 text-amber-500" />
                     <span>Lokasi Kabar</span>
                   </label>
@@ -5398,10 +5535,10 @@ export default function KarebaFeedFinal() {
                   placeholder="Contoh: Makassar, Pantai Losari..."
                   disabled={isSavingPostEdit}
                   maxLength={30}
-                  className="w-full min-w-0 px-3.5 py-2.5 text-sm text-neutral-800 bg-neutral-50/80 rounded-xl border border-neutral-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#00632B] focus:border-transparent transition-all placeholder:text-neutral-400"
+                  className="w-full min-w-0 px-3.5 py-2.5 text-sm text-neutral-100 bg-neutral-900 rounded-xl border border-neutral-800 focus:bg-neutral-950 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-neutral-500"
                 />
                 {editingPostLocation.trim() && !checkContentModeration(editingPostLocation).isClean && (
-                  <p className="text-[11px] text-rose-600 font-medium">
+                  <p className="text-[11px] text-rose-400 font-medium">
                     Peringatan: Lokasi mengandung kata tidak pantas ("{checkContentModeration(editingPostLocation).flaggedWord}").
                   </p>
                 )}
@@ -5414,7 +5551,7 @@ export default function KarebaFeedFinal() {
                   type="button"
                   disabled={isSavingPostEdit || isProcessingEditMedia}
                   onClick={closeEditPostModal}
-                  className="flex-1 min-w-[100px] py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer disabled:opacity-50"
+                  className="flex-1 min-w-[100px] py-2.5 text-xs font-semibold text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition cursor-pointer disabled:opacity-50"
                 >
                   Batal
                 </button>
@@ -5446,18 +5583,18 @@ export default function KarebaFeedFinal() {
         {reportPostData && (
           <div
             id="report-post-modal-overlay"
-            className="fixed inset-0 z-50 bg-white flex flex-col w-full max-w-[500px] mx-auto box-border animate-fade-in touch-manipulation overscroll-none"
+            className="fixed inset-0 z-50 bg-black flex flex-col w-full max-w-[500px] mx-auto box-border animate-fade-in touch-manipulation overscroll-none"
             style={{ touchAction: "manipulation", overscrollBehavior: "none", paddingTop: "env(safe-area-inset-top, 0px)" }}
           >
             {/* Header Full Screen */}
-            <div className="sticky top-0 z-10 bg-white border-b border-neutral-200 px-4 py-3.5 flex items-center justify-between shadow-xs">
+            <div className="sticky top-0 z-10 bg-black border-b border-neutral-800 px-4 py-3.5 flex items-center justify-between shadow-xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-red-950/80 border border-red-800/60 text-red-400 flex items-center justify-center shrink-0">
                   <Flag className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-neutral-900 leading-tight">Laporkan Kabar</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">Kabar oleh @{reportPostData.user}</p>
+                  <h3 className="font-bold text-base text-neutral-100 leading-tight">Laporkan Kabar</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">Kabar oleh @{reportPostData.user}</p>
                 </div>
               </div>
               <button
@@ -5467,7 +5604,7 @@ export default function KarebaFeedFinal() {
                   setReportPostData(null);
                   setReportSuccessInfo(null);
                 }}
-                className="p-2 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer"
+                className="p-2 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition cursor-pointer"
                 aria-label="Tutup Halaman Laporan"
               >
                 <X className="w-5 h-5" />
@@ -5477,34 +5614,34 @@ export default function KarebaFeedFinal() {
             {reportSuccessInfo ? (
               /* Tampilan Konfirmasi Sukses Pelaporan ala Instagram / Facebook */
               <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center text-center animate-fade-in space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-[#00632B] flex items-center justify-center shadow-xs">
+                <div className="w-16 h-16 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-400 flex items-center justify-center shadow-xs">
                   <ShieldCheck className="w-9 h-9" />
                 </div>
                 <div className="space-y-1.5 max-w-xs">
-                  <h3 className="text-lg font-bold text-neutral-900">
+                  <h3 className="text-lg font-bold text-neutral-100">
                     Terima Kasih Atas Laporan Anda
                   </h3>
-                  <p className="text-xs text-neutral-600 leading-relaxed">
-                    Laporan Anda mengenai kabar dari <span className="font-semibold text-neutral-800">@{reportSuccessInfo.targetUser}</span> telah berhasil dikirimkan ke tim pengawas.
+                  <p className="text-xs text-neutral-300 leading-relaxed">
+                    Laporan Anda mengenai kabar dari <span className="font-semibold text-white">@{reportSuccessInfo.targetUser}</span> telah berhasil dikirimkan ke tim pengawas.
                   </p>
                 </div>
 
                 {/* Info Kotak Penjelasan */}
-                <div className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl p-4 text-left space-y-2.5 text-xs text-neutral-700">
+                <div className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-4 text-left space-y-2.5 text-xs text-neutral-300">
                   <div className="flex items-start gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-[#00632B] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                     <p className="leading-snug">
                       <b>Postingan telah disembunyikan</b> dari linimasa beranda Anda agar Anda tidak melihatnya kembali.
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-[#00632B] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                     <p className="leading-snug">
                       <b>Identitas Anda aman & rahasia.</b> Pengguna yang dilaporkan tidak akan pernah mengetahui siapa yang melaporkan.
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-[#00632B] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                     <p className="leading-snug">
                       <b>Pengawas akan meninjau</b> konten ini dan mengambil tindakan tegas jika terbukti melanggar Pedoman Komunitas Kareba'Ta.
                     </p>
@@ -5532,7 +5669,7 @@ export default function KarebaFeedFinal() {
                       setReportSuccessInfo(null);
                       setReportPostData(null);
                     }}
-                    className="w-full py-2.5 px-4 text-neutral-500 hover:text-neutral-800 font-semibold text-xs transition cursor-pointer"
+                    className="w-full py-2.5 px-4 text-neutral-400 hover:text-neutral-200 font-semibold text-xs transition cursor-pointer"
                   >
                     Batalkan Sembunyikan Postingan
                   </button>
@@ -5544,14 +5681,14 @@ export default function KarebaFeedFinal() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {/* Kutipan konten yang dilaporkan */}
                   {reportPostData.text && (
-                    <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs text-neutral-600 italic">
+                    <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs text-neutral-300 italic">
                       &ldquo;{reportPostData.text}&rdquo;
                     </div>
                   )}
 
                   {/* Pilihan alasan pelaporan dengan deskripsi tegas untuk asusila / sensual */}
                   <div>
-                    <label className="text-xs font-bold text-neutral-800 block mb-2">
+                    <label className="text-xs font-bold text-neutral-200 block mb-2">
                       Pilih Alasan Pelaporan:
                     </label>
                     <div className="space-y-2">
@@ -5588,20 +5725,20 @@ export default function KarebaFeedFinal() {
                             onClick={() => setReportReason(opt.title)}
                             className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition select-none ${
                               isSelected
-                                ? "border-red-500 bg-red-50/50 text-neutral-900 ring-1 ring-red-400 shadow-xs"
-                                : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80 text-neutral-700"
+                                ? "border-red-500/80 bg-red-950/40 text-neutral-100 ring-1 ring-red-500/60 shadow-xs"
+                                : "border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-900 text-neutral-300"
                             }`}
                           >
                             {/* Cincin Lingkaran: Abu-abu netral secara default, berubah Merah saat dipilih */}
                             <div
                               className={`w-4 h-4 rounded-full mt-0.5 shrink-0 flex items-center justify-center transition-all ${
                                 isSelected
-                                  ? "border-2 border-red-600 bg-white ring-2 ring-red-200"
-                                  : "border-2 border-neutral-300 bg-white"
+                                  ? "border-2 border-red-500 bg-neutral-900 ring-2 ring-red-500/30"
+                                  : "border-2 border-neutral-600 bg-neutral-900"
                               }`}
                             >
                               {isSelected && (
-                                <div className="w-2 h-2 rounded-full bg-red-600 transition-transform scale-100" />
+                                <div className="w-2 h-2 rounded-full bg-red-500 transition-transform scale-100" />
                               )}
                             </div>
                             <input
@@ -5612,10 +5749,10 @@ export default function KarebaFeedFinal() {
                               className="sr-only"
                             />
                             <div className="min-w-0">
-                              <p className={`text-xs font-bold leading-tight ${isSelected ? "text-red-700" : "text-neutral-900"}`}>
+                              <p className={`text-xs font-bold leading-tight ${isSelected ? "text-red-300" : "text-neutral-100"}`}>
                                 {opt.title}
                               </p>
-                              <p className="text-[11px] text-neutral-500 leading-normal mt-1">{opt.desc}</p>
+                              <p className="text-[11px] text-neutral-400 leading-normal mt-1">{opt.desc}</p>
                             </div>
                           </label>
                         );
@@ -5625,8 +5762,8 @@ export default function KarebaFeedFinal() {
 
                   {/* Catatan tambahan opsional */}
                   <div>
-                    <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                      Keterangan Tambahan <span className="text-neutral-400 font-normal">(Opsional)</span>
+                    <label className="text-xs font-semibold text-neutral-300 block mb-1">
+                      Keterangan Tambahan <span className="text-neutral-500 font-normal">(Opsional)</span>
                     </label>
                     <textarea
                       id="report-details-input"
@@ -5634,22 +5771,22 @@ export default function KarebaFeedFinal() {
                       onChange={(e) => setReportDetails(e.target.value)}
                       placeholder="Jelaskan detail tindakan atau bagian yang melanggar..."
                       rows={3}
-                      className="w-full bg-neutral-50 border border-neutral-300 rounded-xl p-3 text-base text-neutral-900 placeholder-neutral-400 outline-none focus:border-red-500 focus:bg-white transition resize-none"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-3 text-base text-neutral-100 placeholder-neutral-500 outline-none focus:border-red-500 focus:bg-neutral-950 transition resize-none"
                     />
                   </div>
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800 leading-relaxed">
+                  <div className="bg-amber-950/50 border border-amber-700/50 rounded-xl p-3 text-[11px] text-amber-200 leading-relaxed">
                     Laporan Anda bersifat rahasia. Tim moderator Kareba&apos;Ta akan segera meninjau dan menghapus konten jika terbukti melanggar norma komunitas.
                   </div>
                 </div>
 
                 {/* Footer Tombol Aksi Sticky di Bawah */}
-                <div className="sticky bottom-0 bg-white border-t border-neutral-200 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-wrap gap-2.5 shadow-lg">
+                <div className="sticky bottom-0 bg-black border-t border-neutral-800 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-wrap gap-2.5 shadow-lg">
                   <button
                     id="cancel-report-btn"
                     type="button"
                     onClick={() => setReportPostData(null)}
-                    className="flex-1 min-w-[100px] py-3 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer"
+                    className="flex-1 min-w-[100px] py-3 text-xs font-semibold text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition cursor-pointer"
                   >
                     Batal
                   </button>
@@ -5661,7 +5798,7 @@ export default function KarebaFeedFinal() {
                     className={`flex-1 min-w-[130px] py-3 text-xs font-bold text-white rounded-xl transition cursor-pointer shadow-md flex items-center justify-center gap-1.5 ${
                       reportReason
                         ? "bg-red-600 hover:bg-red-700 active:scale-[0.99]"
-                        : "bg-neutral-300 text-neutral-500 cursor-not-allowed shadow-none"
+                        : "bg-neutral-800 text-neutral-500 cursor-not-allowed shadow-none"
                     }`}
                   >
                     <Flag className="w-4 h-4 shrink-0" />
@@ -5673,43 +5810,43 @@ export default function KarebaFeedFinal() {
           </div>
         )}
 
-        {/* MODAL EDIT PROFIL WARGA (IN-APP) - LATAR PUTIH */}
+        {/* MODAL EDIT PROFIL WARGA (IN-APP) - LATAR GELAP */}
         {isEditProfileOpen && (
           <div
             id="edit-profile-modal-overlay"
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border touch-none overscroll-contain select-none animate-fade-in"
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border touch-none overscroll-contain select-none animate-fade-in"
             onClick={() => setIsEditProfileOpen(false)}
             onTouchMove={(e) => e.preventDefault()}
             onWheel={(e) => e.preventDefault()}
           >
             <div
-              className="bg-white border border-neutral-200 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border max-h-[90dvh] overflow-y-auto"
+              className="bg-neutral-950 border border-neutral-800 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border max-h-[90dvh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               onTouchMove={(e) => e.stopPropagation()}
               onWheel={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="font-bold text-base text-neutral-900">Ubah Nama Pengguna</h3>
-                  <p className="text-[11px] text-neutral-500">Maksimal 13 huruf</p>
+                  <h3 className="font-bold text-base text-neutral-100">Ubah Nama Pengguna</h3>
+                  <p className="text-[11px] text-neutral-400">Maksimal 13 huruf</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(false)}
-                  className="text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer rounded-lg hover:bg-neutral-100 transition"
+                  className="text-neutral-400 hover:text-neutral-200 p-1 cursor-pointer rounded-lg hover:bg-neutral-800 transition"
                   aria-label="Tutup modal"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
               {/* Pratinjau Foto Profil dengan Huruf Pertama */}
-              <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+              <div className="flex items-center gap-3 p-3 bg-neutral-900 rounded-xl border border-neutral-800">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] text-white font-extrabold text-xl flex items-center justify-center shrink-0 border-2 border-[#E5A000] select-none">
                   {(newUserNameInput.trim().replace(/^@/, "")[0] || (userName[0] || "W")).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-neutral-500 font-medium">Foto Profil (Huruf Pertama Nama Pengguna):</p>
-                  <p className="text-sm font-bold text-neutral-900 truncate">
+                  <p className="text-[11px] text-neutral-400 font-medium">Foto Profil (Huruf Pertama Nama Pengguna):</p>
+                  <p className="text-sm font-bold text-neutral-100 truncate">
                     Huruf "{(newUserNameInput.trim().replace(/^@/, "")[0] || (userName[0] || "W")).toUpperCase()}"
                   </p>
                 </div>
@@ -5717,14 +5854,14 @@ export default function KarebaFeedFinal() {
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="edit-username-input" className="text-xs text-neutral-600 font-medium">
+                  <label htmlFor="edit-username-input" className="text-xs text-neutral-300 font-medium">
                     Nama Pengguna
                   </label>
-                  <span className={`text-[11px] font-semibold ${newUserNameInput.length >= 13 ? "text-amber-600" : "text-neutral-400"}`}>
+                  <span className={`text-[11px] font-semibold ${newUserNameInput.length >= 13 ? "text-amber-400" : "text-neutral-400"}`}>
                     {newUserNameInput.length}/13
                   </span>
                 </div>
-                <div className="relative flex items-center bg-neutral-50 rounded-xl border border-neutral-300 focus-within:border-[#00632B] focus-within:bg-white transition-all">
+                <div className="relative flex items-center bg-neutral-900 rounded-xl border border-neutral-700 focus-within:border-emerald-500 focus-within:bg-neutral-950 transition-all">
                   <span className="pl-3.5 text-sm font-semibold select-none text-neutral-400">
                     @
                   </span>
@@ -5768,7 +5905,7 @@ export default function KarebaFeedFinal() {
                       }
                     }}
                     placeholder="nama_kamu"
-                    className="w-full py-2.5 pl-1 pr-3 bg-transparent text-sm font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal outline-none"
+                    className="w-full py-2.5 pl-1 pr-3 bg-transparent text-sm font-bold text-neutral-100 placeholder:text-neutral-500 placeholder:font-normal outline-none"
                     autoFocus
                   />
                 </div>
@@ -5780,7 +5917,7 @@ export default function KarebaFeedFinal() {
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(false)}
-                  className="px-3 py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition cursor-pointer"
+                  className="px-3 py-2 text-xs font-semibold text-neutral-300 hover:text-white transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -5823,7 +5960,7 @@ export default function KarebaFeedFinal() {
                   className={`px-4 py-2 text-xs font-semibold rounded-xl transition shadow-xs flex items-center gap-1.5 ${
                     newUserNameInput.trim().replace(/^@/, "")
                       ? "bg-[#00632B] hover:bg-[#004f22] text-white cursor-pointer active:scale-95"
-                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
+                      : "bg-neutral-800 text-neutral-500 cursor-not-allowed shadow-none"
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -5838,39 +5975,39 @@ export default function KarebaFeedFinal() {
         {activeCommentItem && (
           <div
             id="comments-fullscreen-page"
-            className="fixed inset-0 z-[60] bg-white flex justify-center w-full h-[100dvh] overflow-hidden animate-fade-in"
+            className="fixed inset-0 z-[60] bg-black flex justify-center w-full h-[100dvh] overflow-hidden animate-fade-in"
           >
             <div
-              className="w-full max-w-[500px] mx-auto box-border bg-white flex flex-col h-full overflow-hidden"
+              className="w-full max-w-[500px] mx-auto box-border bg-black flex flex-col h-full overflow-hidden"
               style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
             >
             {/* Header Halaman Komentar Layar Penuh */}
-            <header className="px-3.5 sm:px-4 py-3 sm:py-3.5 border-b border-neutral-200 bg-white flex items-center justify-between gap-2 sticky top-0 z-10 shrink-0">
+            <header className="px-3.5 sm:px-4 py-3 sm:py-3.5 border-b border-neutral-800 bg-black flex items-center justify-between gap-2 sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <button
                   type="button"
                   onClick={() => setActiveCommentItem(null)}
-                  className="p-1.5 -ml-1.5 rounded-full text-neutral-700 hover:bg-neutral-100 transition active:scale-95 shrink-0"
+                  className="p-1.5 -ml-1.5 rounded-full text-neutral-200 hover:bg-neutral-800 transition active:scale-95 shrink-0"
                   aria-label="Kembali"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center flex-wrap gap-2">
-                    <h2 className="font-bold text-base text-neutral-900 leading-tight">Komentar</h2>
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-neutral-100 text-neutral-600 rounded-full shrink-0">
+                    <h2 className="font-bold text-base text-neutral-100 leading-tight">Komentar</h2>
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-neutral-800 text-neutral-300 rounded-full shrink-0">
                       {activeCommentItem.comments?.length || 0}
                     </span>
                   </div>
-                  <p className="text-xs text-neutral-500 truncate">Kabar oleh @{activeCommentItem.user}</p>
+                  <p className="text-xs text-neutral-400 truncate">Kabar oleh @{activeCommentItem.user}</p>
                 </div>
               </div>
             </header>
 
             {/* Ringkasan Singkat Postingan yang Sedang Dikomentari */}
-            <div className="px-3.5 sm:px-4 py-2.5 bg-neutral-50/80 border-b border-neutral-200 flex items-center gap-3 shrink-0">
+            <div className="px-3.5 sm:px-4 py-2.5 bg-neutral-950 border-b border-neutral-800 flex items-center gap-3 shrink-0">
               {activeCommentItem.img && activeCommentItem.img.trim() ? (
-                <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-200 shrink-0 border border-neutral-200">
+                <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-900 shrink-0 border border-neutral-800">
                   {activeCommentItem.mediaType === "video" ? (
                     <video src={activeCommentItem.img} className="w-full h-full object-cover" />
                   ) : (
@@ -5878,38 +6015,38 @@ export default function KarebaFeedFinal() {
                   )}
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 border border-emerald-200">
-                  <PenLine className="w-4 h-4 text-[#00632B]" />
+                <div className="w-10 h-10 rounded-lg bg-emerald-950/70 flex items-center justify-center shrink-0 border border-emerald-700/60">
+                  <PenLine className="w-4 h-4 text-emerald-400" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-900 truncate">
+                <p className="text-xs font-semibold text-neutral-100 truncate">
                   {activeCommentItem.name || `@${activeCommentItem.user}`}
                 </p>
-                <p className="text-xs text-neutral-600 truncate mt-0.5">
+                <p className="text-xs text-neutral-400 truncate mt-0.5">
                   {activeCommentItem.text}
                 </p>
               </div>
             </div>
 
             {/* List komentar Layar Penuh */}
-            <div className="p-3.5 sm:p-4 overflow-y-auto space-y-3.5 flex-1 bg-neutral-50/50">
+            <div className="p-3.5 sm:p-4 overflow-y-auto space-y-3.5 flex-1 bg-black">
               {activeCommentItem.comments && activeCommentItem.comments.length > 0 ? (
                 activeCommentItem.comments.map((c) => (
-                  <div key={c.id} className="flex items-start gap-2.5 bg-white p-3.5 rounded-xl border border-neutral-200 shadow-2xs">
+                  <div key={c.id} className="flex items-start gap-2.5 bg-neutral-950 p-3.5 rounded-xl border border-neutral-800 shadow-2xs">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00632B] to-[#004f22] border-2 border-[#E5A000] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs select-none">
                       {c.user?.[0] ? c.user[0].toUpperCase() : "W"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center flex-wrap justify-between gap-1.5 min-w-0">
-                        <span className="text-xs font-bold text-neutral-900 truncate max-w-full">
+                        <span className="text-xs font-bold text-neutral-100 truncate max-w-full">
                           {c.user}
                         </span>
                         <span className="text-[10px] text-neutral-400 shrink-0 whitespace-nowrap">
                           {c.time}
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-700 mt-1 leading-relaxed whitespace-pre-wrap break-words">{c.text}</p>
+                      <p className="text-xs text-neutral-200 mt-1 leading-relaxed whitespace-pre-wrap break-words">{c.text}</p>
 
                       {/* Aksi Komentar (Like, Balas, Hapus) */}
                       {(() => {
@@ -5939,18 +6076,18 @@ export default function KarebaFeedFinal() {
                 ))
               ) : (
                 <div className="py-20 flex flex-col items-center justify-center text-center text-neutral-400">
-                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 mb-3">
                     <MessageSquare className="w-6 h-6" />
                   </div>
-                  <p className="text-sm font-medium text-neutral-600">Belum ada komentar</p>
-                  <p className="text-xs text-neutral-400 mt-1">Jadilah yang pertama memberikan tanggapan!</p>
+                  <p className="text-sm font-medium text-neutral-300">Belum ada komentar</p>
+                  <p className="text-xs text-neutral-500 mt-1">Jadilah yang pertama memberikan tanggapan!</p>
                 </div>
               )}
             </div>
 
             {/* Input komentar baru di bagian bawah layar penuh */}
             {!currentUser ? (
-              <div className="px-3 py-3 sm:p-4 border-t border-neutral-200 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="px-3 py-3 sm:p-4 border-t border-neutral-800 bg-black shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <button
                   id="guest-comment-login-btn"
                   type="button"
@@ -5959,9 +6096,9 @@ export default function KarebaFeedFinal() {
                     setLoginRedirectMessage("Masuk dengan Akun Google terlebih dahulu untuk menulis dan membalas komentar.");
                     setIsLoginModalOpen(true);
                   }}
-                  className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-neutral-100 hover:bg-neutral-200/70 border border-neutral-300 text-left transition cursor-pointer"
+                  className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-left transition cursor-pointer"
                 >
-                  <span className="text-xs sm:text-sm text-neutral-500 font-medium truncate">
+                  <span className="text-xs sm:text-sm text-neutral-400 font-medium truncate">
                     Masuk dengan Google untuk berkomentar...
                   </span>
                   <span className="px-3 py-1 bg-[#00632B] text-white text-xs font-bold rounded-full shrink-0 flex items-center gap-1.5">
@@ -5971,23 +6108,23 @@ export default function KarebaFeedFinal() {
                 </button>
               </div>
             ) : currentBanStatus.isBanned ? (
-              <div className="p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-rose-200 bg-rose-50 flex items-center flex-wrap justify-between gap-2.5 shrink-0 text-xs text-rose-900">
+              <div className="p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-rose-800/60 bg-rose-950/60 flex items-center flex-wrap justify-between gap-2.5 shrink-0 text-xs text-rose-200">
                 <span className="font-semibold flex-1 min-w-[160px]">
                   Tabe' akun Anda telah ditangguhkan karena melanggar aturan komunitas.
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsHelpOpen(true)}
-                  className="px-2.5 py-1 bg-rose-200 hover:bg-rose-300 font-bold rounded-lg transition shrink-0 cursor-pointer"
+                  className="px-2.5 py-1 bg-rose-700 hover:bg-rose-600 text-white font-bold rounded-lg transition shrink-0 cursor-pointer"
                 >
                   Bantuan
                 </button>
               </div>
             ) : (
-              <div className="px-3 py-3 sm:p-4 border-t border-neutral-200 bg-white space-y-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="px-3 py-3 sm:p-4 border-t border-neutral-800 bg-black space-y-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 {!checkContentModeration(commentInputText).isClean && (
-                  <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-fade-in">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                  <div className="text-[11px] text-red-300 bg-red-950/70 border border-red-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-fade-in">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-red-400" />
                     <span>Komentar mengandung kata tidak pantas/jorok. Mohon gunakan bahasa santun.</span>
                   </div>
                 )}
@@ -6012,10 +6149,10 @@ export default function KarebaFeedFinal() {
                       }
                     }}
                     style={{ maxHeight: "82px" }}
-                    className={`flex-1 min-w-[120px] box-border border rounded-2xl px-3.5 py-2 text-sm leading-[22px] text-neutral-900 placeholder-neutral-400 outline-none transition resize-none break-words touch-pan-y ${
+                    className={`flex-1 min-w-[120px] box-border border rounded-2xl px-3.5 py-2 text-sm leading-[22px] text-neutral-100 placeholder-neutral-500 outline-none transition resize-none break-words touch-pan-y ${
                       !checkContentModeration(commentInputText).isClean
-                        ? "bg-red-50 border-red-300"
-                        : "bg-neutral-100 border-neutral-300 focus:border-[#00632B] focus:bg-white"
+                        ? "bg-red-950/50 border-red-700"
+                        : "bg-neutral-900 border-neutral-700 focus:border-emerald-500 focus:bg-neutral-950"
                     }`}
                   />
                   <button
@@ -6039,23 +6176,23 @@ export default function KarebaFeedFinal() {
         {commentToDelete && (
           <div
             id="delete-comment-modal-overlay"
-            className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
+            className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in touch-none overscroll-contain select-none"
             onClick={() => setCommentToDelete(null)}
             onTouchMove={(e) => e.preventDefault()}
             onWheel={(e) => e.preventDefault()}
           >
             <div
-              className="bg-white border border-neutral-200 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border"
+              className="bg-neutral-950 border border-neutral-800 rounded-2xl w-full p-4 sm:p-5 space-y-4 shadow-2xl touch-auto select-auto box-border"
               onClick={(e) => e.stopPropagation()}
               onTouchMove={(e) => e.stopPropagation()}
               onWheel={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-base text-neutral-900">Hapus Komentar</h3>
+                <h3 className="font-bold text-base text-neutral-100">Hapus Komentar</h3>
                 <button
                   type="button"
                   onClick={() => setCommentToDelete(null)}
-                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition cursor-pointer shrink-0"
+                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition cursor-pointer shrink-0"
                   aria-label="Tutup"
                 >
                   <X className="w-5 h-5" />
@@ -6063,13 +6200,13 @@ export default function KarebaFeedFinal() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm text-neutral-600 leading-relaxed">
+                <p className="text-sm text-neutral-300 leading-relaxed">
                   {commentToDelete.isOtherUser && commentToDelete.user
                     ? `Apakah Anda yakin ingin menghapus komentar dari @${commentToDelete.user.replace(/^@/, "")} di postingan Anda?`
                     : "Apakah Anda yakin ingin menghapus komentar ini?"}
                 </p>
                 {commentToDelete.text && (
-                  <p className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-200/80 rounded-xl px-3 py-2 line-clamp-2 italic">
+                  <p className="text-xs text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 line-clamp-2 italic">
                     &ldquo;{commentToDelete.text}&rdquo;
                   </p>
                 )}
@@ -6080,7 +6217,7 @@ export default function KarebaFeedFinal() {
                   id="cancel-delete-comment-btn"
                   type="button"
                   onClick={() => setCommentToDelete(null)}
-                  className="flex-1 min-w-[100px] py-2 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition cursor-pointer"
+                  className="flex-1 min-w-[100px] py-2 text-xs font-semibold text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -6106,32 +6243,39 @@ export default function KarebaFeedFinal() {
         {isInboxOpen && (
           <div
             id="comment-inbox-modal"
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-2xs flex items-end sm:items-center justify-center sm:p-4 animate-fade-in"
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-2xs flex items-end sm:items-center justify-center sm:p-4 animate-fade-in"
             onClick={() => setIsInboxOpen(false)}
           >
             <div
-              className="w-full max-w-[500px] mx-auto box-border bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-neutral-200 flex flex-col max-h-[85vh] overflow-hidden animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
+              className="w-full max-w-[500px] mx-auto box-border bg-neutral-950 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-neutral-800 flex flex-col max-h-[85vh] overflow-hidden animate-slide-up pb-[env(safe-area-inset-bottom,0px)]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header Kotak Surat */}
-              <div className="px-3.5 sm:px-4 py-3.5 border-b border-neutral-200 flex items-center flex-wrap justify-between gap-2 bg-white shrink-0">
+              <div className="px-3.5 sm:px-4 py-3.5 border-b border-neutral-800 flex items-center flex-wrap justify-between gap-2 bg-neutral-950 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-[#00632B] flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-emerald-950/70 border border-emerald-700/60 text-emerald-400 flex items-center justify-center shrink-0">
                     <Mail className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center flex-wrap gap-2">
-                      <h2 className="font-bold text-base text-neutral-900 leading-tight truncate">
+                      <h2 className="font-bold text-base text-neutral-100 leading-tight truncate">
                         Komentar Masuk
                       </h2>
+                      {isAdminApprovalActive && pendingApprovalPosts.length > 0 && (
+                        <span className="px-2 py-0.5 text-[11px] font-bold bg-amber-400 text-black rounded-full shrink-0">
+                          {pendingApprovalPosts.length} Persetujuan
+                        </span>
+                      )}
                       {unreadCommentNotifCount > 0 && (
                         <span className="px-2 py-0.5 text-[11px] font-bold bg-rose-600 text-white rounded-full shrink-0">
                           {unreadCommentNotifCount} Baru
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-neutral-500 truncate">
-                      Tanggapan warga pada kabarmu & balasan nama
+                    <p className="text-[11px] text-neutral-400 truncate">
+                      {isAdminApprovalActive
+                        ? "Antrean persetujuan admin, tanggapan warga & balasan nama"
+                        : "Tanggapan warga pada kabarmu & balasan nama"}
                     </p>
                   </div>
                 </div>
@@ -6142,7 +6286,7 @@ export default function KarebaFeedFinal() {
                       id="mark-all-inbox-read-btn"
                       type="button"
                       onClick={() => markNotifsAsRead(incomingCommentNotifications.map((n) => n.id))}
-                      className="text-[11px] font-bold text-[#00632B] hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                      className="text-[11px] font-bold text-emerald-400 hover:bg-emerald-950/60 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
                     >
                       Tandai dibaca
                     </button>
@@ -6150,7 +6294,7 @@ export default function KarebaFeedFinal() {
                   <button
                     type="button"
                     onClick={() => setIsInboxOpen(false)}
-                    className="p-1.5 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition cursor-pointer"
+                    className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition cursor-pointer"
                     aria-label="Tutup"
                   >
                     <X className="w-5 h-5" />
@@ -6158,17 +6302,136 @@ export default function KarebaFeedFinal() {
                 </div>
               </div>
 
-              {/* Isi Daftar Komentar Masuk */}
-              <div className="flex-1 overflow-y-auto divide-y divide-neutral-100 bg-neutral-50/40">
+              {/* Isi Daftar Persetujuan Admin & Komentar Masuk */}
+              <div className="flex-1 overflow-y-auto divide-y divide-neutral-800 bg-black">
+                {isAdminApprovalActive && Boolean(currentUser) && (
+                  <div id="admin-approval-inbox-section" className="p-3.5 bg-neutral-950 border-b border-neutral-800">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            <span>Persetujuan Kabar Warga</span>
+                            {pendingApprovalPosts.length > 0 && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-amber-400 text-black rounded-full leading-none">
+                                {pendingApprovalPosts.length}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 truncate">
+                            Mode persetujuan admin sedang aktif di Dasbor
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsInboxOpen(false);
+                          setAdminInitialMenu("posts");
+                          setAdminInitialPostFilter("pending");
+                          if (typeof window !== "undefined") {
+                            window.location.hash = "#/admin";
+                          }
+                          setViewMode("admin");
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-[11px] font-bold text-neutral-200 transition cursor-pointer shrink-0"
+                      >
+                        Buka Dasbor
+                      </button>
+                    </div>
+
+                    {pendingApprovalPosts.length === 0 ? (
+                      <div className="px-3 py-2 rounded-xl bg-neutral-900/70 border border-neutral-800 text-[11px] text-neutral-400 flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Tidak ada kabar berita yang menunggu persetujuan saat ini.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {pendingApprovalPosts.map((post) => {
+                          const authorHandle = (post.user || post.name || "warga").replace(/^@/, "");
+                          const isBusy = processingApprovalPostId === post.id;
+                          return (
+                            <div
+                              key={`pending-${post.id}`}
+                              className="p-3 rounded-2xl bg-amber-950/20 border border-amber-500/35 space-y-2.5"
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 text-xs font-bold flex items-center justify-center shrink-0">
+                                  {(authorHandle[0] || "W").toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center flex-wrap gap-1.5">
+                                    <span className="text-xs font-bold text-neutral-100">@{authorHandle}</span>
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                                      <Clock className="w-2.5 h-2.5" />
+                                      Menunggu ACC
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-neutral-400 mt-0.5 truncate">
+                                    {post.location || "Kawasan Sekitar"} • {post.time || "Baru saja"}
+                                  </p>
+                                  <p className="text-xs text-neutral-200 mt-1.5 line-clamp-3 leading-relaxed">
+                                    {post.text || "Kabar warga baru"}
+                                  </p>
+                                </div>
+
+                                {post.img && post.img.trim() && (
+                                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 shrink-0">
+                                    {post.mediaType === "video" ? (
+                                      post.thumbnail ? (
+                                        <img src={post.thumbnail} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-emerald-400">
+                                          <Video className="w-4 h-4" />
+                                        </div>
+                                      )
+                                    ) : (
+                                      <img src={post.img} alt="" className="w-full h-full object-cover" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-amber-500/20">
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleQuickRejectPost(post)}
+                                  className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-bold transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  <span>Tolak</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleQuickApprovePost(post)}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs disabled:opacity-50"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>{isBusy ? "Memproses..." : "Loloskan"}</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {!currentUser ? (
                   <div className="py-14 px-6 flex flex-col items-center justify-center text-center">
-                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 mb-3">
                       <Mail className="w-6 h-6" />
                     </div>
-                    <p className="text-sm font-bold text-neutral-800">
+                    <p className="text-sm font-bold text-neutral-200">
                       Masuk untuk melihat pesan komentar
                     </p>
-                    <p className="text-xs text-neutral-500 mt-1 max-w-[260px] leading-relaxed">
+                    <p className="text-xs text-neutral-400 mt-1 max-w-[260px] leading-relaxed">
                       Notifikasi komentar baru pada kabar Anda dan balasan @nama akan tampil di sini.
                     </p>
                     <button
@@ -6185,17 +6448,23 @@ export default function KarebaFeedFinal() {
                     </button>
                   </div>
                 ) : incomingCommentNotifications.length === 0 ? (
-                  <div className="py-16 px-6 flex flex-col items-center justify-center text-center">
-                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
-                      <Mail className="w-6 h-6" />
+                  isAdminApprovalActive && pendingApprovalPosts.length > 0 ? (
+                    <div className="py-6 px-4 text-center text-xs text-neutral-500">
+                      Belum ada komentar masuk lainnya.
                     </div>
-                    <p className="text-sm font-semibold text-neutral-700">
-                      Belum ada komentar masuk
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1 max-w-[260px] leading-relaxed">
-                      Jika ada warga mengomentari kabarmu atau membalas namamu, pesannya akan langsung muncul di sini.
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="py-16 px-6 flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 mb-3">
+                        <Mail className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-semibold text-neutral-300">
+                        Belum ada komentar masuk
+                      </p>
+                      <p className="text-xs text-neutral-500 mt-1 max-w-[260px] leading-relaxed">
+                        Jika ada warga mengomentari kabarmu atau membalas namamu, pesannya akan langsung muncul di sini.
+                      </p>
+                    </div>
+                  )
                 ) : (
                   incomingCommentNotifications.map((notif) => {
                     const isUnread = !readNotifIdSet.has(notif.id);
@@ -6210,8 +6479,8 @@ export default function KarebaFeedFinal() {
                         }}
                         className={`w-full px-4 py-3 text-left flex items-start gap-3 transition cursor-pointer ${
                           isUnread
-                            ? "bg-emerald-50/70 hover:bg-emerald-50"
-                            : "bg-white hover:bg-neutral-50"
+                            ? "bg-emerald-950/40 hover:bg-emerald-950/60"
+                            : "bg-neutral-950 hover:bg-neutral-900"
                         }`}
                       >
                         <div className="relative shrink-0 mt-0.5">
@@ -6219,15 +6488,15 @@ export default function KarebaFeedFinal() {
                             {(notif.commentUser.replace(/^@/, "")[0] || "W").toUpperCase()}
                           </div>
                           {isUnread && (
-                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-rose-600 border-2 border-white" />
+                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-rose-600 border-2 border-neutral-950" />
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center flex-wrap justify-between gap-x-2 gap-y-0.5">
-                            <p className="text-xs text-neutral-800 break-words">
-                              <span className="font-bold text-neutral-900">@{notif.commentUser.replace(/^@/, "")}</span>{" "}
-                              <span className="text-neutral-500">
+                            <p className="text-xs text-neutral-200 break-words">
+                              <span className="font-bold text-neutral-100">@{notif.commentUser.replace(/^@/, "")}</span>{" "}
+                              <span className="text-neutral-400">
                                 {notif.type === "post_comment" ? "mengomentari kabarmu" : "membalas kamu"}
                               </span>
                             </p>
@@ -6236,7 +6505,7 @@ export default function KarebaFeedFinal() {
                             </span>
                           </div>
 
-                          <p className="text-xs font-medium text-neutral-800 mt-1 line-clamp-2 leading-relaxed">
+                          <p className="text-xs font-medium text-neutral-200 mt-1 line-clamp-2 leading-relaxed">
                             "{notif.commentText}"
                           </p>
                           <p className="text-[11px] text-neutral-400 truncate mt-1">
@@ -6245,7 +6514,7 @@ export default function KarebaFeedFinal() {
                         </div>
 
                         {notif.postImg && notif.postImg.trim() && (
-                          <div className="w-11 h-11 rounded-lg overflow-hidden bg-neutral-200 border border-neutral-200 shrink-0 self-center">
+                          <div className="w-11 h-11 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 shrink-0 self-center">
                             {notif.postMediaType === "video" ? (
                               notif.postThumbnail ? (
                                 <img src={notif.postThumbnail} alt="" className="w-full h-full object-cover" />
@@ -6391,49 +6660,49 @@ export default function KarebaFeedFinal() {
 
         {/* MODAL PERINGATAN BATAS DURASI (30 DETIK) ATAU UKURAN VIDEO (20 MB) */}
         {videoDurationAlert?.isOpen && (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="w-full max-w-[500px] mx-auto box-border bg-white rounded-3xl p-4 sm:p-5 shadow-2xl border border-neutral-200 text-center space-y-4 max-h-[90dvh] overflow-y-auto">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-xs">
-                <Clock className="w-7 h-7 text-amber-600" />
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="w-full max-w-[500px] mx-auto box-border bg-neutral-950 rounded-3xl p-4 sm:p-5 shadow-2xl border border-neutral-800 text-center space-y-4 max-h-[90dvh] overflow-y-auto">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-950/60 text-amber-400 flex items-center justify-center border border-amber-700/50 shadow-xs">
+                <Clock className="w-7 h-7 text-amber-400" />
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-base font-extrabold text-neutral-900">
+                <h3 className="text-base font-extrabold text-neutral-100">
                   {videoDurationAlert.reason === "size"
                     ? "Ukuran Video Terlalu Besar"
                     : "Durasi Video Terlalu Panjang"}
                 </h3>
                 {videoDurationAlert.reason === "size" ? (
-                  <p className="text-xs text-neutral-600 leading-relaxed">
+                  <p className="text-xs text-neutral-300 leading-relaxed">
                     Video yang Anda pilih berukuran{" "}
-                    <span className="font-bold text-amber-600 font-mono">
+                    <span className="font-bold text-amber-400 font-mono">
                       {((videoDurationAlert.fileSizeBytes || 0) / (1024 * 1024)).toFixed(1)} MB
                     </span>
                     . Batas ukuran maksimal video di Kareba&apos;Ta adalah{" "}
-                    <span className="font-bold text-[#00632B]">{MAX_VIDEO_FILE_SIZE_MB} MB</span>.
+                    <span className="font-bold text-emerald-400">{MAX_VIDEO_FILE_SIZE_MB} MB</span>.
                   </p>
                 ) : (
-                  <p className="text-xs text-neutral-600 leading-relaxed">
+                  <p className="text-xs text-neutral-300 leading-relaxed">
                     Video yang Anda pilih berdurasi{" "}
-                    <span className="font-bold text-amber-600 font-mono">
+                    <span className="font-bold text-amber-400 font-mono">
                       {formatDuration(videoDurationAlert.duration || 0)}
                     </span>
                     . Batas durasi maksimal di Kareba&apos;Ta adalah{" "}
-                    <span className="font-bold text-[#00632B]">{MAX_VIDEO_DURATION_SECONDS} detik</span>.
+                    <span className="font-bold text-emerald-400">{MAX_VIDEO_DURATION_SECONDS} detik</span>.
                   </p>
                 )}
               </div>
 
-              <div className="bg-neutral-50 rounded-2xl p-3 border border-neutral-200 text-left space-y-1.5">
-                <p className="text-[11px] font-bold text-neutral-800 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#00632B] shrink-0" />
+              <div className="bg-neutral-900 rounded-2xl p-3 border border-neutral-800 text-left space-y-1.5">
+                <p className="text-[11px] font-bold text-neutral-100 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>
                     {videoDurationAlert.reason === "size"
                       ? `Kenapa dibatasi ${MAX_VIDEO_FILE_SIZE_MB} MB?`
                       : `Kenapa dibatasi ${MAX_VIDEO_DURATION_SECONDS} detik?`}
                   </span>
                 </p>
-                <p className="text-[11px] text-neutral-500 leading-normal">
+                <p className="text-[11px] text-neutral-400 leading-normal">
                   Agar kabar warga tetap padat dan jelas, cepat diunggah di HP, serta hemat kuota dan tidak membuat warga lain buffering saat menonton di beranda.
                 </p>
               </div>
@@ -6456,7 +6725,7 @@ export default function KarebaFeedFinal() {
                 <button
                   type="button"
                   onClick={() => setVideoDurationAlert(null)}
-                  className="w-full py-2 px-4 text-neutral-500 hover:text-neutral-800 text-xs font-semibold rounded-xl hover:bg-neutral-100 transition cursor-pointer"
+                  className="w-full py-2 px-4 text-neutral-400 hover:text-neutral-200 text-xs font-semibold rounded-xl hover:bg-neutral-800 transition cursor-pointer"
                 >
                   Tutup &amp; Potong di Galeri HP
                 </button>
@@ -6469,29 +6738,29 @@ export default function KarebaFeedFinal() {
         {isMediaChoiceModalOpen && (
           <div
             id="media-choice-bottom-sheet"
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in select-none"
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in select-none"
             onClick={() => setIsMediaChoiceModalOpen(false)}
           >
             <div
-              className="w-full box-border bg-white rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border border-neutral-200 animate-slide-up space-y-4 max-h-[90dvh] overflow-y-auto"
+              className="w-full box-border bg-neutral-950 rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border border-neutral-800 animate-slide-up space-y-4 max-h-[90dvh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Garis Handle Tarik */}
-              <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto sm:hidden" />
+              <div className="w-10 h-1 bg-neutral-700 rounded-full mx-auto sm:hidden" />
 
-              <div className="flex items-center justify-between gap-2 pb-2 border-b border-neutral-100">
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-neutral-800">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-extrabold text-base text-neutral-900">
+                  <h3 className="font-extrabold text-base text-neutral-100">
                     Bagikan Kabar Warga
                   </h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-neutral-400 mt-0.5">
                     Pilih sumber foto atau video yang ingin Anda unggah
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsMediaChoiceModalOpen(false)}
-                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition shrink-0"
+                  className="p-1 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition shrink-0"
                   aria-label="Tutup"
                 >
                   <X className="w-5 h-5" />
@@ -6508,14 +6777,14 @@ export default function KarebaFeedFinal() {
                     setIsMediaChoiceModalOpen(false);
                     openCamera();
                   }}
-                  className="flex-1 min-w-[84px] flex flex-col items-center justify-center p-3 bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200/80 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
+                  className="flex-1 min-w-[84px] flex flex-col items-center justify-center p-3 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-700/60 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
                 >
                   <div className="w-11 h-11 rounded-full bg-[#00632B] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                     <CameraIcon className="w-5 h-5" strokeWidth={2.2} />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-xs text-neutral-900">Kamera</p>
-                    <p className="text-[9.5px] text-neutral-500 mt-0.5">Foto baru</p>
+                    <p className="font-bold text-xs text-neutral-100">Kamera</p>
+                    <p className="text-[9.5px] text-neutral-400 mt-0.5">Foto baru</p>
                   </div>
                 </button>
 
@@ -6527,14 +6796,14 @@ export default function KarebaFeedFinal() {
                     setIsMediaChoiceModalOpen(false);
                     openCustomGallery();
                   }}
-                  className="flex-1 min-w-[84px] flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
+                  className="flex-1 min-w-[84px] flex flex-col items-center justify-center p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
                 >
-                  <div className="w-11 h-11 rounded-full bg-neutral-800 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                  <div className="w-11 h-11 rounded-full bg-neutral-800 text-white border border-neutral-700 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                     <ImageIcon className="w-5 h-5" strokeWidth={2.2} />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-xs text-neutral-900">Galeri</p>
-                    <p className="text-[9.5px] text-neutral-500 mt-0.5">Foto/Video</p>
+                    <p className="font-bold text-xs text-neutral-100">Galeri</p>
+                    <p className="text-[9.5px] text-neutral-400 mt-0.5">Foto/Video</p>
                   </div>
                 </button>
 
@@ -6546,14 +6815,14 @@ export default function KarebaFeedFinal() {
                     setIsMediaChoiceModalOpen(false);
                     setIsTextPostModalOpen(true);
                   }}
-                  className="flex-1 min-w-[84px] flex flex-col items-center justify-center p-3 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200/80 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
+                  className="flex-1 min-w-[84px] flex flex-col items-center justify-center p-3 bg-amber-950/50 hover:bg-amber-900/50 border border-amber-700/60 rounded-2xl gap-2 transition active:scale-95 cursor-pointer group"
                 >
                   <div className="w-11 h-11 rounded-full bg-[#E5A000] text-neutral-950 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                     <PenLine className="w-5 h-5" strokeWidth={2.2} />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-xs text-neutral-900">Teks Saja</p>
-                    <p className="text-[9.5px] text-neutral-500 mt-0.5">Tanpa media</p>
+                    <p className="font-bold text-xs text-neutral-100">Teks Saja</p>
+                    <p className="text-[9.5px] text-neutral-400 mt-0.5">Tanpa media</p>
                   </div>
                 </button>
               </div>
@@ -6561,7 +6830,7 @@ export default function KarebaFeedFinal() {
               <button
                 type="button"
                 onClick={() => setIsMediaChoiceModalOpen(false)}
-                className="w-full py-2.5 text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800 rounded-xl hover:bg-neutral-100 transition cursor-pointer"
+                className="w-full py-2.5 text-center text-xs font-semibold text-neutral-400 hover:text-neutral-200 rounded-xl hover:bg-neutral-800 transition cursor-pointer"
               >
                 Batal
               </button>
@@ -6573,37 +6842,37 @@ export default function KarebaFeedFinal() {
         {isTextPostModalOpen && (
           <div
             id="text-post-modal"
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in select-none"
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 w-full max-w-[500px] mx-auto box-border animate-fade-in select-none"
             onClick={() => {
               if (!isPublishingTextPost) setIsTextPostModalOpen(false);
             }}
           >
             <div
-              className="w-full box-border bg-white rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border border-neutral-200 animate-slide-up space-y-4 max-h-[90vh] overflow-y-auto"
+              className="w-full box-border bg-neutral-950 rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border border-neutral-800 animate-slide-up space-y-4 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Garis Handle Tarik */}
-              <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto sm:hidden" />
+              <div className="w-10 h-1 bg-neutral-700 rounded-full mx-auto sm:hidden" />
 
               {/* Header Papan Tulis Kabar */}
-              <div className="flex items-center justify-between gap-2 pb-2 border-b border-neutral-100">
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-neutral-800">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div className="w-9 h-9 rounded-full bg-[#00632B] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
                     {initial}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-extrabold text-sm text-neutral-900">
+                    <h3 className="font-extrabold text-sm text-neutral-100">
                       Tulis Kabar Warga
                     </h3>
-                    <p className="text-[11px] text-neutral-500 truncate">
-                      Sebagai <span className="font-bold text-[#00632B]">@{userName}</span>
+                    <p className="text-[11px] text-neutral-400 truncate">
+                      Sebagai <span className="font-bold text-emerald-400">@{userName}</span>
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsTextPostModalOpen(false)}
-                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition shrink-0"
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition shrink-0"
                   aria-label="Tutup"
                 >
                   <X className="w-5 h-5" />
@@ -6611,23 +6880,23 @@ export default function KarebaFeedFinal() {
               </div>
 
               {/* Pedoman Komunitas Santun Ringkas */}
-              <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-2.5 text-xs text-emerald-950 flex items-start gap-2 select-none">
-                <ShieldCheck className="w-4 h-4 text-[#00632B] shrink-0 mt-0.5" />
+              <div className="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-2.5 text-xs text-emerald-200 flex items-start gap-2 select-none">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-relaxed min-w-0 flex-1">
-                  <span className="font-bold text-neutral-900">Bahasa Santun:</span> Gunakan tutur kata yang santun, bebas dari ujaran kebencian, fitnah, kata jorok atau makian.
+                  <span className="font-bold text-white">Bahasa Santun:</span> Gunakan tutur kata yang santun, bebas dari ujaran kebencian, fitnah, kata jorok atau makian.
                 </div>
               </div>
 
               {/* Kotak Textarea Papan Teks (Batas 3000 Huruf) */}
-              <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white transition space-y-2">
+              <div className="bg-neutral-900 rounded-2xl p-3.5 border border-neutral-800 focus-within:border-emerald-500 focus-within:bg-neutral-950 transition space-y-2">
                 <div className="flex items-center flex-wrap justify-between gap-1.5 text-xs">
-                  <label htmlFor="text-post-textarea" className="font-bold text-neutral-700 flex items-center gap-1.5">
-                    <PenLine className="w-3.5 h-3.5 text-[#00632B]" /> Teks Kabar Warga:
+                  <label htmlFor="text-post-textarea" className="font-bold text-neutral-200 flex items-center gap-1.5">
+                    <PenLine className="w-3.5 h-3.5 text-emerald-400" /> Teks Kabar Warga:
                   </label>
                   <span className={`text-[11px] font-mono font-semibold ${
                     textPostContent.trim().length >= 99
-                      ? "text-emerald-600 font-bold"
-                      : "text-amber-600 font-semibold"
+                      ? "text-emerald-400 font-bold"
+                      : "text-amber-400 font-semibold"
                   }`}>
                     {textPostContent.trim().length}/3000 {textPostContent.trim().length >= 99 ? "✓ (Minimal 99 tercapai)" : `(Kurang ${99 - textPostContent.trim().length} huruf)`}
                   </span>
@@ -6639,7 +6908,7 @@ export default function KarebaFeedFinal() {
                   rows={5}
                   onChange={(e) => setTextPostContent(e.target.value.slice(0, 3000))}
                   placeholder="Ketik kabar atau informasi warga sekitar hari ini (maks. 3000 huruf)..."
-                  className="bg-transparent w-full min-w-0 outline-none text-base sm:text-sm text-neutral-900 placeholder-neutral-400 resize-none leading-relaxed"
+                  className="bg-transparent w-full min-w-0 outline-none text-base sm:text-sm text-neutral-100 placeholder-neutral-500 resize-none leading-relaxed"
                   autoFocus
                 />
               </div>
@@ -6647,14 +6916,14 @@ export default function KarebaFeedFinal() {
               {/* Lokasi Kabar (Wajib Diisi / Maks 30 Huruf) */}
               <div className={`rounded-xl p-3 border transition space-y-1.5 ${
                 textPostLocation.trim()
-                  ? "bg-white border-[#00632B]/50"
-                  : "bg-neutral-50 border-neutral-200 focus-within:border-[#00632B] focus-within:bg-white"
+                  ? "bg-neutral-950 border-emerald-500/60"
+                  : "bg-neutral-900 border-neutral-800 focus-within:border-emerald-500 focus-within:bg-neutral-950"
               }`}>
                 <div className="flex items-center flex-wrap justify-between gap-1.5 text-xs">
-                  <label htmlFor="text-post-loc-input" className="font-bold text-neutral-700 flex items-center gap-1.5">
+                  <label htmlFor="text-post-loc-input" className="font-bold text-neutral-200 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-amber-500" /> Lokasi Kabar (Wajib):
                   </label>
-                  <span className={`text-[10px] font-medium ${textPostLocation.length >= 30 ? "text-red-600 font-bold" : textPostLocation.trim() ? "text-emerald-600 font-semibold" : "text-neutral-400"}`}>
+                  <span className={`text-[10px] font-medium ${textPostLocation.length >= 30 ? "text-rose-400 font-bold" : textPostLocation.trim() ? "text-emerald-400 font-semibold" : "text-neutral-400"}`}>
                     {textPostLocation.length}/30 {textPostLocation.trim() ? "✓" : ""}
                   </span>
                 </div>
@@ -6665,7 +6934,7 @@ export default function KarebaFeedFinal() {
                   value={textPostLocation}
                   onChange={(e) => setTextPostLocation(e.target.value.slice(0, 30))}
                   placeholder="Contoh: Danau Tempe, Sengkang..."
-                  className="bg-transparent w-full min-w-0 outline-none text-sm text-neutral-900 placeholder-neutral-400"
+                  className="bg-transparent w-full min-w-0 outline-none text-sm text-neutral-100 placeholder-neutral-500"
                 />
               </div>
 
@@ -6675,7 +6944,7 @@ export default function KarebaFeedFinal() {
                   type="button"
                   onClick={() => setIsTextPostModalOpen(false)}
                   disabled={isPublishingTextPost}
-                  className="flex-1 min-w-[88px] py-3 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200/80 rounded-xl transition cursor-pointer"
+                  className="flex-1 min-w-[88px] py-3 text-xs font-semibold text-neutral-200 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-xl transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -6687,7 +6956,7 @@ export default function KarebaFeedFinal() {
                   className={`flex-[2] min-w-[175px] py-3 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex flex-wrap items-center justify-center gap-2 text-center ${
                     textPostContent.trim().length >= 99 && textPostLocation.trim() && !isPublishingTextPost
                       ? "bg-[#00632B] hover:bg-[#004f22] text-white cursor-pointer shadow-md active:scale-[0.99]"
-                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none"
+                      : "bg-neutral-800 text-neutral-500 cursor-not-allowed shadow-none"
                   }`}
                 >
                   <Send className="w-4 h-4 shrink-0" />
